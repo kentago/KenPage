@@ -13,12 +13,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 .topbar{display:flex;align-items:baseline;justify-content:space-between;padding:18px 32px 12px;border-bottom:1px solid var(--border)}
 .app-title{font:700 30px/1 'Oswald',sans-serif;letter-spacing:2px;text-transform:uppercase}
 .app-title span{color:var(--amber)}
-.clock-block{text-align:right}a
+.clock-block{text-align:right}
 .clock{font:600 40px/1 'Oswald',sans-serif;color:var(--amber);font-variant-numeric:tabular-nums}
 .dateline{font-size:11px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
 .nameday{font-size:11px;color:var(--ice);margin-top:3px}
 
-.controls{display:flex;align-items:center;gap:12px;padding:10px 32px;border-bottom:1px solid var(--border)}
+.controls{display:flex;align-items:center;gap:12px;padding:0 0 14px;border-bottom:1px solid var(--border);margin-bottom:14px}
 .mode-toggle{display:flex;gap:12px}
 .mode-toggle label{font-size:13px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:4px}
 .mode-toggle label:has(input:checked){color:var(--amber)}
@@ -31,7 +31,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 .btn:hover{background:var(--border)}
 .btn-primary{background:var(--amber);color:#1a1306;border:none;border-radius:6px;width:auto;padding:8px 16px;text-transform:uppercase;letter-spacing:1px}
 
-.grid{display:grid;grid-template-columns:1.4fr 1fr;height:calc(100vh - 105px);gap:1px;background:var(--border)}
+.grid{display:grid;grid-template-columns:1.4fr 1fr;height:calc(100vh - 75px);gap:1px;background:var(--border)}
 .col{background:var(--bg);overflow-y:auto;padding:20px 28px}
 
 .trip{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:10px}
@@ -127,24 +127,25 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
   </div>
 </div>
 
-<div class="controls">
-  <div class="mode-toggle">
-    <label><input type="radio" name="mode" value="trip" id="modeTrip" checked> Resa</label>
-    <label><input type="radio" name="mode" value="dep" id="modeDep"> Avgångar</label>
-  </div>
-  <div class="route">
-    <span class="from" id="rFrom">—</span><span class="arrow" id="rArrow">→</span><span class="to" id="rTo">—</span>
-  </div>
-  <button class="btn" id="swap" title="Byt riktning">⇄</button>
-  <button class="btn btn-primary" id="refresh">Uppdatera</button>
-</div>
-
 <div class="grid">
-  <div class="col" id="main"><div class="empty">Konfigurera stationer i ⚙</div></div>
+  <div class="col" id="main">
+    <div class="controls" id="controls">
+      <div class="mode-toggle">
+        <label><input type="radio" name="mode" value="trip" id="modeTrip" checked> Resa</label>
+        <label><input type="radio" name="mode" value="dep" id="modeDep"> Avgångar</label>
+      </div>
+      <div class="route">
+        <span class="from" id="rFrom">—</span><span class="arrow" id="rArrow">→</span><span class="to" id="rTo">—</span>
+      </div>
+      <button class="btn" id="swap" title="Byt riktning">⇄</button>
+      <button class="btn btn-primary" id="refresh">Uppdatera</button>
+    </div>
+    <div id="tripResults"><div class="empty">Konfigurera stationer i ⚙</div></div>
+  </div>
   <div class="col">
     <div id="news"><div class="empty">Hämtar nyheter...</div></div>
     <div class="weather" id="weather"></div>
-    <div class="stocks">
+    <div class="stocks" id="stocksWrap">
       <div class="tradingview-widget-container">
         <div class="tradingview-widget-container__widget"></div>
         <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
@@ -170,6 +171,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     <input type="text" id="inTo" placeholder="Sök..." autocomplete="off">
     <div class="suggestions" id="sugTo"></div>
     <div class="selected" id="selTo"></div>
+    <label>Visa sektioner</label>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:4px;">
+      <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togTravel" checked style="accent-color:var(--amber)"> Resor</label>
+      <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togNews" checked style="accent-color:var(--amber)"> Nyheter</label>
+      <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togWeather" checked style="accent-color:var(--amber)"> Väder</label>
+      <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togStocks" checked style="accent-color:var(--amber)"> Aktier</label>
+    </div>
     <div class="actions">
       <button class="secondary" id="btnClear">Rensa</button>
       <button class="primary" id="btnSave">Spara</button>
@@ -180,13 +188,19 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 </div>
 <script>
 const STORE='sjokrans-cfg', STORE_S='sjokrans-stations';
-let cfg={apiKey:''}, stations={from:null,to:null};
+let cfg={apiKey:'',show:{travel:true,news:true,weather:true,stocks:true}}, stations={from:null,to:null};
 
 // --- Persistence ---
 function save(){localStorage.setItem(STORE,JSON.stringify(cfg))}
 function saveS(){localStorage.setItem(STORE_S,JSON.stringify(stations))}
+function applyToggles(){
+  document.getElementById('main').style.display=cfg.show.travel?'':'none';
+  document.getElementById('news').style.display=cfg.show.news?'':'none';
+  document.getElementById('weather').style.display=cfg.show.weather?'':'none';
+  document.getElementById('stocksWrap').style.display=cfg.show.stocks?'':'none';
+}
 function load(){
-  try{cfg=JSON.parse(localStorage.getItem(STORE))||cfg}catch(e){}
+  try{const raw=JSON.parse(localStorage.getItem(STORE));if(raw){cfg.apiKey=raw.apiKey||'';cfg.show={travel:raw.show?.travel!==false,news:raw.show?.news!==false,weather:raw.show?.weather!==false,stocks:raw.show?.stocks!==false}}}catch(e){}
   try{const s=JSON.parse(localStorage.getItem(STORE_S));if(s){stations=s}}catch(e){}
   // URL params: ?t=passphrase, ?from=id:name, ?to=id:name
   const p=new URLSearchParams(location.search);
@@ -280,7 +294,7 @@ async function news(){
 
 // --- Trips ---
 async function trips(){
-  const el=document.getElementById('main');
+  const el=document.getElementById('tripResults');
   if(!cfg.apiKey||!stations.from||!stations.to){el.innerHTML='<div class="empty">Konfigurera i ⚙</div>';return}
   el.innerHTML='<div class="empty">Söker...</div>';
   try{
@@ -300,7 +314,7 @@ async function trips(){
 
 // --- Departures ---
 async function departures(){
-  const el=document.getElementById('main');
+  const el=document.getElementById('tripResults');
   if(!cfg.apiKey||!stations.from){el.innerHTML='<div class="empty">Konfigurera i ⚙</div>';return}
   el.innerHTML='<div class="empty">Hämtar...</div>';
   try{
@@ -350,11 +364,11 @@ function setupAC(inputId,sugId,selId,key){
 
 // --- Modal ---
 const modal=document.getElementById('modalBg');
-document.getElementById('gear').onclick=()=>{modal.classList.add('open');document.getElementById('inKey').value=cfg.apiKey;document.getElementById('inFrom').value=stations.from?.name||'';document.getElementById('inTo').value=stations.to?.name||'';document.getElementById('selFrom').textContent=stations.from?'✓ '+stations.from.name:'';document.getElementById('selTo').textContent=stations.to?'✓ '+stations.to.name:''};
+document.getElementById('gear').onclick=()=>{modal.classList.add('open');document.getElementById('inKey').value=cfg.apiKey;document.getElementById('inFrom').value=stations.from?.name||'';document.getElementById('inTo').value=stations.to?.name||'';document.getElementById('selFrom').textContent=stations.from?'✓ '+stations.from.name:'';document.getElementById('selTo').textContent=stations.to?'✓ '+stations.to.name:'';document.getElementById('togTravel').checked=cfg.show.travel;document.getElementById('togNews').checked=cfg.show.news;document.getElementById('togWeather').checked=cfg.show.weather;document.getElementById('togStocks').checked=cfg.show.stocks};
 document.getElementById('modalClose').onclick=()=>modal.classList.remove('open');
 modal.onclick=e=>{if(e.target===modal)modal.classList.remove('open')};
-document.getElementById('btnSave').onclick=()=>{cfg.apiKey=document.getElementById('inKey').value.trim();save();saveS();updateRoute();modal.classList.remove('open');refresh();news()};
-document.getElementById('btnClear').onclick=()=>{cfg={apiKey:''};stations={from:null,to:null};save();localStorage.removeItem(STORE_S);updateRoute();document.getElementById('main').innerHTML='<div class="empty">Konfigurera i ⚙</div>'};
+document.getElementById('btnSave').onclick=()=>{cfg.apiKey=document.getElementById('inKey').value.trim();cfg.show={travel:document.getElementById('togTravel').checked,news:document.getElementById('togNews').checked,weather:document.getElementById('togWeather').checked,stocks:document.getElementById('togStocks').checked};save();saveS();updateRoute();applyToggles();modal.classList.remove('open');refresh();news()};
+document.getElementById('btnClear').onclick=()=>{cfg={apiKey:''};stations={from:null,to:null};save();localStorage.removeItem(STORE_S);updateRoute();document.getElementById('tripResults').innerHTML='<div class="empty">Konfigurera i ⚙</div>'};
 document.getElementById('btnShare').onclick=()=>{const el=document.getElementById('shareOut');if(!cfg.apiKey){el.textContent='Spara nyckel först';return}let u=location.origin+location.pathname+'?t=sommar26';if(stations.from)u+='&from='+encodeURIComponent(stations.from.id+':'+stations.from.name);if(stations.to)u+='&to='+encodeURIComponent(stations.to.id+':'+stations.to.name);navigator.clipboard.writeText(u).then(()=>el.textContent='Kopierad ✓').catch(()=>el.textContent=u)};
 
 // --- Mode & controls ---
@@ -370,11 +384,11 @@ document.getElementById('refresh').onclick=refresh;
 load();
 setupAC('inFrom','sugFrom','selFrom','from');
 setupAC('inTo','sugTo','selTo','to');
-updateRoute();
+updateRoute();applyToggles();
 if(!cfg.apiKey||!stations.from)modal.classList.add('open');
 else refresh();
 news();nameday();weather();
-setInterval(news,15*60000);setInterval(refresh,10*60000);setInterval(nameday,3600000);setInterval(weather,1800000);
+setInterval(news,15*60000);setInterval(refresh,30*60000);setInterval(nameday,3600000);setInterval(weather,1800000);
 </script>
 </body>
 </html>
