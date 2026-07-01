@@ -4,1079 +4,377 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Sjökrans Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#0a0e1a;
-  --panel:#10172a;
-  --panel-border:#212c47;
-  --amber:#f5a623;
-  --amber-dim:#7a5316;
-  --ice:#7fd6e8;
-  --ice-dim:#2a4d56;
-  --text:#eef2fb;
-  --muted:#6b7a99;
-  --good:#7fd99a;
-  --bad:#e2725b;
-  --transfer:#b39ddb;
-}
-*{box-sizing:border-box;}
-html,body{
-  margin:0;padding:0;min-height:100vh;
-  background:var(--bg);
-  color:var(--text);
-  font-family:'JetBrains Mono',monospace;
-  -webkit-user-select:none;user-select:none;
-}
-body{
-  background-image:
-    radial-gradient(circle at 15% 10%, rgba(245,166,35,0.05), transparent 40%),
-    radial-gradient(circle at 85% 90%, rgba(127,214,232,0.05), transparent 40%);
-}
+:root{--bg:#0a0e1a;--panel:#10172a;--border:#212c47;--amber:#f5a623;--amber-dim:#7a5316;--ice:#7fd6e8;--text:#eef2fb;--muted:#6b7a99;--good:#7fd99a;--bad:#e2725b;--transfer:#b39ddb}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;-webkit-user-select:none;user-select:none}
 
-/* ---------- Top bar ---------- */
-.topbar{
-  display:flex;align-items:baseline;justify-content:space-between;
-  padding:22px 36px 14px 36px;
-  border-bottom:1px solid var(--panel-border);
-}
-.app-title{
-  font-family:'Oswald',sans-serif;
-  font-weight:700;font-size:30px;
-  letter-spacing:2px;text-transform:uppercase;
-  color:var(--text);
-}
-.app-title span{color:var(--amber);}
-.clock-block{text-align:right;}
-.clock{
-  font-family:'Oswald',sans-serif;font-size:36px;font-weight:600;
-  letter-spacing:2px;color:var(--amber);font-variant-numeric:tabular-nums;
-}
-.dateline{font-size:12px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
-.nameday{font-size:12px;color:var(--ice);letter-spacing:1px;margin-top:4px;}
+.topbar{display:flex;align-items:baseline;justify-content:space-between;padding:18px 32px 12px;border-bottom:1px solid var(--border)}
+.app-title{font:700 30px/1 'Oswald',sans-serif;letter-spacing:2px;text-transform:uppercase}
+.app-title span{color:var(--amber)}
+.clock-block{text-align:right}a
+.clock{font:600 40px/1 'Oswald',sans-serif;color:var(--amber);font-variant-numeric:tabular-nums}
+.dateline{font-size:11px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
+.nameday{font-size:11px;color:var(--ice);margin-top:3px}
 
-/* ---------- Search form ---------- */
-.search-section{
-  padding:24px 36px;
-  border-bottom:1px solid var(--panel-border);
-}
-.search-row{
-  display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;
-}
-.field-group{flex:1;min-width:200px;}
-.field-group label{
-  display:block;font-size:11px;color:var(--muted);
-  letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;
-}
-.field-group input{
-  width:100%;padding:10px 12px;background:var(--panel);
-  border:1px solid var(--panel-border);border-radius:6px;
-  color:var(--text);font-family:'JetBrains Mono',monospace;font-size:14px;
-}
-.field-group input:focus{outline:none;border-color:var(--amber);}
-.swap-btn{
-  width:40px;height:40px;border-radius:50%;
-  background:var(--panel);border:1px solid var(--panel-border);
-  color:var(--amber);font-size:18px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;margin-bottom:0;
-}
-.swap-btn:hover{background:var(--panel-border);}
-.search-btn{
-  font-family:'Oswald',sans-serif;
-  background:var(--amber);color:#1a1306;border:none;border-radius:6px;
-  padding:10px 20px;font-size:14px;font-weight:600;letter-spacing:1px;
-  cursor:pointer;text-transform:uppercase;height:40px;
-}
-.search-btn:hover{filter:brightness(1.1);}
-.search-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.controls{display:flex;align-items:center;gap:12px;padding:10px 32px;border-bottom:1px solid var(--border)}
+.mode-toggle{display:flex;gap:12px}
+.mode-toggle label{font-size:13px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:4px}
+.mode-toggle label:has(input:checked){color:var(--amber)}
+.mode-toggle input{accent-color:var(--amber);width:13px;height:13px}
+.route{flex:1;font:500 18px/1 'Oswald',sans-serif;letter-spacing:1px;margin-left:16px}
+.route .from{color:var(--amber)}
+.route .arrow{color:var(--muted);margin:0 10px}
+.route .to{color:var(--ice)}
+.btn{font:600 13px/1 'Oswald',sans-serif;background:var(--panel);border:1px solid var(--border);color:var(--amber);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px}
+.btn:hover{background:var(--border)}
+.btn-primary{background:var(--amber);color:#1a1306;border:none;border-radius:6px;width:auto;padding:8px 16px;text-transform:uppercase;letter-spacing:1px}
 
-/* Station suggestions dropdown */
-.suggestions{
-  position:absolute;top:100%;left:0;right:0;
-  background:var(--panel);border:1px solid var(--panel-border);
-  border-radius:6px;margin-top:4px;max-height:200px;
-  overflow-y:auto;z-index:20;display:none;
-}
-.suggestions.open{display:block;}
-.suggestion-item{
-  padding:10px 12px;font-size:13px;cursor:pointer;
-  border-bottom:1px solid var(--panel-border);
-}
-.suggestion-item:last-child{border-bottom:none;}
-.suggestion-item:hover{background:rgba(245,166,35,0.08);}
-.field-group{position:relative;}
+.grid{display:grid;grid-template-columns:1.4fr 1fr;height:calc(100vh - 105px);gap:1px;background:var(--border)}
+.col{background:var(--bg);overflow-y:auto;padding:20px 28px}
 
-/* ---------- Mode toggle ---------- */
-.mode-toggle{
-  display:flex;gap:14px;margin-right:18px;
-}
-.radio-label{
-  font-size:13px;color:var(--muted);cursor:pointer;
-  display:flex;align-items:center;gap:5px;
-}
-.radio-label input[type="radio"]{
-  accent-color:var(--amber);width:14px;height:14px;cursor:pointer;
-}
-.radio-label:has(input:checked){color:var(--amber);}
+.trip{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:10px}
+.trip:hover{border-color:var(--amber-dim)}
+.trip-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.trip-time{font:600 26px/1 'Oswald',sans-serif;color:var(--amber);font-variant-numeric:tabular-nums}
+.trip-time .arr{color:var(--muted);margin:0 8px;font-size:18px}
+.badge{font-size:12px;padding:3px 8px;border-radius:4px}
+.badge-dur{color:var(--ice);background:rgba(127,214,232,.08)}
+.badge-xfer{color:var(--transfer);background:rgba(179,157,219,.08)}
+.badge-direct{color:var(--good);background:rgba(127,217,154,.08)}
+.leg{display:grid;grid-template-columns:55px 1fr;gap:6px;padding:6px 0;border-top:1px solid var(--border);font-size:12px}
+.leg:first-child{border-top:none}
+.leg-t{font:500 14px/1 'Oswald',sans-serif;color:var(--text)}
+.leg-name{font-weight:600;color:var(--amber)}
+.leg-name.walk{color:var(--muted)}
+.leg-detail{color:var(--muted)}
 
-/* ---------- Results ---------- */
-.results-section{padding:24px 36px;}
-.results-title{
-  font-family:'Oswald',sans-serif;font-size:15px;font-weight:600;
-  letter-spacing:3px;text-transform:uppercase;color:var(--muted);
-  margin-bottom:18px;display:flex;align-items:center;gap:10px;
-}
-.results-title .dot{width:6px;height:6px;border-radius:50%;background:var(--amber);}
-.empty-state,.error-state{
-  color:var(--muted);font-size:14px;line-height:1.6;padding:20px 0;
-}
-.error-state{color:var(--bad);}
+.dep{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.dep-time{font:600 22px/1 'Oswald',sans-serif;color:var(--amber);margin-right:12px}
+.dep-time.late{color:var(--bad)}
+.dep-line{font-size:12px;color:var(--amber-dim);margin-right:8px}
+.dep-dest{font:500 15px/1 'Oswald',sans-serif;color:var(--text)}
+.dep-eta{font-size:13px;color:var(--muted)}
 
-/* ---------- Trip card ---------- */
-.trip-card{
-  background:var(--panel);border:1px solid var(--panel-border);
-  border-radius:10px;padding:20px 24px;margin-bottom:14px;
-  transition:border-color 0.2s;
-}
-.trip-card:hover{border-color:var(--amber-dim);}
-.trip-header{
-  display:flex;justify-content:space-between;align-items:center;
-  margin-bottom:12px;flex-wrap:wrap;gap:8px;
-}
-.trip-times{
-  font-family:'Oswald',sans-serif;font-size:28px;font-weight:600;
-  color:var(--amber);font-variant-numeric:tabular-nums;
-}
-.trip-times .arrow{color:var(--muted);margin:0 10px;font-size:20px;}
-.trip-meta{display:flex;gap:14px;align-items:center;}
-.trip-duration{
-  font-size:13px;color:var(--ice);
-  padding:4px 10px;border-radius:4px;
-  background:rgba(127,214,232,0.08);
-}
-.trip-transfers{
-  font-size:13px;color:var(--transfer);
-  padding:4px 10px;border-radius:4px;
-  background:rgba(179,157,219,0.08);
-}
-.trip-transfers.direct{color:var(--good);background:rgba(127,217,154,0.08);}
+.news-item{display:block;text-decoration:none;padding:8px;margin:0 -8px;border-radius:4px;border-bottom:1px solid var(--border);transition:background .15s}
+.news-item:hover{background:rgba(245,166,35,.05)}
+.news-item:last-child{border-bottom:none}
+.news-num{font:600 12px/1 'Oswald',sans-serif;color:#e2a07a;margin-right:6px}
+.news-text{font-size:13px;line-height:1.4;color:var(--text)}
+.news-meta{font-size:10px;color:var(--muted);margin-top:3px}
 
-/* Leg details */
-.trip-legs{margin-top:10px;}
-.leg{
-  display:grid;grid-template-columns:60px 1fr;
-  gap:8px;padding:8px 0;
-  border-top:1px solid var(--panel-border);
-  font-size:13px;
-}
-.leg:first-child{border-top:none;}
-.leg-time{
-  font-family:'Oswald',sans-serif;font-size:15px;
-  font-weight:500;color:var(--text);
-}
-.leg-info{min-width:0;}
-.leg-line{
-  font-weight:600;color:var(--amber);
-  margin-bottom:2px;
-}
-.leg-line.walk{color:var(--muted);}
-.leg-stops{color:var(--muted);font-size:12px;}
-.leg-direction{color:var(--text);font-size:12px;margin-top:2px;}
+.weather{display:flex;gap:20px;padding:14px 0;border-top:1px solid var(--border);margin-top:12px}
+.weather-day{flex:1}
+.weather-lbl{font:600 11px/1 'Oswald',sans-serif;letter-spacing:1px;text-transform:uppercase;color:var(--ice);margin-bottom:4px}
+.weather-ico{font-size:24px;line-height:1}
+.weather-tmp{font:600 20px/1 'Oswald',sans-serif;color:var(--text);margin-top:3px}
+.weather-tmp .lo{color:var(--muted);font-size:14px;margin-left:3px}
+.weather-dsc{font-size:11px;color:var(--muted);margin-top:2px}
 
-/* ---------- Settings ---------- */
-.gear{
-  position:fixed;top:18px;right:18px;
-  width:34px;height:34px;border-radius:50%;
-  background:var(--panel);border:1px solid var(--panel-border);
-  color:var(--muted);display:flex;align-items:center;justify-content:center;
-  cursor:pointer;font-size:16px;z-index:50;
-}
-.gear:active{background:var(--panel-border);}
-.modal-overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,0.6);
-  display:none;align-items:center;justify-content:center;z-index:100;
-}
-.modal-overlay.open{display:flex;}
-.modal{
-  background:var(--panel);border:1px solid var(--panel-border);
-  border-radius:10px;padding:28px;width:420px;max-width:90vw;
-}
-.modal h2{font-family:'Oswald',sans-serif;font-size:20px;margin:0 0 18px 0;letter-spacing:1px;}
-.modal label{display:block;font-size:12px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin:16px 0 6px 0;position:relative;}
-.modal input{
-  width:100%;padding:10px 12px;background:var(--bg);
-  border:1px solid var(--panel-border);border-radius:6px;
-  color:var(--text);font-family:'JetBrains Mono',monospace;font-size:14px;
-}
-.modal button{
-  font-family:'Oswald',sans-serif;
-  background:var(--amber);color:#1a1306;border:none;border-radius:6px;
-  padding:10px 16px;font-size:14px;font-weight:600;letter-spacing:1px;
-  cursor:pointer;margin-top:14px;text-transform:uppercase;
-}
-.modal button.secondary{background:transparent;color:var(--muted);border:1px solid var(--panel-border);margin-right:8px;}
-.modal .hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:6px;}
-.modal .hint a{color:var(--ice);}
-.close-x{position:absolute;top:14px;right:18px;cursor:pointer;color:var(--muted);font-size:20px;}
-.modal .suggestions{
-  position:relative;top:0;left:0;right:0;
-  background:var(--bg);border:1px solid var(--panel-border);
-  border-radius:6px;margin-top:4px;max-height:160px;
-  overflow-y:auto;display:none;
-}
-.modal .suggestions.open{display:block;}
-.modal .suggestion-item{
-  padding:8px 10px;font-size:13px;cursor:pointer;
-  border-bottom:1px solid var(--panel-border);
-}
-.modal .suggestion-item:last-child{border-bottom:none;}
-.modal .suggestion-item:hover{background:rgba(245,166,35,0.08);}
+.stocks{border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
 
-/* ---------- Stocks ---------- */
-.stocks-section{
-  padding:24px 36px;
-  border-top:1px solid var(--panel-border);
-}
-.stocks-title{
-  font-family:'Oswald',sans-serif;font-size:15px;font-weight:600;
-  letter-spacing:3px;text-transform:uppercase;color:var(--muted);
-  margin-bottom:18px;display:flex;align-items:center;gap:10px;
-}
-.stocks-title .dot{width:6px;height:6px;border-radius:50%;background:var(--ice);}
-.stocks-grid{
-  display:grid;grid-template-columns:1fr 1fr;gap:16px;
-}
-.stocks-col-title{
-  font-family:'Oswald',sans-serif;font-size:12px;
-  letter-spacing:2px;text-transform:uppercase;
-  margin-bottom:10px;padding-bottom:6px;
-  border-bottom:1px solid var(--panel-border);
-}
-.stocks-col-title.winners{color:var(--good);}
-.stocks-col-title.losers{color:var(--bad);}
-.stock-row{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:8px 0;border-bottom:1px solid var(--panel-border);
-}
-.stock-row:last-child{border-bottom:none;}
-.stock-name{font-size:13px;color:var(--text);max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.stock-change{
-  font-family:'Oswald',sans-serif;font-size:15px;font-weight:600;
-  padding:3px 8px;border-radius:4px;
-}
-.stock-change.up{color:var(--good);background:rgba(127,217,154,0.1);}
-.stock-change.down{color:var(--bad);background:rgba(226,114,91,0.1);}
+.screensaver{position:fixed;inset:0;pointer-events:none;z-index:1}
+.screensaver span{position:absolute;font:700 180px/1 'Oswald',sans-serif;color:rgba(245,166,35,.04);will-change:transform}
 
-/* ---------- News ---------- */
-.news-section{
-  padding:24px 36px;
-  border-top:1px solid var(--panel-border);
-}
-.news-title{
-  font-family:'Oswald',sans-serif;font-size:15px;font-weight:600;
-  letter-spacing:3px;text-transform:uppercase;color:var(--muted);
-  margin-bottom:18px;display:flex;align-items:center;gap:10px;
-}
-.news-title .dot{width:6px;height:6px;border-radius:50%;background:#e2a07a;}
-.news-region-label{
-  font-size:11px;color:#e2a07a;letter-spacing:1px;
-  text-transform:uppercase;margin-left:auto;font-family:'JetBrains Mono',monospace;
-}
-.news-item{
-  padding:12px 0;
-  border-bottom:1px solid var(--panel-border);
-}
-.news-item:last-child{border-bottom:none;}
-.news-num{
-  font-family:'Oswald',sans-serif;color:#e2a07a;
-  font-size:13px;letter-spacing:1px;margin-right:8px;
-}
-.news-headline{font-size:14px;line-height:1.4;color:var(--text);}
-.news-meta{font-size:11px;color:var(--muted);margin-top:4px;}
+.gear{position:fixed;top:14px;right:14px;width:30px;height:30px;border-radius:50%;background:var(--panel);border:1px solid var(--border);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;z-index:50}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-bg.open{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:24px;width:400px;max-width:90vw;max-height:85vh;overflow-y:auto;position:relative}
+.modal h2{font:600 18px/1 'Oswald',sans-serif;margin-bottom:16px}
+.modal label{display:block;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin:14px 0 5px}
+.modal input{width:100%;padding:9px 11px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font:14px 'JetBrains Mono',monospace}
+.modal input:focus{outline:none;border-color:var(--amber)}
+.modal .hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4}
+.modal .hint a{color:var(--ice)}
+.modal .actions{display:flex;gap:8px;margin-top:16px}
+.modal .actions button{font:600 13px/1 'Oswald',sans-serif;padding:9px 14px;border-radius:6px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1px}
+.modal .actions .primary{background:var(--amber);color:#1a1306}
+.modal .actions .secondary{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.modal .close{position:absolute;top:12px;right:16px;cursor:pointer;color:var(--muted);font-size:18px}
+.modal .suggestions{background:var(--bg);border:1px solid var(--border);border-radius:6px;margin-top:4px;max-height:140px;overflow-y:auto;display:none}
+.modal .suggestions.open{display:block}
+.modal .suggestions div{padding:7px 10px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border)}
+.modal .suggestions div:last-child{border-bottom:none}
+.modal .suggestions div:hover{background:rgba(245,166,35,.08)}
+.modal .selected{color:var(--amber);font-size:11px;margin-top:3px}
 
-/* ---------- Weather ---------- */
-.weather-section{
-  padding:16px 36px;
-  border-top:1px solid var(--panel-border);
-}
-.weather-title{
-  font-family:'Oswald',sans-serif;font-size:15px;font-weight:600;
-  letter-spacing:3px;text-transform:uppercase;color:var(--muted);
-  margin-bottom:12px;display:flex;align-items:center;gap:10px;
-}
-.weather-title .dot{width:6px;height:6px;border-radius:50%;background:var(--ice);}
-.weather-row{display:flex;gap:24px;}
-.weather-day{flex:1;}
-.weather-label{font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--ice);margin-bottom:4px;}
-.weather-icon{font-size:28px;line-height:1;margin-bottom:4px;}
-.weather-temp{font-family:'Oswald',sans-serif;font-size:24px;font-weight:600;color:var(--text);}
-.weather-temp .lo{color:var(--muted);font-size:15px;margin-left:4px;}
-.weather-desc{font-size:12px;color:var(--muted);margin-top:2px;}
+.empty{color:var(--muted);font-size:13px;padding:16px 0}
+.error{color:var(--bad);font-size:13px;padding:16px 0}
 
-/* ---------- Responsive ---------- */
-/* Desktop: kiosk grid layout */
-@media (min-width:721px){
-  html,body{height:100%;overflow:hidden;}
-  .kiosk-grid{
-    display:grid;
-    grid-template-columns:1.4fr 1fr;
-    grid-template-rows:1fr;
-    flex:1;min-height:0;gap:1px;
-    background:var(--panel-border);
-    height:calc(100vh - 120px);
-  }
-  .kiosk-left,.kiosk-right{
-    background:var(--bg);
-    overflow-y:auto;
-  }
-  .kiosk-right{
-    display:flex;flex-direction:column;
-    overflow-y:auto;
-  }
-  .results-section{flex:1;overflow-y:auto;}
-  .news-section,.stocks-section,.weather-section{flex-shrink:0;}
-  .app-title{font-size:34px;}
-  .clock{font-size:42px;}
-  .trip-times{font-size:32px;}
-  .search-section{padding:14px 36px;}
-}
-
-/* Mobile: stack everything */
-@media (max-width:720px){
-  .topbar{flex-direction:column;align-items:flex-start;gap:8px;padding:18px 20px 12px 20px;}
-  .search-section{padding:16px 20px;}
-  .search-row{flex-direction:column;gap:10px;}
-  .field-group{min-width:100%;}
-  .swap-btn{align-self:center;}
-  .results-section{padding:16px 20px;}
-  .trip-times{font-size:22px;}
-  .trip-card{padding:16px;}
-  .app-title{font-size:24px;}
-  .clock{font-size:28px;}
-  .news-section{padding:16px 20px;}
-  .stocks-section{padding:16px 20px;}
-  .stocks-grid{grid-template-columns:1fr;gap:20px;}
+@media(max-width:720px){
+  .grid{display:block;height:auto}
+  .col{padding:16px 20px}
+  .topbar{flex-direction:column;align-items:flex-start;gap:6px;padding:14px 20px 10px}
+  .controls{flex-wrap:wrap;padding:10px 20px}
+  .route{margin-left:0;margin-top:6px;width:100%}
+  .app-title{font-size:24px}.clock{font-size:28px}
+  .trip-time{font-size:22px}
+  html,body{height:auto;overflow-y:auto}
 }
 </style>
 </head>
 <body>
-<div class="gear" id="gearBtn">⚙</div>
+<div class="gear" id="gear">⚙</div>
+<div class="screensaver"><span id="ssLetter">S</span></div>
 
 <div class="topbar">
   <div class="app-title">Sjökrans Dashboard<span>.</span></div>
   <div class="clock-block">
     <div class="clock" id="clock">--:--</div>
-    <div class="dateline" id="dateline">—</div>
+    <div class="dateline" id="date">—</div>
     <div class="nameday" id="nameday">—</div>
   </div>
 </div>
 
-<div class="search-section">
-  <div class="search-row">
-    <div class="mode-toggle">
-      <label class="radio-label"><input type="radio" name="mode" value="trip" id="modeTrip" checked> Resa</label>
-      <label class="radio-label"><input type="radio" name="mode" value="departures" id="modeDep"> Avgångar</label>
+<div class="controls">
+  <div class="mode-toggle">
+    <label><input type="radio" name="mode" value="trip" id="modeTrip" checked> Resa</label>
+    <label><input type="radio" name="mode" value="dep" id="modeDep"> Avgångar</label>
+  </div>
+  <div class="route">
+    <span class="from" id="rFrom">—</span><span class="arrow" id="rArrow">→</span><span class="to" id="rTo">—</span>
+  </div>
+  <button class="btn" id="swap" title="Byt riktning">⇄</button>
+  <button class="btn btn-primary" id="refresh">Uppdatera</button>
+</div>
+
+<div class="grid">
+  <div class="col" id="main"><div class="empty">Konfigurera stationer i ⚙</div></div>
+  <div class="col">
+    <div id="news"><div class="empty">Hämtar nyheter...</div></div>
+    <div class="weather" id="weather"></div>
+    <div class="stocks">
+      <div class="tradingview-widget-container">
+        <div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
+        {"symbols":[["OMXS30","OMXSTO:OMXS30|1D"],["Volvo B","OMXSTO:VOLV_B|1D"],["Ericsson B","OMXSTO:ERIC_B|1D"],["H&M B","OMXSTO:HM_B|1D"],["ABB","OMXSTO:ABB|1D"],["SEB A","OMXSTO:SEB_A|1D"]],"chartOnly":false,"width":"100%","height":"220","locale":"sv_SE","colorTheme":"dark","autosize":false,"showVolume":false,"showMA":false,"hideDateRanges":true,"hideMarketStatus":false,"hideSymbolLogo":true,"scalePosition":"right","scaleMode":"Normal","fontFamily":"Oswald,sans-serif","fontSize":"11","noTimeScale":false,"valuesTracking":"1","changeMode":"price-and-percent","chartType":"area","lineWidth":2,"dateRanges":["1d|1"],"isTransparent":true,"lineColor":"rgba(245,166,35,1)","topColor":"rgba(245,166,35,.1)","bottomColor":"rgba(245,166,35,0)"}
+        </script>
+      </div>
     </div>
-    <div class="route-display" id="routeDisplay" style="flex:1;font-family:'Oswald',sans-serif;font-size:20px;font-weight:500;letter-spacing:1px;">
-      <span id="routeFrom" style="color:var(--amber)">—</span>
-      <span id="routeArrow" style="color:var(--muted);margin:0 12px;">→</span>
-      <span id="routeTo" style="color:var(--ice)">—</span>
-    </div>
-    <button class="swap-btn" id="swapBtn" title="Byt riktning">⇄</button>
-    <button class="search-btn" id="searchBtn">Uppdatera</button>
   </div>
 </div>
 
-<div class="kiosk-grid">
-<div class="kiosk-left">
-<div class="results-section">
-  <div id="resultsBody">
-    <div class="empty-state">Konfigurera stationer i inställningar (⚙) för att se resealternativ.</div>
-  </div>
-</div>
-</div>
-
-<div class="kiosk-right">
-<div class="news-section">
-  <span id="newsRegionLabel" style="display:none;"></span>
-  <div id="newsBody"><div class="empty-state">Nyheter visas baserat på vald från-station.</div></div>
-</div>
-
-<div class="weather-section">
-  <div class="weather-row" id="weatherBody"><div class="empty-state">Laddar...</div></div>
-</div>
-
-<div class="stocks-section">
-  <div id="stocksBody">
-    <!-- TradingView Symbol Overview - OMXS30 index -->
-    <div class="tradingview-widget-container">
-      <div class="tradingview-widget-container__widget"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
-      {
-        "symbols": [
-          ["OMXS30", "OMXSTO:OMXS30|1D"],
-          ["Volvo B", "OMXSTO:VOLV_B|1D"],
-          ["Ericsson B", "OMXSTO:ERIC_B|1D"],
-          ["H&M B", "OMXSTO:HM_B|1D"],
-          ["ABB", "OMXSTO:ABB|1D"],
-          ["AstraZeneca", "OMXSTO:AZN|1D"],
-          ["SEB A", "OMXSTO:SEB_A|1D"]
-        ],
-        "chartOnly": false,
-        "width": "100%",
-        "height": "250",
-        "locale": "sv_SE",
-        "colorTheme": "dark",
-        "autosize": false,
-        "showVolume": false,
-        "showMA": false,
-        "hideDateRanges": true,
-        "hideMarketStatus": false,
-        "hideSymbolLogo": true,
-        "scalePosition": "right",
-        "scaleMode": "Normal",
-        "fontFamily": "Oswald, sans-serif",
-        "fontSize": "12",
-        "noTimeScale": false,
-        "valuesTracking": "1",
-        "changeMode": "price-and-percent",
-        "chartType": "area",
-        "lineWidth": 2,
-        "lineType": 0,
-        "dateRanges": ["1d|1"],
-        "isTransparent": true,
-        "lineColor": "rgba(245, 166, 35, 1)",
-        "topColor": "rgba(245, 166, 35, 0.1)",
-        "bottomColor": "rgba(245, 166, 35, 0)"
-      }
-      </script>
-    </div>
-    <noscript><div class="empty-state">Aktiewidget kräver https-hosting.</div></noscript>
-  </div>
-</div>
-</div><!-- kiosk-right -->
-</div><!-- kiosk-grid -->
-
-<!-- Settings modal -->
-<div class="modal-overlay" id="modalOverlay">
-  <div class="modal" style="position:relative;">
-    <div class="close-x" id="closeModal">✕</div>
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="close" id="modalClose">✕</div>
     <h2>Inställningar</h2>
-
-    <label>Trafiklab API-nyckel (ResRobot v2.1)</label>
-    <input type="password" id="apiKeyInput" placeholder="din accessId" autocomplete="off">
-    <div class="hint">Skaffa en gratis nyckel på <a href="https://www.trafiklab.se" target="_blank">trafiklab.se</a> → skapa konto → lägg till "ResRobot v2.1".</div>
-
+    <label>API-nyckel (ResRobot v2.1)</label>
+    <input type="password" id="inKey" placeholder="accessId" autocomplete="off">
+    <div class="hint">Gratis på <a href="https://www.trafiklab.se" target="_blank">trafiklab.se</a></div>
     <label>Från-station</label>
-    <input type="text" id="fromInput" placeholder="Sök station..." autocomplete="off">
-    <div class="suggestions" id="fromSuggestions"></div>
-    <div class="hint" id="fromSelected" style="color:var(--amber);margin-top:4px;"></div>
-
+    <input type="text" id="inFrom" placeholder="Sök..." autocomplete="off">
+    <div class="suggestions" id="sugFrom"></div>
+    <div class="selected" id="selFrom"></div>
     <label>Till-station</label>
-    <input type="text" id="toInput" placeholder="Sök station..." autocomplete="off">
-    <div class="suggestions" id="toSuggestions"></div>
-    <div class="hint" id="toSelected" style="color:var(--ice);margin-top:4px;"></div>
-
-    <div style="display:flex;gap:8px;margin-top:18px;">
-      <button class="secondary" id="clearSettingsBtn">Rensa allt</button>
-      <button id="saveSettingsBtn">Spara</button>
-      <button class="secondary" id="shareLinkBtn" style="margin-left:auto;">📋 Dela-länk</button>
+    <input type="text" id="inTo" placeholder="Sök..." autocomplete="off">
+    <div class="suggestions" id="sugTo"></div>
+    <div class="selected" id="selTo"></div>
+    <div class="actions">
+      <button class="secondary" id="btnClear">Rensa</button>
+      <button class="primary" id="btnSave">Spara</button>
+      <button class="secondary" id="btnShare" style="margin-left:auto">📋 Dela</button>
     </div>
-    <div class="hint" id="shareLink" style="word-break:break-all;margin-top:8px;"></div>
-    <div class="hint" id="modalStatus"></div>
+    <div class="hint" id="shareOut" style="word-break:break-all;margin-top:6px"></div>
   </div>
 </div>
-
 <script>
-// ============ CONFIG ============
-const STORAGE_KEY = 'trip-planner-config';
-let config = { apiKey: '' };
-const lastStations = { from: null, to: null }; // {id, name}
+const STORE='sjokrans-cfg', STORE_S='sjokrans-stations';
+let cfg={apiKey:''}, stations={from:null,to:null};
 
-function loadConfig() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) config = JSON.parse(raw);
-  } catch (e) {}
-  // Check URL params - allows sharing link with ?t=xxx (obfuscated key) &from=id:name&to=id:name
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('t')) {
-    // Unlock: 't' is the passphrase, encrypted key is baked in
-    try {
-      const encKey = 'Ql1VXAJFAQNeX1tcA18GBkANQFVRSlcbRVleDlVABgIRXglZ';
-      const pass = params.get('t');
-      const cipher = atob(encKey);
-      let result = '';
-      for (let i = 0; i < cipher.length; i++) {
-        result += String.fromCharCode(cipher.charCodeAt(i) ^ pass.charCodeAt(i % pass.length));
-      }
-      // Verify it looks like a valid key (contains dashes)
-      if (result.includes('-') && result.length > 20) {
-        config.apiKey = result;
-        saveConfig();
-      }
-    } catch(e) {}
-  }
-  if (params.get('key')) {
-    config.apiKey = params.get('key');
-    saveConfig();
-  }
-  if (params.get('from')) {
-    const [id, ...nameParts] = params.get('from').split(':');
-    lastStations.from = { id: id, name: nameParts.join(':') };
-  }
-  if (params.get('to')) {
-    const [id, ...nameParts] = params.get('to').split(':');
-    lastStations.to = { id: id, name: nameParts.join(':') };
-  }
-  if (params.get('from') || params.get('to')) saveStations();
-  // Clean URL after importing params (so key isn't visible in browser bar)
-  if (params.get('key') || params.get('t') || params.get('from') || params.get('to')) {
-    window.history.replaceState({}, '', window.location.pathname);
-  }
-  document.getElementById('apiKeyInput').value = config.apiKey || '';
-  // Restore last used stations
-  try {
-    const s = localStorage.getItem(STORAGE_KEY + '-stations');
-    if (s) {
-      const parsed = JSON.parse(s);
-      if (parsed.from) { lastStations.from = parsed.from; document.getElementById('fromInput').value = parsed.from.name; }
-      if (parsed.to) { lastStations.to = parsed.to; document.getElementById('toInput').value = parsed.to.name; }
-    }
-  } catch (e) {}
-}
-function saveConfig() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-}
-function saveStations() {
-  localStorage.setItem(STORAGE_KEY + '-stations', JSON.stringify(lastStations));
+// --- Persistence ---
+function save(){localStorage.setItem(STORE,JSON.stringify(cfg))}
+function saveS(){localStorage.setItem(STORE_S,JSON.stringify(stations))}
+function load(){
+  try{cfg=JSON.parse(localStorage.getItem(STORE))||cfg}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem(STORE_S));if(s){stations=s}}catch(e){}
+  // URL params: ?t=passphrase, ?from=id:name, ?to=id:name
+  const p=new URLSearchParams(location.search);
+  if(p.get('t')){try{const c=atob('Ql1VXAJFAQNeX1tcA18GBkANQFVRSlcbRVleDlVABgIRXglZ'),pass=p.get('t');let r='';for(let i=0;i<c.length;i++)r+=String.fromCharCode(c.charCodeAt(i)^pass.charCodeAt(i%pass.length));if(r.includes('-')&&r.length>20){cfg.apiKey=r;save()}}catch(e){}}
+  if(p.get('key')){cfg.apiKey=p.get('key');save()}
+  if(p.get('from')){const[id,...n]=p.get('from').split(':');stations.from={id,name:n.join(':')};saveS()}
+  if(p.get('to')){const[id,...n]=p.get('to').split(':');stations.to={id,name:n.join(':')};saveS()}
+  if(p.has('t')||p.has('key')||p.has('from')||p.has('to'))history.replaceState({},'',location.pathname);
 }
 
-// ============ CORS PROXY ============
-const LOCAL_PROXY = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const CORS_PROXIES = LOCAL_PROXY ? [
-  { name: 'local', build: (u) => '/proxy?url=' + encodeURIComponent(u) },
-] : [
-  { name: 'direct', build: (u) => u },
-  { name: 'allorigins', build: (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u) },
-  { name: 'codetabs', build: (u) => 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(u) },
+// --- Fetch helper ---
+async function api(url){
+  const r=await fetch(url);
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return r.json();
+}
+
+// --- Clock ---
+function tick(){
+  const n=new Date(),D=['Sön','Mån','Tis','Ons','Tor','Fre','Lör'],M=['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
+  document.getElementById('clock').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
+  document.getElementById('date').textContent=D[n.getDay()]+' '+n.getDate()+' '+M[n.getMonth()];
+}
+setInterval(tick,1000);tick();
+
+// --- Nameday ---
+async function nameday(){
+  const n=new Date(),url=`https://sholiday.faboul.se/dagar/v2.1/${n.getFullYear()}/${String(n.getMonth()+1).padStart(2,'0')}/${String(n.getDate()).padStart(2,'0')}`;
+  try{const d=await api(url);const names=d.dagar?.[0]?.namnsdag;document.getElementById('nameday').textContent=names?.length?'Namnsdag: '+names.join(' & '):''}catch(e){document.getElementById('nameday').textContent=''}
+}
+
+// --- Weather ---
+const COORDS={'kungsbacka':{lat:57.49,lon:12.08},'göteborg':{lat:57.71,lon:11.97},'stockholm':{lat:59.33,lon:18.07},'malmö':{lat:55.60,lon:13.00},'halmstad':{lat:56.67,lon:12.86},'varberg':{lat:57.11,lon:12.25},'borås':{lat:57.72,lon:12.94},'linköping':{lat:58.41,lon:15.62},'uppsala':{lat:59.86,lon:17.64},'västerås':{lat:59.61,lon:16.55},'karlstad':{lat:59.38,lon:13.50},'lund':{lat:55.70,lon:13.19}};
+const WMO={0:'☀️ Klart',1:'🌤️ Mest klart',2:'⛅ Växlande',3:'☁️ Mulet',45:'🌫️ Dimma',51:'🌦️ Duggregn',61:'🌧️ Regn',63:'🌧️ Regn',65:'🌧️ Kraftigt regn',71:'🌨️ Snö',73:'🌨️ Snö',80:'🌦️ Skurar',95:'⛈️ Åska'};
+async function weather(){
+  let c={lat:57.49,lon:12.08};
+  if(stations.from){const n=stations.from.name.toLowerCase();for(const[k,v]of Object.entries(COORDS)){if(n.includes(k)){c=v;break}}}
+  try{
+    const d=await(await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Europe/Stockholm&forecast_days=3`)).json();
+    const lbl=['Idag','Imorgon','Övermorgon'];
+    document.getElementById('weather').innerHTML=d.daily.time.map((t,i)=>{const w=WMO[d.daily.weathercode[i]]||'❓ Okänt';const[ico,dsc]=w.split(' ');return`<div class="weather-day"><div class="weather-lbl">${lbl[i]}</div><div class="weather-ico">${ico}</div><div class="weather-tmp">${Math.round(d.daily.temperature_2m_max[i])}°<span class="lo">${Math.round(d.daily.temperature_2m_min[i])}°</span></div><div class="weather-dsc">${dsc||''}</div></div>`}).join('');
+  }catch(e){document.getElementById('weather').innerHTML='<div class="empty">Väder ej tillgängligt</div>'}
+}
+
+// --- News ---
+const REGIONS=[
+  {kw:['kungsbacka','varberg','falkenberg','halmstad','laholm','anneberg'],id:128,lbl:'Halland'},
+  {kw:['göteborg','mölndal','partille','lerum','kungälv','uddevalla','trollhättan','borås'],id:104,lbl:'Väst'},
+  {kw:['malmö','lund','helsingborg','kristianstad','hässleholm','ystad'],id:96,lbl:'Skåne'},
+  {kw:['stockholm','solna','sundbyberg','nacka','huddinge','södertälje'],id:103,lbl:'Stockholm'},
+  {kw:['linköping','norrköping','motala'],id:160,lbl:'Östergötland'},
+  {kw:['jönköping','värnamo','nässjö'],id:91,lbl:'Jönköping'},
+  {kw:['karlstad','arvika','sunne'],id:93,lbl:'Värmland'},
+  {kw:['örebro','kumla','karlskoga'],id:159,lbl:'Örebro'},
+  {kw:['uppsala','enköping'],id:114,lbl:'Uppsala'},
+  {kw:['västerås','eskilstuna'],id:112,lbl:'Västmanland'},
+  {kw:['gävle','sandviken'],id:99,lbl:'Gävleborg'},
+  {kw:['falun','borlänge','mora'],id:161,lbl:'Dalarna'},
+  {kw:['sundsvall','härnösand'],id:110,lbl:'Västernorrland'},
+  {kw:['umeå','skellefteå'],id:109,lbl:'Västerbotten'},
+  {kw:['luleå','piteå','kiruna'],id:98,lbl:'Norrbotten'},
 ];
-async function fetchJSON(targetUrl, timeoutMs = 10000) {
-  const attempts = [];
-  for (const proxy of CORS_PROXIES) {
-    const proxied = proxy.build(targetUrl);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const res = await fetch(proxied, { signal: controller.signal });
-      clearTimeout(timer);
-      if (!res.ok) { attempts.push(proxy.name + ': HTTP ' + res.status); continue; }
-      const data = await res.json();
-      return data;
-    } catch (e) {
-      clearTimeout(timer);
-      attempts.push(proxy.name + ': ' + e.message);
-    }
-  }
-  throw new Error('Alla anrop misslyckades:\n' + attempts.join('\n'));
+function findRegion(name){
+  if(!name)return null;
+  const n=name.toLowerCase();
+  return REGIONS.find(r=>r.kw.some(k=>n.includes(k)))||null;
+}
+async function parseAtom(url,max){
+  const items=[];
+  try{const r=await fetch(url);if(!r.ok)return items;const xml=new DOMParser().parseFromString(await r.text(),'text/xml');
+  for(const e of xml.querySelectorAll('entry')){
+    const title=(e.querySelector('title')?.textContent||'').trim();
+    const link=e.querySelector('link')?.getAttribute('href')||'';
+    const pub=e.querySelector('published')?.textContent||'';
+    if(title.length>10){const t=new Date(pub);items.push({title,link,time:isNaN(t)?'':t.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'})})}
+    if(items.length>=max)break;
+  }}catch(e){}
+  return items;
+}
+async function news(){
+  const el=document.getElementById('news');
+  const region=findRegion(stations.from?.name);
+  let items=[];
+  if(region)items=await parseAtom('https://api.sr.se/api/rss/program/'+region.id,2);
+  const nat=await parseAtom('https://api.sr.se/api/rss/program/4540',4);
+  items.push(...nat.map(n=>({...n,title:n.title.replace(/^Ekot \d{2}:\d{2}\s*/,'')})).filter(n=>n.title.length>5));
+  items=items.slice(0,6);
+  if(!items.length){el.innerHTML='<div class="empty">Inga nyheter just nu</div>';return}
+  el.innerHTML=items.map((n,i)=>`<a class="news-item" href="${n.link}" target="_blank"><span class="news-num">${i+1}</span><span class="news-text">${n.title}</span><div class="news-meta">${i<(region?2:0)?'📍 Lokalt':'Ekot'}${n.time?' · '+n.time:''}</div></a>`).join('');
 }
 
-// ============ CLOCK ============
-function tickClock() {
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
-  document.getElementById('clock').textContent = hh + ':' + mm;
-  const days = ['Söndag','Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag'];
-  const months = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
-  document.getElementById('dateline').textContent =
-    days[now.getDay()] + ' ' + now.getDate() + ' ' + months[now.getMonth()];
-}
-setInterval(tickClock, 1000); tickClock();
-
-// ============ NAMEDAY ============
-async function fetchNameday() {
-  const el = document.getElementById('nameday');
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  try {
-    const data = await fetchJSON('https://sholiday.faboul.se/dagar/v2.1/' + y + '/' + m + '/' + d);
-    const day = data.dagar && data.dagar[0];
-    const names = day && day.namnsdag;
-    el.textContent = (names && names.length) ? 'Namnsdag: ' + names.join(' & ') : '';
-  } catch (e) { el.textContent = ''; }
-}
-
-// ============ WEATHER ============
-const STATION_COORDS = {
-  'kungsbacka': {lat:57.49,lon:12.08}, 'göteborg': {lat:57.71,lon:11.97},
-  'stockholm': {lat:59.33,lon:18.07}, 'malmö': {lat:55.60,lon:13.00},
-  'linköping': {lat:58.41,lon:15.62}, 'uppsala': {lat:59.86,lon:17.64},
-  'västerås': {lat:59.61,lon:16.55}, 'örebro': {lat:59.27,lon:15.21},
-  'halmstad': {lat:56.67,lon:12.86}, 'varberg': {lat:57.11,lon:12.25},
-  'borås': {lat:57.72,lon:12.94}, 'jönköping': {lat:57.78,lon:14.16},
-  'norrköping': {lat:58.59,lon:16.18}, 'lund': {lat:55.70,lon:13.19},
-  'helsingborg': {lat:56.05,lon:12.69}, 'karlstad': {lat:59.38,lon:13.50},
-};
-const WMO = {
-  0:['☀️','Klart'],1:['🌤️','Mest klart'],2:['⛅','Växlande'],3:['☁️','Mulet'],
-  45:['🌫️','Dimma'],48:['🌫️','Rimfrost'],
-  51:['🌦️','Duggregn'],53:['🌦️','Duggregn'],55:['🌧️','Duggregn'],
-  61:['🌧️','Regn'],63:['🌧️','Regn'],65:['🌧️','Kraftigt regn'],
-  71:['🌨️','Snö'],73:['🌨️','Snö'],75:['❄️','Snö'],
-  80:['🌦️','Skurar'],81:['🌧️','Skurar'],82:['⛈️','Kraftiga skurar'],
-  95:['⛈️','Åska'],96:['⛈️','Åska+hagel'],99:['⛈️','Åska']
-};
-function getWeatherCoords() {
-  if (lastStations.from) {
-    const name = lastStations.from.name.toLowerCase();
-    for (const [key, coords] of Object.entries(STATION_COORDS)) {
-      if (name.includes(key)) return coords;
-    }
-  }
-  return { lat: 57.49, lon: 12.08 }; // Default Kungsbacka
-}
-async function fetchWeather() {
-  const body = document.getElementById('weatherBody');
-  const coords = getWeatherCoords();
-  try {
-    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + coords.lat + '&longitude=' + coords.lon + '&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Europe%2FStockholm&forecast_days=3';
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const labels = ['Idag','Imorgon','Övermorgon'];
-    body.innerHTML = data.daily.time.map((d,i) => {
-      const code = data.daily.weathercode[i];
-      const [icon, desc] = WMO[code] || ['❓','Okänt'];
-      const hi = Math.round(data.daily.temperature_2m_max[i]);
-      const lo = Math.round(data.daily.temperature_2m_min[i]);
-      return '<div class="weather-day"><div class="weather-label">' + labels[i] + '</div><div class="weather-icon">' + icon + '</div><div class="weather-temp">' + hi + '°<span class="lo">' + lo + '°</span></div><div class="weather-desc">' + desc + '</div></div>';
+// --- Trips ---
+async function trips(){
+  const el=document.getElementById('main');
+  if(!cfg.apiKey||!stations.from||!stations.to){el.innerHTML='<div class="empty">Konfigurera i ⚙</div>';return}
+  el.innerHTML='<div class="empty">Söker...</div>';
+  try{
+    const d=await api(`https://api.resrobot.se/v2.1/trip?originId=${stations.from.id}&destId=${stations.to.id}&format=json&numF=4&accessId=${cfg.apiKey}`);
+    const t=d.Trip||[];
+    if(!t.length){el.innerHTML='<div class="empty">Inga resor hittades</div>';return}
+    el.innerHTML=t.map(trip=>{
+      const legs=trip.LegList?.Leg||[];if(!legs.length)return'';
+      const dep=legs[0].Origin,arr=legs[legs.length-1].Destination;
+      const mins=Math.round((new Date(arr.date+'T'+arr.time)-new Date(dep.date+'T'+dep.time))/60000);
+      const h=Math.floor(mins/60),m=mins%60,dur=h?h+'h '+m+'m':m+'m';
+      const xfer=Math.max(0,legs.filter(l=>l.type!=='WALK'&&l.type!=='TRSF').length-1);
+      return`<div class="trip"><div class="trip-head"><div class="trip-time">${dep.time.slice(0,5)}<span class="arr">→</span>${arr.time.slice(0,5)}</div><div><span class="badge badge-dur">${dur}</span> <span class="badge ${xfer?'badge-xfer':'badge-direct'}">${xfer?xfer+' byte':'Direkt'}</span></div></div>${legs.map(l=>{const w=l.type==='WALK'||l.type==='TRSF';const p=l.Product||{};return`<div class="leg"><div class="leg-t">${l.Origin.time.slice(0,5)}–${l.Destination.time.slice(0,5)}</div><div><div class="leg-name${w?' walk':''}">${w?'🚶 Gång':(p.catOutL||p.name||'')+(p.num?' '+p.num:'')}</div><div class="leg-detail">${l.Origin.name} → ${l.Destination.name}</div></div></div>`}).join('')}</div>`;
     }).join('');
-  } catch (e) {
-    body.innerHTML = '<div class="empty-state">Väder ej tillgängligt.</div>';
-  }
+  }catch(e){el.innerHTML='<div class="error">'+e.message+'</div>'}
 }
 
-// ============ STATION SEARCH (autocomplete) ============
-let searchTimeout = null;
-function setupAutocomplete(inputId, suggestionsId, stationKey) {
-  const input = document.getElementById(inputId);
-  const sugBox = document.getElementById(suggestionsId);
+// --- Departures ---
+async function departures(){
+  const el=document.getElementById('main');
+  if(!cfg.apiKey||!stations.from){el.innerHTML='<div class="empty">Konfigurera i ⚙</div>';return}
+  el.innerHTML='<div class="empty">Hämtar...</div>';
+  try{
+    const d=await api(`https://api.resrobot.se/v2.1/departureBoard?id=${stations.from.id}&format=json&duration=90&accessId=${cfg.apiKey}`);
+    const deps=d.Departure||[];
+    if(!deps.length){el.innerHTML='<div class="empty">Inga avgångar</div>';return}
+    el.innerHTML=deps.slice(0,8).map(dep=>{
+      const p=dep.Product||dep.ProductAtStop?.[0]||{};
+      const t=dep.rtTime||dep.time||'';const late=dep.rtTime&&dep.rtTime!==dep.time;
+      const eta=Math.round((new Date((dep.rtDate||dep.date)+'T'+t)-new Date())/60000);
+      return`<div class="dep"><div><span class="dep-time${late?' late':''}">${t.slice(0,5)}</span><span class="dep-line">${p.catOutL||''} ${p.num||''}</span><span class="dep-dest">${dep.direction||''}</span></div><div class="dep-eta">${eta<=0?'nu':eta+' min'}</div></div>`;
+    }).join('');
+  }catch(e){el.innerHTML='<div class="error">'+e.message+'</div>'}
+}
 
-  input.addEventListener('input', () => {
-    clearTimeout(searchTimeout);
-    const q = input.value.trim();
-    if (q.length < 2) { sugBox.classList.remove('open'); return; }
-    if (!config.apiKey) { sugBox.innerHTML = '<div class="suggestion-item" style="color:var(--bad)">API-nyckel saknas — öppna inställningar (⚙)</div>'; sugBox.classList.add('open'); return; }
-    searchTimeout = setTimeout(async () => {
-      try {
-        const url = 'https://api.resrobot.se/v2.1/location.name?input=' + encodeURIComponent(q) + '&format=json&accessId=' + encodeURIComponent(config.apiKey);
-        const data = await fetchJSON(url);
-        const stops = (data.stopLocationOrCoordLocation || []).map(s => s.StopLocation).filter(Boolean);
-        if (stops.length === 0) { sugBox.innerHTML = '<div class="suggestion-item">Inga stationer hittades</div>'; sugBox.classList.add('open'); return; }
-        sugBox.innerHTML = stops.slice(0, 8).map(s =>
-          '<div class="suggestion-item" data-id="' + s.extId + '" data-name="' + s.name + '">' + s.name + '</div>'
-        ).join('');
-        sugBox.classList.add('open');
-        sugBox.querySelectorAll('.suggestion-item').forEach(el => {
-          el.onclick = () => {
-            lastStations[stationKey] = { id: el.dataset.id, name: el.dataset.name };
-            input.value = el.dataset.name;
-            sugBox.classList.remove('open');
-            saveStations();
-            const indicator = document.getElementById(stationKey === 'from' ? 'fromSelected' : 'toSelected');
-            if (indicator) indicator.textContent = '\u2713 ' + el.dataset.name;
-            if (stationKey === 'from') fetchNews();
-          };
-        });
-      } catch (e) {
-        sugBox.innerHTML = '<div class="suggestion-item" style="color:var(--bad)">' + e.message + '</div>';
-        sugBox.classList.add('open');
-      }
-    }, 350);
+function refresh(){document.getElementById('modeDep').checked?departures():trips()}
+function updateRoute(){
+  document.getElementById('rFrom').textContent=stations.from?.name||'—';
+  document.getElementById('rTo').textContent=stations.to?.name||'—';
+  const show=!document.getElementById('modeDep').checked;
+  document.getElementById('rArrow').style.display=show?'':'none';
+  document.getElementById('rTo').style.display=show?'':'none';
+}
+
+// --- Autocomplete ---
+let acTimer;
+function setupAC(inputId,sugId,selId,key){
+  const inp=document.getElementById(inputId),sug=document.getElementById(sugId);
+  inp.addEventListener('input',()=>{
+    clearTimeout(acTimer);const q=inp.value.trim();
+    if(q.length<2){sug.classList.remove('open');return}
+    if(!cfg.apiKey){sug.innerHTML='<div>API-nyckel saknas</div>';sug.classList.add('open');return}
+    acTimer=setTimeout(async()=>{
+      try{const d=await api('https://api.resrobot.se/v2.1/location.name?input='+encodeURIComponent(q)+'&format=json&accessId='+cfg.apiKey);
+      const stops=(d.stopLocationOrCoordLocation||[]).map(s=>s.StopLocation).filter(Boolean);
+      if(!stops.length){sug.innerHTML='<div>Inga resultat</div>';sug.classList.add('open');return}
+      sug.innerHTML=stops.slice(0,6).map(s=>`<div data-id="${s.extId}" data-name="${s.name}">${s.name}</div>`).join('');
+      sug.classList.add('open');
+      sug.querySelectorAll('div').forEach(el=>el.onclick=()=>{
+        stations[key]={id:el.dataset.id,name:el.dataset.name};inp.value=el.dataset.name;sug.classList.remove('open');saveS();
+        document.getElementById(selId).textContent='✓ '+el.dataset.name;
+      });}catch(e){sug.innerHTML='<div>Fel: '+e.message+'</div>';sug.classList.add('open')}
+    },350);
   });
-
-  input.addEventListener('blur', () => { setTimeout(() => sugBox.classList.remove('open'), 200); });
-  input.addEventListener('focus', () => { if (sugBox.innerHTML && input.value.length >= 2) sugBox.classList.add('open'); });
+  inp.addEventListener('blur',()=>setTimeout(()=>sug.classList.remove('open'),200));
 }
 
-// ============ TRIP SEARCH ============
-async function searchTrips() {
-  const body = document.getElementById('resultsBody');
-  if (!config.apiKey) {
-    body.innerHTML = '<div class="error-state">API-nyckel saknas. Öppna inställningar (⚙) och ange din Trafiklab-nyckel.</div>';
-    return;
-  }
-  if (!lastStations.from || !lastStations.to) {
-    body.innerHTML = '<div class="error-state">Välj både från- och till-station från förslagen som visas när du skriver.</div>';
-    return;
-  }
-  body.innerHTML = '<div class="empty-state">Söker resor...</div>';
+// --- Modal ---
+const modal=document.getElementById('modalBg');
+document.getElementById('gear').onclick=()=>{modal.classList.add('open');document.getElementById('inKey').value=cfg.apiKey;document.getElementById('inFrom').value=stations.from?.name||'';document.getElementById('inTo').value=stations.to?.name||'';document.getElementById('selFrom').textContent=stations.from?'✓ '+stations.from.name:'';document.getElementById('selTo').textContent=stations.to?'✓ '+stations.to.name:''};
+document.getElementById('modalClose').onclick=()=>modal.classList.remove('open');
+modal.onclick=e=>{if(e.target===modal)modal.classList.remove('open')};
+document.getElementById('btnSave').onclick=()=>{cfg.apiKey=document.getElementById('inKey').value.trim();save();saveS();updateRoute();modal.classList.remove('open');refresh();news()};
+document.getElementById('btnClear').onclick=()=>{cfg={apiKey:''};stations={from:null,to:null};save();localStorage.removeItem(STORE_S);updateRoute();document.getElementById('main').innerHTML='<div class="empty">Konfigurera i ⚙</div>'};
+document.getElementById('btnShare').onclick=()=>{const el=document.getElementById('shareOut');if(!cfg.apiKey){el.textContent='Spara nyckel först';return}let u=location.origin+location.pathname+'?t=sommar26';if(stations.from)u+='&from='+encodeURIComponent(stations.from.id+':'+stations.from.name);if(stations.to)u+='&to='+encodeURIComponent(stations.to.id+':'+stations.to.name);navigator.clipboard.writeText(u).then(()=>el.textContent='Kopierad ✓').catch(()=>el.textContent=u)};
 
-  try {
-    // Try v2.1 first, then v2 (some keys only work with one)
-    const baseParams = 'originId=' + encodeURIComponent(lastStations.from.id)
-      + '&destId=' + encodeURIComponent(lastStations.to.id)
-      + '&format=json&numF=4&accessId=' + encodeURIComponent(config.apiKey);
-    
-    let data = null;
-    const urls = [
-      'https://api.resrobot.se/v2.1/trip?' + baseParams,
-      'https://api.resrobot.se/v2/trip?' + baseParams.replace('accessId=', 'key='),
-    ];
-    
-    let lastErr = null;
-    for (const url of urls) {
-      try {
-        data = await fetchJSON(url);
-        if (data && (data.Trip || data.trip)) break;
-      } catch (e) {
-        lastErr = e;
-        data = null;
-      }
-    }
-    
-    if (!data) {
-      body.innerHTML = '<div class="error-state">Kunde inte s\u00f6ka resor. Din API-nyckel kanske saknar produkten "ResRobot v2.1 Reseplanerare" p\u00e5 trafiklab.se. G\u00e5 till ditt konto och l\u00e4gg till den.</div>';
-      return;
-    }
-    
-    const trips = data.Trip || data.trip || [];
-    if (trips.length === 0) {
-      body.innerHTML = '<div class="empty-state">Inga resor hittades mellan dessa stationer.</div>';
-      return;
-    }
-    body.innerHTML = trips.slice(0, 8).map(trip => renderTrip(trip)).join('');
-  } catch (e) {
-    body.innerHTML = '<div class="error-state">Kunde inte s\u00f6ka resor: ' + e.message + '</div>';
-  }
-}
+// --- Mode & controls ---
+document.getElementById('modeTrip').onchange=()=>{updateRoute();refresh()};
+document.getElementById('modeDep').onchange=()=>{updateRoute();refresh()};
+document.getElementById('swap').onclick=()=>{[stations.from,stations.to]=[stations.to,stations.from];saveS();updateRoute();refresh();news()};
+document.getElementById('refresh').onclick=refresh;
 
-function renderTrip(trip) {
-  const legs = trip.LegList ? trip.LegList.Leg : [];
-  if (!legs || legs.length === 0) return '';
+// --- Screensaver ---
+(function(){const el=document.getElementById('ssLetter');let x=Math.random()*(innerWidth-180),y=Math.random()*(innerHeight-180),dx=.7,dy=.5;(function anim(){x+=dx;y+=dy;if(x<=0||x>=innerWidth-180)dx*=-1;if(y<=0||y>=innerHeight-180)dy*=-1;el.style.transform=`translate(${x}px,${y}px)`;requestAnimationFrame(anim)})()})();
 
-  const firstLeg = legs[0];
-  const lastLeg = legs[legs.length - 1];
-  const depTime = firstLeg.Origin.time.slice(0, 5);
-  const arrTime = lastLeg.Destination.time.slice(0, 5);
-
-  // Duration
-  const depDt = new Date(firstLeg.Origin.date + 'T' + firstLeg.Origin.time);
-  const arrDt = new Date(lastLeg.Destination.date + 'T' + lastLeg.Destination.time);
-  const diffMin = Math.round((arrDt - depDt) / 60000);
-  const durH = Math.floor(diffMin / 60);
-  const durM = diffMin % 60;
-  const durStr = durH > 0 ? durH + ' h ' + durM + ' min' : durM + ' min';
-
-  // Count transfers (non-walk legs minus 1)
-  const transitLegs = legs.filter(l => l.type !== 'WALK' && l.type !== 'TRSF');
-  const transfers = Math.max(0, transitLegs.length - 1);
-  const transferClass = transfers === 0 ? 'trip-transfers direct' : 'trip-transfers';
-  const transferText = transfers === 0 ? 'Direkt' : transfers + ' byte' + (transfers > 1 ? 'n' : '');
-
-  // Render legs
-  const legsHtml = legs.map(leg => {
-    const isWalk = (leg.type === 'WALK' || leg.type === 'TRSF');
-    const prod = leg.Product || (leg.ProductAtStop && leg.ProductAtStop[0]) || {};
-    const lineName = isWalk ? '🚶 Gång' : (prod.catOutL || prod.name || leg.name || 'Transport');
-    const lineNum = isWalk ? '' : (prod.displayNumber || prod.num || '');
-    const origin = leg.Origin.name || '';
-    const dest = leg.Destination.name || '';
-    const legDepTime = leg.Origin.time.slice(0, 5);
-    const legArrTime = leg.Destination.time.slice(0, 5);
-    const direction = leg.direction || '';
-
-    return '<div class="leg">'
-      + '<div class="leg-time">' + legDepTime + '–' + legArrTime + '</div>'
-      + '<div class="leg-info">'
-      + '<div class="leg-line' + (isWalk ? ' walk' : '') + '">' + lineName + (lineNum ? ' ' + lineNum : '') + '</div>'
-      + '<div class="leg-stops">' + origin + ' → ' + dest + '</div>'
-      + (direction ? '<div class="leg-direction">Mot: ' + direction + '</div>' : '')
-      + '</div></div>';
-  }).join('');
-
-  return '<div class="trip-card">'
-    + '<div class="trip-header">'
-    + '<div class="trip-times">' + depTime + '<span class="arrow">→</span>' + arrTime + '</div>'
-    + '<div class="trip-meta">'
-    + '<div class="trip-duration">' + durStr + '</div>'
-    + '<div class="' + transferClass + '">' + transferText + '</div>'
-    + '</div></div>'
-    + '<div class="trip-legs">' + legsHtml + '</div>'
-    + '</div>';
-}
-
-// ============ REGION-BASED NEWS ============
-// Maps station name keywords to SVT regional RSS feeds
-// SR (Sveriges Radio) JSON API per region - reliable, no CORS/auth issues
-const REGION_MAP = [
-  { keywords: ['malmö','lund','helsingborg','kristianstad','ystad','trelleborg','landskrona','eslöv','hässleholm','ängelholm','höganäs','staffanstorp','simrishamn','sjöbo','tomelilla','svedala','skurup','lomma','kävlinge','burlöv','vellinge','höör','osby','perstorp','klippan','åstorp','bjuv','bromölla','svalöv','båstad','örkelljunga'], region: 'skane', label: 'Skåne', srId: 104 },
-  { keywords: ['göteborg','mölndal','partille','lerum','ale','kungälv','stenungsund','tjörn','orust','lysekil','uddevalla','trollhättan','vänersborg','borås','alingsås','mark','herrljunga','vara','lidköping','skara','falköping','skövde','mariestad','tibro'], region: 'vast', label: 'Västra Götaland', srId: 104 },
-  { keywords: ['kungsbacka','varberg','falkenberg','halmstad','laholm','hylte','anneberg'], region: 'halland', label: 'Halland', srId: 128 },
-  { keywords: ['stockholm','solna','sundbyberg','nacka','lidingö','huddinge','botkyrka','södertälje','norrtälje','sigtuna','upplands','vallentuna','täby','danderyd','tyresö','haninge','nynäshamn','värmdö'], region: 'stockholm', label: 'Stockholm', srId: 103 },
-  { keywords: ['uppsala','enköping','knivsta','tierp','östhammar'], region: 'uppsala', label: 'Uppsala', srId: 114 },
-  { keywords: ['linköping','norrköping','motala','mjölby','finspång','söderköping','vadstena','ödeshög','kinda','boxholm','åtvidaberg','valdemarsvik'], region: 'ost', label: 'Östergötland', srId: 160 },
-  { keywords: ['jönköping','huskvarna','värnamo','gislaved','nässjö','vetlanda','tranås','eksjö','sävsjö','aneby','mullsjö','habo','vaggeryd'], region: 'jonkoping', label: 'Jönköping', srId: 109 },
-  { keywords: ['växjö','kalmar','västervik','vimmerby','oskarshamn','nybro','emmaboda','torsås','hultsfred','uppvidinge','lessebo','alvesta','ljungby','älmhult','markaryd','tingsryd'], region: 'smaland', label: 'Småland', srId: 106 },
-  { keywords: ['karlskrona','ronneby','karlshamn','sölvesborg','olofström'], region: 'blekinge', label: 'Blekinge', srId: 105 },
-  { keywords: ['örebro','kumla','hallsberg','lindesberg','askersund','degerfors','karlskoga','laxå','ljusnarsberg','nora','hällefors'], region: 'orebro', label: 'Örebro', srId: 119 },
-  { keywords: ['västerås','eskilstuna','strängnäs','katrineholm','flen','nyköping','oxelösund','sala','surahammar','hallstahammar','köping','arboga','kungsör'], region: 'sormland', label: 'Sörmland', srId: 125 },
-  { keywords: ['karlstad','kristinehamn','hagfors','sunne','torsby','arvika','säffle','årjäng','filipstad','eda','grums','forshaga','kil','hammarö','munkfors','storfors'], region: 'varmland', label: 'Värmland', srId: 112 },
-  { keywords: ['falun','borlänge','mora','leksand','rättvik','ludvika','avesta','hedemora','säter','gagnef','vansbro','malung','orsa','älvdalen','smedjebacken'], region: 'dalarna', label: 'Dalarna', srId: 161 },
-  { keywords: ['gävle','sandviken','hudiksvall','söderhamn','bollnäs','ljusdal','ovanåker','nordanstig','ockelbo','hofors'], region: 'gavleborg', label: 'Gävleborg', srId: 99 },
-  { keywords: ['sundsvall','härnösand','örnsköldsvik','kramfors','sollefteå','ånge','timrå','nordmaling'], region: 'vasternorrland', label: 'Västernorrland', srId: 110 },
-  { keywords: ['östersund','krokom','berg','åre','strömsund','härjedalen','bräcke','ragunda'], region: 'jamtland', label: 'Jämtland', srId: 78 },
-  { keywords: ['umeå','skellefteå','lycksele','vilhelmina','storuman','dorotea','vindeln','vännäs','robertsfors','norsjö','malå','sorsele','åsele','bjurholm'], region: 'vasterbotten', label: 'Västerbotten', srId: 113 },
-  { keywords: ['luleå','piteå','boden','kiruna','gällivare','haparanda','kalix','älvsbyn','jokkmokk','pajala','överkalix','övertorneå','arjeplog','arvidsjaur'], region: 'norrbotten', label: 'Norrbotten', srId: 98 },
-  { keywords: ['visby','gotland'], region: 'gotland', label: 'Gotland', srId: 94 },
-];
-
-function detectRegion(stationName) {
-  if (!stationName) return null;
-  const lower = stationName.toLowerCase().replace(/å/g,'a').replace(/ä/g,'a').replace(/ö/g,'o');
-  for (const r of REGION_MAP) {
-    for (const kw of r.keywords) {
-      const kwNorm = kw.replace(/å/g,'a').replace(/ä/g,'a').replace(/ö/g,'o');
-      if (lower.includes(kwNorm)) return r;
-    }
-  }
-  return null;
-}
-
-async function fetchNews() {
-  const body = document.getElementById('newsBody');
-  const label = document.getElementById('newsRegionLabel');
-  const fromStation = lastStations.from;
-  const region = fromStation ? detectRegion(fromStation.name) : null;
-  const programId = region ? region.srId : 4540;
-  label.textContent = region ? region.label : 'Sverige';
-  body.innerHTML = '<div class="empty-state">H\u00e4mtar nyheter...</div>';
-  try {
-    // SR Atom feeds with real headlines
-    const ekotFeed = 'https://api.sr.se/api/rss/program/4540';
-    const regionalFeed = 'https://api.sr.se/api/rss/program/' + programId;
-    const regionalItems = [];
-    const nationalItems = [];
-
-    // Fetch regional news (2 items)
-    if (region && programId !== 4540) {
-      try {
-        const res = await fetch(regionalFeed);
-        if (res.ok) {
-          const text = await res.text();
-          const xml = new DOMParser().parseFromString(text, 'text/xml');
-          const entries = xml.querySelectorAll('entry');
-          for (const entry of entries) {
-            const title = (entry.querySelector('title')?.textContent || '').trim();
-            const published = entry.querySelector('published')?.textContent || '';
-            if (title.length > 10) {
-              const t = new Date(published);
-              const timeStr = isNaN(t) ? '' : t.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-              regionalItems.push({ title, timeStr, local: true });
-            }
-            if (regionalItems.length >= 2) break;
-          }
-        }
-      } catch (e) {}
-    }
-
-    // Fetch Ekot national news (fill rest up to 6)
-    try {
-      const res = await fetch(ekotFeed);
-      if (res.ok) {
-        const text = await res.text();
-        const xml = new DOMParser().parseFromString(text, 'text/xml');
-        const entries = xml.querySelectorAll('entry');
-        for (const entry of entries) {
-          const title = (entry.querySelector('title')?.textContent || '').trim();
-          const published = entry.querySelector('published')?.textContent || '';
-          if (title.length > 15) {
-            const cleanTitle = title.replace(/^Ekot \d{2}:\d{2}\s*/, '');
-            if (cleanTitle.length > 5) {
-              const t = new Date(published);
-              const timeStr = isNaN(t) ? '' : t.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-              nationalItems.push({ title: cleanTitle, timeStr, local: false });
-            }
-          }
-          if (nationalItems.length >= 4) break;
-        }
-      }
-    } catch (e) {}
-
-    const allItems = [...regionalItems, ...nationalItems].slice(0, 6);
-
-    if (allItems.length === 0) {
-      body.innerHTML = '<div class="empty-state">Inga nyheter tillg\u00e4ngliga just nu.</div>';
-      return;
-    }
-    body.innerHTML = allItems.map((item, i) =>
-      '<div class="news-item"><span class="news-num">' + (i + 1) + '</span><span class="news-headline">' + item.title + '</span>' + '<div class="news-meta">' + (item.local ? '\ud83d\udccd Lokalt' : 'Ekot') + (item.timeStr ? ' \u00b7 ' + item.timeStr : '') + '</div></div>'
-    ).join('');
-  } catch (e) {
-    body.innerHTML = '<div class="error-state">Kunde inte h\u00e4mta nyheter: ' + e.message + '</div>';
-  }
-}
-  } catch (e) {
-    body.innerHTML = '<div class="error-state">Kunde inte hämta nyheter: ' + e.message + '</div>';
-  }
-}
-
-
-
-// ============ DEPARTURES MODE ============
-async function fetchDepartures() {
-  const body = document.getElementById('resultsBody');
-  if (!config.apiKey) {
-    body.innerHTML = '<div class="error-state">API-nyckel saknas.</div>';
-    return;
-  }
-  if (!lastStations.from) {
-    body.innerHTML = '<div class="error-state">V\u00e4lj en fr\u00e5n-station i inst\u00e4llningar.</div>';
-    return;
-  }
-  body.innerHTML = '<div class="empty-state">H\u00e4mtar avg\u00e5ngar...</div>';
-  try {
-    const url = 'https://api.resrobot.se/v2.1/departureBoard?id=' + encodeURIComponent(lastStations.from.id)
-      + '&format=json&duration=90&accessId=' + encodeURIComponent(config.apiKey);
-    const data = await fetchJSON(url);
-    const deps = data.Departure || [];
-    if (deps.length === 0) {
-      body.innerHTML = '<div class="empty-state">Inga avg\u00e5ngar hittades de n\u00e4rmaste 1,5 timmarna.</div>';
-      return;
-    }
-    body.innerHTML = deps.slice(0, 8).map(dep => {
-      const p = dep.Product || (dep.ProductAtStop && dep.ProductAtStop[0]) || {};
-      const time = dep.rtTime || dep.time || '';
-      const delayed = !!(dep.rtTime && dep.rtTime !== dep.time);
-      const line = p.num || p.displayNumber || p.name || '';
-      const category = p.catOutL || p.catOutS || '';
-      const dest = dep.direction || '';
-      const track = dep.rtTrack || dep.track || '';
-      const depDt = new Date((dep.rtDate || dep.date) + 'T' + time);
-      const diffMin = Math.round((depDt - new Date()) / 60000);
-      const eta = diffMin <= 0 ? 'nu' : diffMin + ' min';
-      return '<div class="trip-card" style="padding:14px 20px;margin-bottom:8px;">'
-        + '<div style="display:flex;justify-content:space-between;align-items:center;">'
-        + '<div>'
-        + '<span style="font-family:Oswald,sans-serif;font-size:24px;font-weight:600;color:' + (delayed ? 'var(--bad)' : 'var(--amber)') + ';margin-right:14px;">' + time.slice(0,5) + '</span>'
-        + '<span style="font-size:13px;color:var(--amber-dim);margin-right:10px;">' + category + ' ' + line + '</span>'
-        + '<span style="font-family:Oswald,sans-serif;font-size:17px;font-weight:500;color:var(--text);">' + dest + '</span>'
-        + '</div>'
-        + '<div style="text-align:right;">'
-        + '<div style="font-size:14px;color:var(--muted);">' + eta + '</div>'
-        + (track ? '<div style="font-size:11px;color:var(--muted);">L\u00e4ge ' + track + '</div>' : '')
-        + '</div>'
-        + '</div></div>';
-    }).join('');
-  } catch (e) {
-    body.innerHTML = '<div class="error-state">Kunde inte h\u00e4mta avg\u00e5ngar: ' + e.message + '</div>';
-  }
-}
-
-// ============ MODE SWITCHING ============
-function getMode() {
-  return document.getElementById('modeDep').checked ? 'departures' : 'trip';
-}
-function refreshData() {
-  if (getMode() === 'departures') fetchDepartures();
-  else searchTrips();
-}
-document.getElementById('modeTrip').onchange = () => {
-  document.getElementById('routeArrow').style.display = '';
-  document.getElementById('routeTo').style.display = '';
-  refreshData();
-};
-document.getElementById('modeDep').onchange = () => {
-  document.getElementById('routeArrow').style.display = 'none';
-  document.getElementById('routeTo').style.display = 'none';
-  refreshData();
-};
-
-// ============ SWAP BUTTON ============
-document.getElementById('swapBtn').onclick = () => {
-  const tmp = lastStations.from;
-  lastStations.from = lastStations.to;
-  lastStations.to = tmp;
-  saveStations();
-  updateRouteDisplay();
-  fetchNews();
-  refreshData();
-};
-
-// ============ SEARCH BUTTON ============
-document.getElementById('searchBtn').onclick = refreshData;
-
-// ============ ROUTE DISPLAY ============
-function updateRouteDisplay() {
-  document.getElementById('routeFrom').textContent = lastStations.from ? lastStations.from.name : '—';
-  document.getElementById('routeTo').textContent = lastStations.to ? lastStations.to.name : '—';
-}
-
-// ============ SETTINGS MODAL ============
-const overlay = document.getElementById('modalOverlay');
-document.getElementById('gearBtn').onclick = () => {
-  overlay.classList.add('open');
-  document.getElementById('fromInput').value = lastStations.from ? lastStations.from.name : '';
-  document.getElementById('toInput').value = lastStations.to ? lastStations.to.name : '';
-  document.getElementById('fromSelected').textContent = lastStations.from ? '\u2713 ' + lastStations.from.name : '';
-  document.getElementById('toSelected').textContent = lastStations.to ? '\u2713 ' + lastStations.to.name : '';
-};
-document.getElementById('closeModal').onclick = () => overlay.classList.remove('open');
-overlay.onclick = (e) => { if (e.target === overlay) overlay.classList.remove('open'); };
-document.getElementById('saveSettingsBtn').onclick = () => {
-  config.apiKey = document.getElementById('apiKeyInput').value.trim();
-  saveConfig();
-  saveStations();
-  updateRouteDisplay();
-  document.getElementById('modalStatus').textContent = 'Sparat \u2713';
-  setTimeout(() => { overlay.classList.remove('open'); refreshData(); fetchNews(); }, 600);
-};
-document.getElementById('clearSettingsBtn').onclick = () => {
-  config = { apiKey: '' };
-  saveConfig();
-  localStorage.removeItem(STORAGE_KEY + '-stations');
-  lastStations.from = null; lastStations.to = null;
-  document.getElementById('apiKeyInput').value = '';
-  document.getElementById('fromInput').value = '';
-  document.getElementById('toInput').value = '';
-  document.getElementById('fromSelected').textContent = '';
-  document.getElementById('toSelected').textContent = '';
-  updateRouteDisplay();
-  document.getElementById('resultsBody').innerHTML = '<div class="empty-state">Konfigurera stationer i inställningar (\u2699).</div>';
-};
-// Share link generator
-document.getElementById('shareLinkBtn').onclick = () => {
-  const el = document.getElementById('shareLink');
-  if (!config.apiKey) { el.textContent = 'Spara en API-nyckel först.'; return; }
-  let url = window.location.origin + window.location.pathname + '?t=sommar26';
-  if (lastStations.from) url += '&from=' + encodeURIComponent(lastStations.from.id + ':' + lastStations.from.name);
-  if (lastStations.to) url += '&to=' + encodeURIComponent(lastStations.to.id + ':' + lastStations.to.name);
-  navigator.clipboard.writeText(url).then(() => { el.textContent = 'Kopierad! ✓'; }).catch(() => { el.textContent = url; });
-};
-
-
-// ============ INIT ============
-loadConfig();
-setupAutocomplete('fromInput', 'fromSuggestions', 'from');
-setupAutocomplete('toInput', 'toSuggestions', 'to');
-updateRouteDisplay();
-if (!config.apiKey || !lastStations.from || !lastStations.to) {
-  overlay.classList.add('open');
-} else {
-  refreshData();
-}
-fetchNews();
-fetchNameday();
-fetchWeather();
-setInterval(fetchNews, 15 * 60 * 1000);
-setInterval(refreshData, 2 * 60 * 1000);
-setInterval(fetchNameday, 60 * 60 * 1000);
-setInterval(fetchWeather, 30 * 60 * 1000);
+// --- Init ---
+load();
+setupAC('inFrom','sugFrom','selFrom','from');
+setupAC('inTo','sugTo','selTo','to');
+updateRoute();
+if(!cfg.apiKey||!stations.from)modal.classList.add('open');
+else refresh();
+news();nameday();weather();
+setInterval(news,15*60000);setInterval(refresh,2*60000);setInterval(nameday,3600000);setInterval(weather,1800000);
 </script>
 </body>
 </html>
