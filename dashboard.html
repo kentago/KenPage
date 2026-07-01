@@ -74,6 +74,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 
 .stocks{border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
 
+.bath{border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
+.bath-title{font:600 11px/1 'Oswald',sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--ice);margin-bottom:10px}
+.bath-items{display:flex;gap:12px}
+.bath-item{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center}
+.bath-name{font:500 12px/1.2 'Oswald',sans-serif;color:var(--text);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bath-temp{font:700 24px/1 'Oswald',sans-serif;color:var(--amber)}
+.bath-temp .unit{font-size:14px;color:var(--muted);font-weight:500}
+.bath-warn{font-size:10px;color:var(--bad);margin-top:4px}
+
 .screensaver{position:fixed;inset:0;pointer-events:none;z-index:1}
 .screensaver span{position:absolute;font:700 180px/1 'Oswald',sans-serif;color:rgba(245,166,35,.04);will-change:transform}
 
@@ -145,6 +154,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
   <div class="col">
     <div id="news"><div class="empty">Hämtar nyheter...</div></div>
     <div class="weather" id="weather"></div>
+    <div class="bath" id="bathWrap">
+      <div class="bath-title">🏖️ Badtemperatur</div>
+      <div class="bath-items" id="bathItems"><span class="empty">Hämtar...</span></div>
+    </div>
     <div class="stocks" id="stocksWrap">
       <div class="tradingview-widget-container">
         <div class="tradingview-widget-container__widget"></div>
@@ -176,6 +189,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togTravel" checked style="accent-color:var(--amber)"> Resor</label>
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togNews" checked style="accent-color:var(--amber)"> Nyheter</label>
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togWeather" checked style="accent-color:var(--amber)"> Väder</label>
+      <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togBath" checked style="accent-color:var(--amber)"> Badtemp</label>
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togStocks" checked style="accent-color:var(--amber)"> Aktier</label>
     </div>
     <div class="actions">
@@ -188,7 +202,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 </div>
 <script>
 const STORE='sjokrans-cfg', STORE_S='sjokrans-stations';
-let cfg={apiKey:'',show:{travel:true,news:true,weather:true,stocks:true}}, stations={from:null,to:null};
+let cfg={apiKey:'',show:{travel:true,news:true,weather:true,bath:true,stocks:true}}, stations={from:null,to:null};
 
 // --- Persistence ---
 function save(){localStorage.setItem(STORE,JSON.stringify(cfg))}
@@ -197,10 +211,11 @@ function applyToggles(){
   document.getElementById('main').style.display=cfg.show.travel?'':'none';
   document.getElementById('news').style.display=cfg.show.news?'':'none';
   document.getElementById('weather').style.display=cfg.show.weather?'':'none';
+  document.getElementById('bathWrap').style.display=cfg.show.bath?'':'none';
   document.getElementById('stocksWrap').style.display=cfg.show.stocks?'':'none';
 }
 function load(){
-  try{const raw=JSON.parse(localStorage.getItem(STORE));if(raw){cfg.apiKey=raw.apiKey||'';cfg.show={travel:raw.show?.travel!==false,news:raw.show?.news!==false,weather:raw.show?.weather!==false,stocks:raw.show?.stocks!==false}}}catch(e){}
+  try{const raw=JSON.parse(localStorage.getItem(STORE));if(raw){cfg.apiKey=raw.apiKey||'';cfg.show={travel:raw.show?.travel!==false,news:raw.show?.news!==false,weather:raw.show?.weather!==false,bath:raw.show?.bath!==false,stocks:raw.show?.stocks!==false}}}catch(e){}
   try{const s=JSON.parse(localStorage.getItem(STORE_S));if(s){stations=s}}catch(e){}
   // URL params: ?t=passphrase, ?from=id:name, ?to=id:name
   const p=new URLSearchParams(location.search);
@@ -245,6 +260,61 @@ async function weather(){
   }catch(e){document.getElementById('weather').innerHTML='<div class="empty">Väder ej tillgängligt</div>'}
 }
 
+// --- Bath Temperature ---
+const HAV_BASE='https://gw.havochvatten.se/external-public/bathing-waters/v2';
+let bathCache=null;
+async function bathTemp(){
+  const el=document.getElementById('bathItems');
+  let c={lat:57.49,lon:12.08};
+  if(stations.from){const n=stations.from.name.toLowerCase();for(const[k,v]of Object.entries(COORDS)){if(n.includes(k)){c=v;break}}}
+  try{
+    // Fetch all bathing waters (cached)
+    if(!bathCache){
+      const allRes=await fetch(HAV_BASE+'/bathing-waters');
+      if(!allRes.ok)throw new Error('HTTP '+allRes.status);
+      const allData=await allRes.json();
+      bathCache=allData.watersAndAdvisories||[];
+    }
+    // Calculate distance and sort
+    const scored=[];
+    for(const w of bathCache){
+      const bw=w.bathingWater;
+      const pos=bw.samplingPointPosition;
+      if(!pos)continue;
+      const lat=parseFloat(pos.latitude),lon=parseFloat(pos.longitude);
+      if(!lat||!lon)continue;
+      const d=Math.sqrt((lat-c.lat)**2+(lon-c.lon)**2);
+      scored.push({d,id:bw.id,name:bw.name,advise:w.adviceAgainstBathing||[]});
+    }
+    scored.sort((a,b)=>a.d-b.d);
+    const closest=scored.slice(0,3);
+    if(!closest.length){el.innerHTML='<span class="empty">Inga badplatser</span>';return}
+    // Fetch forecasts for the closest ones
+    const forecasts=await Promise.all(closest.map(async bw=>{
+      try{
+        const r=await fetch(HAV_BASE+'/bathing-waters/'+bw.id);
+        if(!r.ok)return{...bw,temp:null};
+        const d=await r.json();
+        const wt=d.waterTemperature||[];
+        // Find forecast closest to current hour
+        const now=new Date().getHours();
+        let best=wt[0]||null;
+        let bestDiff=99;
+        for(const f of wt){const h=parseInt(f.measHour);const diff=Math.abs(h-now);if(diff<bestDiff){bestDiff=diff;best=f}}
+        // Also check latest sample result for actual measured temp
+        const results=d.results||[];
+        const latestResult=results.length?results[0]:null;
+        return{...bw,temp:best?best.waterTemp:null,measured:latestResult?.waterTemp||null,measuredDate:latestResult?.takenAt||null};
+      }catch(e){return{...bw,temp:null}}
+    }));
+    el.innerHTML=forecasts.map(f=>{
+      const temp=f.temp||f.measured;
+      const hasWarn=f.advise.length>0;
+      return`<div class="bath-item"><div class="bath-name" title="${f.name}">${f.name}</div><div class="bath-temp">${temp?temp+'<span class="unit">°C</span>':'—'}</div>${hasWarn?'<div class="bath-warn">⚠ Avrådan</div>':''}</div>`;
+    }).join('');
+  }catch(e){el.innerHTML='<span class="empty">Kunde ej hämta badtemp</span>'}
+}
+
 // --- News ---
 const REGIONS=[
   {kw:['kungsbacka','varberg','falkenberg','halmstad','laholm','anneberg'],id:128,lbl:'Halland'},
@@ -268,13 +338,21 @@ function findRegion(name){
   const n=name.toLowerCase();
   return REGIONS.find(r=>r.kw.some(k=>n.includes(k)))||null;
 }
+function slugify(str){
+  return str.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[æ]/g,'ae').replace(/[ø]/g,'o').replace(/[ð]/g,'d').replace(/[þ]/g,'th')
+    .replace(/[^a-z0-9\s-]/g,'')
+    .replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+}
 async function parseAtom(url,max){
   const items=[];
   try{const r=await fetch(url);if(!r.ok)return items;const xml=new DOMParser().parseFromString(await r.text(),'text/xml');
   for(const e of xml.querySelectorAll('entry')){
     const title=(e.querySelector('title')?.textContent||'').trim();
-    const link=e.querySelector('link')?.getAttribute('href')||'';
-    const pub=e.querySelector('published')?.textContent||'';
+    const slug=slugify(title);
+    const link=slug?'https://www.sverigesradio.se/artikel/'+slug:'https://sverigesradio.se';
+    const pub=(e.querySelector('published')||e.getElementsByTagName('published')[0])?.textContent||'';
     if(title.length>10){const t=new Date(pub);items.push({title,link,time:isNaN(t)?'':t.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'})})}
     if(items.length>=max)break;
   }}catch(e){}
@@ -364,17 +442,17 @@ function setupAC(inputId,sugId,selId,key){
 
 // --- Modal ---
 const modal=document.getElementById('modalBg');
-document.getElementById('gear').onclick=()=>{modal.classList.add('open');document.getElementById('inKey').value=cfg.apiKey;document.getElementById('inFrom').value=stations.from?.name||'';document.getElementById('inTo').value=stations.to?.name||'';document.getElementById('selFrom').textContent=stations.from?'✓ '+stations.from.name:'';document.getElementById('selTo').textContent=stations.to?'✓ '+stations.to.name:'';document.getElementById('togTravel').checked=cfg.show.travel;document.getElementById('togNews').checked=cfg.show.news;document.getElementById('togWeather').checked=cfg.show.weather;document.getElementById('togStocks').checked=cfg.show.stocks};
+document.getElementById('gear').onclick=()=>{modal.classList.add('open');document.getElementById('inKey').value=cfg.apiKey;document.getElementById('inFrom').value=stations.from?.name||'';document.getElementById('inTo').value=stations.to?.name||'';document.getElementById('selFrom').textContent=stations.from?'✓ '+stations.from.name:'';document.getElementById('selTo').textContent=stations.to?'✓ '+stations.to.name:'';document.getElementById('togTravel').checked=cfg.show.travel;document.getElementById('togNews').checked=cfg.show.news;document.getElementById('togWeather').checked=cfg.show.weather;document.getElementById('togBath').checked=cfg.show.bath;document.getElementById('togStocks').checked=cfg.show.stocks};
 document.getElementById('modalClose').onclick=()=>modal.classList.remove('open');
 modal.onclick=e=>{if(e.target===modal)modal.classList.remove('open')};
-document.getElementById('btnSave').onclick=()=>{cfg.apiKey=document.getElementById('inKey').value.trim();cfg.show={travel:document.getElementById('togTravel').checked,news:document.getElementById('togNews').checked,weather:document.getElementById('togWeather').checked,stocks:document.getElementById('togStocks').checked};save();saveS();updateRoute();applyToggles();modal.classList.remove('open');refresh();news()};
+document.getElementById('btnSave').onclick=()=>{cfg.apiKey=document.getElementById('inKey').value.trim();cfg.show={travel:document.getElementById('togTravel').checked,news:document.getElementById('togNews').checked,weather:document.getElementById('togWeather').checked,bath:document.getElementById('togBath').checked,stocks:document.getElementById('togStocks').checked};save();saveS();updateRoute();applyToggles();modal.classList.remove('open');refresh();news();bathTemp()};
 document.getElementById('btnClear').onclick=()=>{cfg={apiKey:''};stations={from:null,to:null};save();localStorage.removeItem(STORE_S);updateRoute();document.getElementById('tripResults').innerHTML='<div class="empty">Konfigurera i ⚙</div>'};
 document.getElementById('btnShare').onclick=()=>{const el=document.getElementById('shareOut');if(!cfg.apiKey){el.textContent='Spara nyckel först';return}let u=location.origin+location.pathname+'?t=sommar26';if(stations.from)u+='&from='+encodeURIComponent(stations.from.id+':'+stations.from.name);if(stations.to)u+='&to='+encodeURIComponent(stations.to.id+':'+stations.to.name);navigator.clipboard.writeText(u).then(()=>el.textContent='Kopierad ✓').catch(()=>el.textContent=u)};
 
 // --- Mode & controls ---
 document.getElementById('modeTrip').onchange=()=>{updateRoute();refresh()};
 document.getElementById('modeDep').onchange=()=>{updateRoute();refresh()};
-document.getElementById('swap').onclick=()=>{[stations.from,stations.to]=[stations.to,stations.from];saveS();updateRoute();refresh();news()};
+document.getElementById('swap').onclick=()=>{[stations.from,stations.to]=[stations.to,stations.from];saveS();updateRoute();refresh();news();bathTemp()};
 document.getElementById('refresh').onclick=refresh;
 
 // --- Screensaver ---
@@ -387,8 +465,8 @@ setupAC('inTo','sugTo','selTo','to');
 updateRoute();applyToggles();
 if(!cfg.apiKey||!stations.from)modal.classList.add('open');
 else refresh();
-news();nameday();weather();
-setInterval(news,15*60000);setInterval(refresh,30*60000);setInterval(nameday,3600000);setInterval(weather,1800000);
+news();nameday();weather();bathTemp();
+setInterval(news,15*60000);setInterval(refresh,30*60000);setInterval(nameday,3600000);setInterval(weather,1800000);setInterval(bathTemp,3600000);
 </script>
 </body>
 </html>
