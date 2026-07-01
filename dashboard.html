@@ -389,35 +389,50 @@ body{
 <div class="stocks-section">
   <div class="stocks-title"><span class="dot"></span>OMXS30</div>
   <div id="stocksBody">
-    <!-- TradingView Widget - Hotlists for Stockholm -->
+    <!-- TradingView Symbol Overview - OMXS30 index -->
     <div class="tradingview-widget-container">
       <div class="tradingview-widget-container__widget"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-hotlists.js" async>
+      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js" async>
       {
-        "colorTheme": "dark",
-        "dateRange": "1D",
-        "exchange": "STO",
-        "showChart": true,
-        "locale": "sv_SE",
-        "largeChartUrl": "",
-        "isTransparent": true,
-        "showSymbolLogo": false,
-        "showFloatingTooltip": false,
+        "symbols": [
+          ["OMXS30", "OMXSTO:OMXS30|1D"],
+          ["Volvo B", "OMXSTO:VOLV_B|1D"],
+          ["Ericsson B", "OMXSTO:ERIC_B|1D"],
+          ["H&M B", "OMXSTO:HM_B|1D"],
+          ["ABB", "OMXSTO:ABB|1D"],
+          ["AstraZeneca", "OMXSTO:AZN|1D"],
+          ["SEB A", "OMXSTO:SEB_A|1D"]
+        ],
+        "chartOnly": false,
         "width": "100%",
         "height": "400",
-        "plotLineColorGrowing": "rgba(127, 217, 154, 1)",
-        "plotLineColorFalling": "rgba(226, 114, 91, 1)",
-        "gridLineColor": "rgba(33, 44, 71, 1)",
-        "scaleFontColor": "rgba(107, 122, 153, 1)",
-        "belowLineFillColorGrowing": "rgba(127, 217, 154, 0.05)",
-        "belowLineFillColorFalling": "rgba(226, 114, 91, 0.05)",
-        "belowLineFillColorGrowingBottom": "rgba(127, 217, 154, 0)",
-        "belowLineFillColorFallingBottom": "rgba(226, 114, 91, 0)",
-        "symbolActiveColor": "rgba(245, 166, 35, 0.1)"
+        "locale": "sv_SE",
+        "colorTheme": "dark",
+        "autosize": false,
+        "showVolume": false,
+        "showMA": false,
+        "hideDateRanges": true,
+        "hideMarketStatus": false,
+        "hideSymbolLogo": true,
+        "scalePosition": "right",
+        "scaleMode": "Normal",
+        "fontFamily": "Oswald, sans-serif",
+        "fontSize": "12",
+        "noTimeScale": false,
+        "valuesTracking": "1",
+        "changeMode": "price-and-percent",
+        "chartType": "area",
+        "lineWidth": 2,
+        "lineType": 0,
+        "dateRanges": ["1d|1"],
+        "isTransparent": true,
+        "lineColor": "rgba(245, 166, 35, 1)",
+        "topColor": "rgba(245, 166, 35, 0.1)",
+        "bottomColor": "rgba(245, 166, 35, 0)"
       }
       </script>
     </div>
-    <noscript><div class="empty-state">Aktiewidget kräver att sidan körs från en webbserver (http/https), inte file://</div></noscript>
+    <noscript><div class="empty-state">Aktiewidget kräver https-hosting.</div></noscript>
   </div>
 </div>
 </div><!-- kiosk-right -->
