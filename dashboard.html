@@ -296,16 +296,36 @@ body{
 .news-headline{font-size:14px;line-height:1.4;color:var(--text);}
 .news-meta{font-size:11px;color:var(--muted);margin-top:4px;}
 
+/* ---------- Weather ---------- */
+.weather-section{
+  padding:16px 36px;
+  border-top:1px solid var(--panel-border);
+}
+.weather-title{
+  font-family:'Oswald',sans-serif;font-size:15px;font-weight:600;
+  letter-spacing:3px;text-transform:uppercase;color:var(--muted);
+  margin-bottom:12px;display:flex;align-items:center;gap:10px;
+}
+.weather-title .dot{width:6px;height:6px;border-radius:50%;background:var(--ice);}
+.weather-row{display:flex;gap:24px;}
+.weather-day{flex:1;}
+.weather-label{font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--ice);margin-bottom:4px;}
+.weather-icon{font-size:28px;line-height:1;margin-bottom:4px;}
+.weather-temp{font-family:'Oswald',sans-serif;font-size:24px;font-weight:600;color:var(--text);}
+.weather-temp .lo{color:var(--muted);font-size:15px;margin-left:4px;}
+.weather-desc{font-size:12px;color:var(--muted);margin-top:2px;}
+
 /* ---------- Responsive ---------- */
 /* Desktop: kiosk grid layout */
 @media (min-width:721px){
+  html,body{height:100%;overflow:hidden;}
   .kiosk-grid{
     display:grid;
     grid-template-columns:1.4fr 1fr;
     grid-template-rows:1fr;
     flex:1;min-height:0;gap:1px;
     background:var(--panel-border);
-    height:calc(100vh - 130px);
+    height:calc(100vh - 120px);
   }
   .kiosk-left,.kiosk-right{
     background:var(--bg);
@@ -313,12 +333,14 @@ body{
   }
   .kiosk-right{
     display:flex;flex-direction:column;
+    overflow-y:auto;
   }
   .results-section{flex:1;overflow-y:auto;}
-  .news-section,.stocks-section{border-top:1px solid var(--panel-border);}
+  .news-section,.stocks-section,.weather-section{flex-shrink:0;}
   .app-title{font-size:34px;}
   .clock{font-size:42px;}
   .trip-times{font-size:32px;}
+  .search-section{padding:14px 36px;}
 }
 
 /* Mobile: stack everything */
@@ -370,7 +392,6 @@ body{
 <div class="kiosk-grid">
 <div class="kiosk-left">
 <div class="results-section">
-  <div class="results-title"><span class="dot"></span>Resealternativ</div>
   <div id="resultsBody">
     <div class="empty-state">Konfigurera stationer i inställningar (⚙) för att se resealternativ.</div>
   </div>
@@ -379,15 +400,15 @@ body{
 
 <div class="kiosk-right">
 <div class="news-section">
-  <div class="news-title">
-    <span class="dot"></span>Lokala nyheter
-    <span class="news-region-label" id="newsRegionLabel"></span>
-  </div>
+  <span id="newsRegionLabel" style="display:none;"></span>
   <div id="newsBody"><div class="empty-state">Nyheter visas baserat på vald från-station.</div></div>
 </div>
 
+<div class="weather-section">
+  <div class="weather-row" id="weatherBody"><div class="empty-state">Laddar...</div></div>
+</div>
+
 <div class="stocks-section">
-  <div class="stocks-title"><span class="dot"></span>OMXS30</div>
   <div id="stocksBody">
     <!-- TradingView Symbol Overview - OMXS30 index -->
     <div class="tradingview-widget-container">
@@ -405,7 +426,7 @@ body{
         ],
         "chartOnly": false,
         "width": "100%",
-        "height": "400",
+        "height": "250",
         "locale": "sv_SE",
         "colorTheme": "dark",
         "autosize": false,
@@ -590,6 +611,56 @@ async function fetchNameday() {
   } catch (e) { el.textContent = ''; }
 }
 
+// ============ WEATHER ============
+const STATION_COORDS = {
+  'kungsbacka': {lat:57.49,lon:12.08}, 'göteborg': {lat:57.71,lon:11.97},
+  'stockholm': {lat:59.33,lon:18.07}, 'malmö': {lat:55.60,lon:13.00},
+  'linköping': {lat:58.41,lon:15.62}, 'uppsala': {lat:59.86,lon:17.64},
+  'västerås': {lat:59.61,lon:16.55}, 'örebro': {lat:59.27,lon:15.21},
+  'halmstad': {lat:56.67,lon:12.86}, 'varberg': {lat:57.11,lon:12.25},
+  'borås': {lat:57.72,lon:12.94}, 'jönköping': {lat:57.78,lon:14.16},
+  'norrköping': {lat:58.59,lon:16.18}, 'lund': {lat:55.70,lon:13.19},
+  'helsingborg': {lat:56.05,lon:12.69}, 'karlstad': {lat:59.38,lon:13.50},
+};
+const WMO = {
+  0:['☀️','Klart'],1:['🌤️','Mest klart'],2:['⛅','Växlande'],3:['☁️','Mulet'],
+  45:['🌫️','Dimma'],48:['🌫️','Rimfrost'],
+  51:['🌦️','Duggregn'],53:['🌦️','Duggregn'],55:['🌧️','Duggregn'],
+  61:['🌧️','Regn'],63:['🌧️','Regn'],65:['🌧️','Kraftigt regn'],
+  71:['🌨️','Snö'],73:['🌨️','Snö'],75:['❄️','Snö'],
+  80:['🌦️','Skurar'],81:['🌧️','Skurar'],82:['⛈️','Kraftiga skurar'],
+  95:['⛈️','Åska'],96:['⛈️','Åska+hagel'],99:['⛈️','Åska']
+};
+function getWeatherCoords() {
+  if (lastStations.from) {
+    const name = lastStations.from.name.toLowerCase();
+    for (const [key, coords] of Object.entries(STATION_COORDS)) {
+      if (name.includes(key)) return coords;
+    }
+  }
+  return { lat: 57.49, lon: 12.08 }; // Default Kungsbacka
+}
+async function fetchWeather() {
+  const body = document.getElementById('weatherBody');
+  const coords = getWeatherCoords();
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + coords.lat + '&longitude=' + coords.lon + '&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Europe%2FStockholm&forecast_days=3';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const labels = ['Idag','Imorgon','Övermorgon'];
+    body.innerHTML = data.daily.time.map((d,i) => {
+      const code = data.daily.weathercode[i];
+      const [icon, desc] = WMO[code] || ['❓','Okänt'];
+      const hi = Math.round(data.daily.temperature_2m_max[i]);
+      const lo = Math.round(data.daily.temperature_2m_min[i]);
+      return '<div class="weather-day"><div class="weather-label">' + labels[i] + '</div><div class="weather-icon">' + icon + '</div><div class="weather-temp">' + hi + '°<span class="lo">' + lo + '°</span></div><div class="weather-desc">' + desc + '</div></div>';
+    }).join('');
+  } catch (e) {
+    body.innerHTML = '<div class="empty-state">Väder ej tillgängligt.</div>';
+  }
+}
+
 // ============ STATION SEARCH (autocomplete) ============
 let searchTimeout = null;
 function setupAutocomplete(inputId, suggestionsId, stationKey) {
@@ -650,7 +721,7 @@ async function searchTrips() {
     // Try v2.1 first, then v2 (some keys only work with one)
     const baseParams = 'originId=' + encodeURIComponent(lastStations.from.id)
       + '&destId=' + encodeURIComponent(lastStations.to.id)
-      + '&format=json&numF=6&accessId=' + encodeURIComponent(config.apiKey);
+      + '&format=json&numF=4&accessId=' + encodeURIComponent(config.apiKey);
     
     let data = null;
     const urls = [
@@ -878,7 +949,7 @@ async function fetchDepartures() {
       body.innerHTML = '<div class="empty-state">Inga avg\u00e5ngar hittades de n\u00e4rmaste 1,5 timmarna.</div>';
       return;
     }
-    body.innerHTML = deps.slice(0, 12).map(dep => {
+    body.innerHTML = deps.slice(0, 8).map(dep => {
       const p = dep.Product || (dep.ProductAtStop && dep.ProductAtStop[0]) || {};
       const time = dep.rtTime || dep.time || '';
       const delayed = !!(dep.rtTime && dep.rtTime !== dep.time);
@@ -1001,9 +1072,11 @@ if (!config.apiKey || !lastStations.from || !lastStations.to) {
 }
 fetchNews();
 fetchNameday();
+fetchWeather();
 setInterval(fetchNews, 15 * 60 * 1000);
 setInterval(refreshData, 2 * 60 * 1000);
 setInterval(fetchNameday, 60 * 60 * 1000);
+setInterval(fetchWeather, 30 * 60 * 1000);
 </script>
 </body>
 </html>
