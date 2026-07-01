@@ -83,6 +83,21 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 .bath-temp .unit{font-size:14px;color:var(--muted);font-weight:500}
 .bath-warn{font-size:10px;color:var(--bad);margin-top:4px}
 
+.elpris{border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
+.elpris-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+.elpris-title{font:600 11px/1 'Oswald',sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--ice)}
+.elpris-zone{font-size:10px;color:var(--muted)}
+.elpris-now{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.elpris-val{font:700 28px/1 'Oswald',sans-serif;color:var(--amber)}
+.elpris-unit{font-size:12px;color:var(--muted)}
+.elpris-lbl{font-size:11px;color:var(--muted)}
+.elpris-range{font-size:11px;color:var(--muted);margin-top:4px}
+.elpris-bar{height:32px;display:flex;align-items:flex-end;gap:1px;margin-top:6px}
+.elpris-bar span{flex:1;background:var(--border);border-radius:2px 2px 0 0;min-height:2px;transition:background .2s}
+.elpris-bar span.now{background:var(--amber)}
+.elpris-bar span.hi{background:var(--bad)}
+.elpris-bar span.lo{background:var(--good)}
+
 .screensaver{position:fixed;inset:0;pointer-events:none;z-index:1}
 .screensaver span{position:absolute;font:700 180px/1 'Oswald',sans-serif;color:rgba(245,166,35,.04);will-change:transform}
 
@@ -158,6 +173,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <div class="bath-title">🏖️ Badtemperatur</div>
       <div class="bath-items" id="bathItems"><span class="empty">Hämtar...</span></div>
     </div>
+    <div class="elpris" id="elprisWrap">
+      <div class="elpris-head"><span class="elpris-title">⚡ Elpris</span><span class="elpris-zone" id="elprisZone"></span></div>
+      <div id="elprisContent"><span class="empty">Hämtar...</span></div>
+    </div>
     <div class="stocks" id="stocksWrap">
       <div class="tradingview-widget-container">
         <div class="tradingview-widget-container__widget"></div>
@@ -190,6 +209,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togNews" checked style="accent-color:var(--amber)"> Nyheter</label>
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togWeather" checked style="accent-color:var(--amber)"> Väder</label>
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togBath" checked style="accent-color:var(--amber)"> Badtemp</label>
+      <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togElpris" checked style="accent-color:var(--amber)"> Elpris</label>
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togStocks" checked style="accent-color:var(--amber)"> Aktier</label>
     </div>
     <div class="actions">
@@ -202,7 +222,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 </div>
 <script>
 const STORE='sjokrans-cfg', STORE_S='sjokrans-stations';
-let cfg={apiKey:'',show:{travel:true,news:true,weather:true,bath:true,stocks:true}}, stations={from:null,to:null};
+let cfg={apiKey:'',show:{travel:true,news:true,weather:true,bath:true,elpris:true,stocks:true}}, stations={from:null,to:null};
 
 // --- Persistence ---
 function save(){localStorage.setItem(STORE,JSON.stringify(cfg))}
@@ -212,10 +232,11 @@ function applyToggles(){
   document.getElementById('news').style.display=cfg.show.news?'':'none';
   document.getElementById('weather').style.display=cfg.show.weather?'':'none';
   document.getElementById('bathWrap').style.display=cfg.show.bath?'':'none';
+  document.getElementById('elprisWrap').style.display=cfg.show.elpris?'':'none';
   document.getElementById('stocksWrap').style.display=cfg.show.stocks?'':'none';
 }
 function load(){
-  try{const raw=JSON.parse(localStorage.getItem(STORE));if(raw){cfg.apiKey=raw.apiKey||'';cfg.show={travel:raw.show?.travel!==false,news:raw.show?.news!==false,weather:raw.show?.weather!==false,bath:raw.show?.bath!==false,stocks:raw.show?.stocks!==false}}}catch(e){}
+  try{const raw=JSON.parse(localStorage.getItem(STORE));if(raw){cfg.apiKey=raw.apiKey||'';cfg.show={travel:raw.show?.travel!==false,news:raw.show?.news!==false,weather:raw.show?.weather!==false,bath:raw.show?.bath!==false,elpris:raw.show?.elpris!==false,stocks:raw.show?.stocks!==false}}}catch(e){}
   try{const s=JSON.parse(localStorage.getItem(STORE_S));if(s){stations=s}}catch(e){}
   // URL params: ?t=passphrase, ?from=id:name, ?to=id:name
   const p=new URLSearchParams(location.search);
@@ -313,6 +334,52 @@ async function bathTemp(){
       return`<div class="bath-item"><div class="bath-name" title="${f.name}">${f.name}</div><div class="bath-temp">${temp?temp+'<span class="unit">°C</span>':'—'}</div>${hasWarn?'<div class="bath-warn">⚠ Avrådan</div>':''}</div>`;
     }).join('');
   }catch(e){el.innerHTML='<span class="empty">Kunde ej hämta badtemp</span>'}
+}
+
+// --- Electricity Price ---
+const ELZONES={
+  'luleå':'SE1','piteå':'SE1','kiruna':'SE1',
+  'umeå':'SE2','skellefteå':'SE2','sundsvall':'SE2','härnösand':'SE2','gävle':'SE2','sandviken':'SE2','falun':'SE2','borlänge':'SE2','mora':'SE2',
+  'malmö':'SE4','lund':'SE4','helsingborg':'SE4','kristianstad':'SE4','hässleholm':'SE4','ystad':'SE4',
+  'kungsbacka':'SE4','varberg':'SE4','falkenberg':'SE4','halmstad':'SE4','laholm':'SE4','anneberg':'SE4'
+};
+function getElZone(){
+  if(stations.from){const n=stations.from.name.toLowerCase();for(const[k,z]of Object.entries(ELZONES)){if(n.includes(k))return z}}
+  return 'SE4'; // default Kungsbacka = SE4
+}
+async function elpris(){
+  const el=document.getElementById('elprisContent');
+  const zone=getElZone();
+  document.getElementById('elprisZone').textContent=zone;
+  const now=new Date();
+  const dateStr=now.getFullYear()+'/'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  try{
+    const r=await fetch(`https://www.elprisetjustnu.se/api/v1/prices/${dateStr}_${zone}.json`);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const data=await r.json();
+    if(!data.length){el.innerHTML='<span class="empty">Inga priser</span>';return}
+    // Find current price
+    const prices=data.map(d=>d.SEK_per_kWh);
+    const mn=Math.min(...prices),mx=Math.max(...prices);
+    let currentPrice=null,currentIdx=-1;
+    for(let i=0;i<data.length;i++){
+      const s=new Date(data[i].time_start),e=new Date(data[i].time_end);
+      if(now>=s&&now<e){currentPrice=data[i].SEK_per_kWh;currentIdx=i;break}
+    }
+    if(currentPrice===null){currentPrice=prices[prices.length-1];currentIdx=prices.length-1}
+    // Build mini bar chart (sample every 4th = hourly)
+    const hourly=[];
+    for(let i=0;i<data.length;i+=4)hourly.push({price:data[i].SEK_per_kWh,idx:i});
+    const hMin=Math.min(...hourly.map(h=>h.price)),hMax=Math.max(...hourly.map(h=>h.price));
+    const bars=hourly.map(h=>{
+      const pct=hMax>hMin?((h.price-hMin)/(hMax-hMin)*100):50;
+      const isCurrent=currentIdx>=h.idx&&currentIdx<h.idx+4;
+      const cls=isCurrent?'now':h.price===hMax?'hi':h.price===hMin?'lo':'';
+      return`<span style="height:${Math.max(4,pct)}%" class="${cls}"></span>`;
+    }).join('');
+    const avg=(prices.reduce((a,b)=>a+b,0)/prices.length);
+    el.innerHTML=`<div class="elpris-now"><span class="elpris-val">${currentPrice.toFixed(2)}</span><span class="elpris-unit">kr/kWh</span><span class="elpris-lbl">just nu</span></div><div class="elpris-range">↓ ${mn.toFixed(2)} · snitt ${avg.toFixed(2)} · ↑ ${mx.toFixed(2)} kr/kWh</div><div class="elpris-bar">${bars}</div>`;
+  }catch(e){el.innerHTML='<span class="empty">Kunde ej hämta elpris</span>'}
 }
 
 // --- News ---
@@ -442,10 +509,10 @@ function setupAC(inputId,sugId,selId,key){
 
 // --- Modal ---
 const modal=document.getElementById('modalBg');
-document.getElementById('gear').onclick=()=>{modal.classList.add('open');document.getElementById('inKey').value=cfg.apiKey;document.getElementById('inFrom').value=stations.from?.name||'';document.getElementById('inTo').value=stations.to?.name||'';document.getElementById('selFrom').textContent=stations.from?'✓ '+stations.from.name:'';document.getElementById('selTo').textContent=stations.to?'✓ '+stations.to.name:'';document.getElementById('togTravel').checked=cfg.show.travel;document.getElementById('togNews').checked=cfg.show.news;document.getElementById('togWeather').checked=cfg.show.weather;document.getElementById('togBath').checked=cfg.show.bath;document.getElementById('togStocks').checked=cfg.show.stocks};
+document.getElementById('gear').onclick=()=>{modal.classList.add('open');document.getElementById('inKey').value=cfg.apiKey;document.getElementById('inFrom').value=stations.from?.name||'';document.getElementById('inTo').value=stations.to?.name||'';document.getElementById('selFrom').textContent=stations.from?'✓ '+stations.from.name:'';document.getElementById('selTo').textContent=stations.to?'✓ '+stations.to.name:'';document.getElementById('togTravel').checked=cfg.show.travel;document.getElementById('togNews').checked=cfg.show.news;document.getElementById('togWeather').checked=cfg.show.weather;document.getElementById('togBath').checked=cfg.show.bath;document.getElementById('togElpris').checked=cfg.show.elpris;document.getElementById('togStocks').checked=cfg.show.stocks};
 document.getElementById('modalClose').onclick=()=>modal.classList.remove('open');
 modal.onclick=e=>{if(e.target===modal)modal.classList.remove('open')};
-document.getElementById('btnSave').onclick=()=>{cfg.apiKey=document.getElementById('inKey').value.trim();cfg.show={travel:document.getElementById('togTravel').checked,news:document.getElementById('togNews').checked,weather:document.getElementById('togWeather').checked,bath:document.getElementById('togBath').checked,stocks:document.getElementById('togStocks').checked};save();saveS();updateRoute();applyToggles();modal.classList.remove('open');refresh();news();bathTemp()};
+document.getElementById('btnSave').onclick=()=>{cfg.apiKey=document.getElementById('inKey').value.trim();cfg.show={travel:document.getElementById('togTravel').checked,news:document.getElementById('togNews').checked,weather:document.getElementById('togWeather').checked,bath:document.getElementById('togBath').checked,elpris:document.getElementById('togElpris').checked,stocks:document.getElementById('togStocks').checked};save();saveS();updateRoute();applyToggles();modal.classList.remove('open');refresh();news();bathTemp()};
 document.getElementById('btnClear').onclick=()=>{cfg={apiKey:''};stations={from:null,to:null};save();localStorage.removeItem(STORE_S);updateRoute();document.getElementById('tripResults').innerHTML='<div class="empty">Konfigurera i ⚙</div>'};
 document.getElementById('btnShare').onclick=()=>{const el=document.getElementById('shareOut');if(!cfg.apiKey){el.textContent='Spara nyckel först';return}let u=location.origin+location.pathname+'?t=sommar26';if(stations.from)u+='&from='+encodeURIComponent(stations.from.id+':'+stations.from.name);if(stations.to)u+='&to='+encodeURIComponent(stations.to.id+':'+stations.to.name);navigator.clipboard.writeText(u).then(()=>el.textContent='Kopierad ✓').catch(()=>el.textContent=u)};
 
@@ -465,8 +532,8 @@ setupAC('inTo','sugTo','selTo','to');
 updateRoute();applyToggles();
 if(!cfg.apiKey||!stations.from)modal.classList.add('open');
 else refresh();
-news();nameday();weather();bathTemp();
-setInterval(news,15*60000);setInterval(refresh,30*60000);setInterval(nameday,3600000);setInterval(weather,1800000);setInterval(bathTemp,3600000);
+news();nameday();weather();bathTemp();elpris();
+setInterval(news,15*60000);setInterval(refresh,30*60000);setInterval(nameday,3600000);setInterval(weather,1800000);setInterval(bathTemp,3600000);setInterval(elpris,15*60000);
 </script>
 </body>
 </html>
