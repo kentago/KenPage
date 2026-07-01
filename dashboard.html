@@ -283,20 +283,26 @@ async function weather(){
 
 // --- Bath Temperature ---
 const HAV_BASE='https://gw.havochvatten.se/external-public/bathing-waters/v2';
-let bathCache=null;
+let bathCache=null,bathFcCache=null;
 async function bathTemp(){
   const el=document.getElementById('bathItems');
   let c={lat:57.49,lon:12.08};
   if(stations.from){const n=stations.from.name.toLowerCase();for(const[k,v]of Object.entries(COORDS)){if(n.includes(k)){c=v;break}}}
   try{
-    // Fetch all bathing waters (cached)
+    // Fetch all bathing waters + all forecasts (cached)
     if(!bathCache){
       const allRes=await fetch(HAV_BASE+'/bathing-waters');
       if(!allRes.ok)throw new Error('HTTP '+allRes.status);
       const allData=await allRes.json();
       bathCache=allData.watersAndAdvisories||[];
     }
-    // Calculate distance and sort
+    if(!bathFcCache){
+      const fcRes=await fetch(HAV_BASE+'/forecasts');
+      if(fcRes.ok){const fcData=await fcRes.json();bathFcCache={};for(const f of fcData.forecasts||[])bathFcCache[f.bathingWaterId]=f.waterForecasts||[]}
+      else bathFcCache={};
+    }
+    // Calculate distance, only include those with forecast data
+    const now=new Date().getHours();
     const scored=[];
     for(const w of bathCache){
       const bw=w.bathingWater;
@@ -304,34 +310,20 @@ async function bathTemp(){
       if(!pos)continue;
       const lat=parseFloat(pos.latitude),lon=parseFloat(pos.longitude);
       if(!lat||!lon)continue;
+      const fc=bathFcCache[bw.id];
+      if(!fc||!fc.length)continue; // skip — no forecast available
+      // Find forecast closest to current hour
+      let best=fc[0],bestDiff=99;
+      for(const f of fc){const diff=Math.abs(parseInt(f.measHour)-now);if(diff<bestDiff){bestDiff=diff;best=f}}
       const d=Math.sqrt((lat-c.lat)**2+(lon-c.lon)**2);
-      scored.push({d,id:bw.id,name:bw.name,advise:w.adviceAgainstBathing||[]});
+      scored.push({d,name:bw.name,temp:best.waterTemp,advise:w.adviceAgainstBathing||[]});
     }
     scored.sort((a,b)=>a.d-b.d);
-    const closest=scored.slice(0,3);
-    if(!closest.length){el.innerHTML='<span class="empty">Inga badplatser</span>';return}
-    // Fetch forecasts for the closest ones
-    const forecasts=await Promise.all(closest.map(async bw=>{
-      try{
-        const r=await fetch(HAV_BASE+'/bathing-waters/'+bw.id);
-        if(!r.ok)return{...bw,temp:null};
-        const d=await r.json();
-        const wt=d.waterTemperature||[];
-        // Find forecast closest to current hour
-        const now=new Date().getHours();
-        let best=wt[0]||null;
-        let bestDiff=99;
-        for(const f of wt){const h=parseInt(f.measHour);const diff=Math.abs(h-now);if(diff<bestDiff){bestDiff=diff;best=f}}
-        // Also check latest sample result for actual measured temp
-        const results=d.results||[];
-        const latestResult=results.length?results[0]:null;
-        return{...bw,temp:best?best.waterTemp:null,measured:latestResult?.waterTemp||null,measuredDate:latestResult?.takenAt||null};
-      }catch(e){return{...bw,temp:null}}
-    }));
-    el.innerHTML=forecasts.map(f=>{
-      const temp=f.temp||f.measured;
+    const top3=scored.slice(0,3);
+    if(!top3.length){el.innerHTML='<span class="empty">Ingen badtemp tillgänglig</span>';return}
+    el.innerHTML=top3.map(f=>{
       const hasWarn=f.advise.length>0;
-      return`<div class="bath-item"><div class="bath-name" title="${f.name}">${f.name}</div><div class="bath-temp">${temp?temp+'<span class="unit">°C</span>':'—'}</div>${hasWarn?'<div class="bath-warn">⚠ Avrådan</div>':''}</div>`;
+      return`<div class="bath-item"><div class="bath-name" title="${f.name}">${f.name}</div><div class="bath-temp">${f.temp}<span class="unit">°C</span></div>${hasWarn?'<div class="bath-warn">⚠ Avrådan</div>':''}</div>`;
     }).join('');
   }catch(e){el.innerHTML='<span class="empty">Kunde ej hämta badtemp</span>'}
 }
