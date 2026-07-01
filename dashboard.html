@@ -512,7 +512,7 @@ function loadConfig() {
   }
   if (params.get('from') || params.get('to')) saveStations();
   // Clean URL after importing params (so key isn't visible in browser bar)
-  if (params.get('key') || params.get('from') || params.get('to')) {
+  if (params.get('key') || params.get('t') || params.get('from') || params.get('to')) {
     window.history.replaceState({}, '', window.location.pathname);
   }
   document.getElementById('apiKeyInput').value = config.apiKey || '';
@@ -781,71 +781,80 @@ async function fetchNews() {
   const body = document.getElementById('newsBody');
   const label = document.getElementById('newsRegionLabel');
   const fromStation = lastStations.from;
-  if (!fromStation) {
-    body.innerHTML = '<div class="empty-state">Välj en från-station för att se lokala nyheter.</div>';
-    label.textContent = '';
-    return;
-  }
-  const region = detectRegion(fromStation.name);
-  const programId = region ? region.srId : 83;
+  const region = fromStation ? detectRegion(fromStation.name) : null;
+  const programId = region ? region.srId : 4540;
   label.textContent = region ? region.label : 'Sverige';
-  body.innerHTML = '<div class="empty-state">Hämtar nyheter...</div>';
+  body.innerHTML = '<div class="empty-state">H\u00e4mtar nyheter...</div>';
   try {
-    // Ekot (4540) has real news headlines in episode titles
-    // Regional P4 programs also have headlines but less detailed
-    const ekotUrl = 'https://api.sr.se/api/v2/episodes?programid=4540&format=json&size=4';
-    const regionalUrl = 'https://api.sr.se/api/v2/episodes?programid=' + programId + '&format=json&size=4';
-    
-    let allItems = [];
-    
-    // Fetch regional news first (if we have a region)
-    if (region) {
+    // SR Atom feeds with real headlines
+    const ekotFeed = 'https://api.sr.se/api/rss/program/4540';
+    const regionalFeed = 'https://api.sr.se/api/rss/program/' + programId;
+    const regionalItems = [];
+    const nationalItems = [];
+
+    // Fetch regional news (2 items)
+    if (region && programId !== 4540) {
       try {
-        const rData = await fetchJSON(regionalUrl);
-        const rEps = (rData.episodes || []).filter(e => e.title && e.title.length > 20);
-        allItems.push(...rEps);
-      } catch(e) {}
+        const res = await fetch(regionalFeed);
+        if (res.ok) {
+          const text = await res.text();
+          const xml = new DOMParser().parseFromString(text, 'text/xml');
+          const entries = xml.querySelectorAll('entry');
+          for (const entry of entries) {
+            const title = (entry.querySelector('title')?.textContent || '').trim();
+            const published = entry.querySelector('published')?.textContent || '';
+            if (title.length > 10) {
+              const t = new Date(published);
+              const timeStr = isNaN(t) ? '' : t.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+              regionalItems.push({ title, timeStr, local: true });
+            }
+            if (regionalItems.length >= 2) break;
+          }
+        }
+      } catch (e) {}
     }
-    
-    // Always add Ekot national headlines
+
+    // Fetch Ekot national news (fill rest up to 6)
     try {
-      const eData = await fetchJSON(ekotUrl);
-      const eEps = (eData.episodes || []).filter(e => e.title && e.title.length > 10);
-      allItems.push(...eEps);
-    } catch(e) {}
-    
-    // Deduplicate and take top 6
-    const seen = new Set();
-    const unique = allItems.filter(e => {
-      const t = e.title || '';
-      if (seen.has(t)) return false;
-      seen.add(t);
-      // Skip generic titles like just "Ekot 12:30" or "Nyheter P4 Halland"
-      return t.length > 15 && !/^(Ekot \d|Nyheter P4)$/.test(t.trim());
-    }).slice(0, 6);
-    
-    if (unique.length === 0) {
-      // Fallback: show whatever we got
-      renderNewsItems(allItems.slice(0, 6), body);
-    } else {
-      renderNewsItems(unique, body);
+      const res = await fetch(ekotFeed);
+      if (res.ok) {
+        const text = await res.text();
+        const xml = new DOMParser().parseFromString(text, 'text/xml');
+        const entries = xml.querySelectorAll('entry');
+        for (const entry of entries) {
+          const title = (entry.querySelector('title')?.textContent || '').trim();
+          const published = entry.querySelector('published')?.textContent || '';
+          if (title.length > 15) {
+            const cleanTitle = title.replace(/^Ekot \d{2}:\d{2}\s*/, '');
+            if (cleanTitle.length > 5) {
+              const t = new Date(published);
+              const timeStr = isNaN(t) ? '' : t.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+              nationalItems.push({ title: cleanTitle, timeStr, local: false });
+            }
+          }
+          if (nationalItems.length >= 4) break;
+        }
+      }
+    } catch (e) {}
+
+    const allItems = [...regionalItems, ...nationalItems].slice(0, 6);
+
+    if (allItems.length === 0) {
+      body.innerHTML = '<div class="empty-state">Inga nyheter tillg\u00e4ngliga just nu.</div>';
+      return;
     }
+    body.innerHTML = allItems.map((item, i) =>
+      '<div class="news-item"><span class="news-num">' + (i + 1) + '</span><span class="news-headline">' + item.title + '</span>' + '<div class="news-meta">' + (item.local ? '\ud83d\udccd Lokalt' : 'Ekot') + (item.timeStr ? ' \u00b7 ' + item.timeStr : '') + '</div></div>'
+    ).join('');
+  } catch (e) {
+    body.innerHTML = '<div class="error-state">Kunde inte h\u00e4mta nyheter: ' + e.message + '</div>';
+  }
+}
   } catch (e) {
     body.innerHTML = '<div class="error-state">Kunde inte hämta nyheter: ' + e.message + '</div>';
   }
 }
 
-function renderNewsItems(articles, body) {
-  if (!articles.length) { body.innerHTML = '<div class="empty-state">Inga nyheter.</div>'; return; }
-  body.innerHTML = articles.slice(0, 6).map((item, i) => {
-    const title = item.title || '';
-    const t = new Date(item.publicationdate || '');
-    const dateMatch = (item.publishdateutc || '').match(/(\d+)/);
-    const ts = dateMatch ? new Date(parseInt(dateMatch[1])) : t;
-    const timeStr = !isNaN(ts) ? ts.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }) : '';
-    return '<div class="news-item"><span class="news-num">' + (i+1) + '</span><span class="news-headline">' + title + '</span>' + (timeStr ? '<div class="news-meta">SR · ' + timeStr + '</div>' : '') + '</div>';
-  }).join('');
-}
 
 
 // ============ DEPARTURES MODE ============
