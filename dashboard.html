@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Reseplanerare</title>
+<title>Sjökrans Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -343,7 +343,7 @@ body{
 <div class="gear" id="gearBtn">⚙</div>
 
 <div class="topbar">
-  <div class="app-title">Reseplanerare<span>.</span></div>
+  <div class="app-title">Sjökrans Dashboard<span>.</span></div>
   <div class="clock-block">
     <div class="clock" id="clock">--:--</div>
     <div class="dateline" id="dateline">—</div>
@@ -461,7 +461,9 @@ body{
     <div style="display:flex;gap:8px;margin-top:18px;">
       <button class="secondary" id="clearSettingsBtn">Rensa allt</button>
       <button id="saveSettingsBtn">Spara</button>
+      <button class="secondary" id="shareLinkBtn" style="margin-left:auto;">📋 Dela-länk</button>
     </div>
+    <div class="hint" id="shareLink" style="word-break:break-all;margin-top:8px;"></div>
     <div class="hint" id="modalStatus"></div>
   </div>
 </div>
@@ -477,6 +479,42 @@ function loadConfig() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) config = JSON.parse(raw);
   } catch (e) {}
+  // Check URL params - allows sharing link with ?t=xxx (obfuscated key) &from=id:name&to=id:name
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('t')) {
+    // Unlock: 't' is the passphrase, encrypted key is baked in
+    try {
+      const encKey = 'Ql1VXAJFAQNeX1tcA18GBkANQFVRSlcbRVleDlVABgIRXglZ';
+      const pass = params.get('t');
+      const cipher = atob(encKey);
+      let result = '';
+      for (let i = 0; i < cipher.length; i++) {
+        result += String.fromCharCode(cipher.charCodeAt(i) ^ pass.charCodeAt(i % pass.length));
+      }
+      // Verify it looks like a valid key (contains dashes)
+      if (result.includes('-') && result.length > 20) {
+        config.apiKey = result;
+        saveConfig();
+      }
+    } catch(e) {}
+  }
+  if (params.get('key')) {
+    config.apiKey = params.get('key');
+    saveConfig();
+  }
+  if (params.get('from')) {
+    const [id, ...nameParts] = params.get('from').split(':');
+    lastStations.from = { id: id, name: nameParts.join(':') };
+  }
+  if (params.get('to')) {
+    const [id, ...nameParts] = params.get('to').split(':');
+    lastStations.to = { id: id, name: nameParts.join(':') };
+  }
+  if (params.get('from') || params.get('to')) saveStations();
+  // Clean URL after importing params (so key isn't visible in browser bar)
+  if (params.get('key') || params.get('from') || params.get('to')) {
+    window.history.replaceState({}, '', window.location.pathname);
+  }
   document.getElementById('apiKeyInput').value = config.apiKey || '';
   // Restore last used stations
   try {
@@ -753,15 +791,45 @@ async function fetchNews() {
   label.textContent = region ? region.label : 'Sverige';
   body.innerHTML = '<div class="empty-state">Hämtar nyheter...</div>';
   try {
-    const url = 'https://api.sr.se/api/v2/news?programid=' + programId + '&format=json&size=6';
-    const data = await fetchJSON(url);
-    const articles = data.articles || [];
-    if (articles.length === 0) {
-      const data2 = await fetchJSON('https://api.sr.se/api/v2/news?format=json&size=6');
-      renderNewsItems(data2.articles || [], body);
-      return;
+    // Ekot (4540) has real news headlines in episode titles
+    // Regional P4 programs also have headlines but less detailed
+    const ekotUrl = 'https://api.sr.se/api/v2/episodes?programid=4540&format=json&size=4';
+    const regionalUrl = 'https://api.sr.se/api/v2/episodes?programid=' + programId + '&format=json&size=4';
+    
+    let allItems = [];
+    
+    // Fetch regional news first (if we have a region)
+    if (region) {
+      try {
+        const rData = await fetchJSON(regionalUrl);
+        const rEps = (rData.episodes || []).filter(e => e.title && e.title.length > 20);
+        allItems.push(...rEps);
+      } catch(e) {}
     }
-    renderNewsItems(articles, body);
+    
+    // Always add Ekot national headlines
+    try {
+      const eData = await fetchJSON(ekotUrl);
+      const eEps = (eData.episodes || []).filter(e => e.title && e.title.length > 10);
+      allItems.push(...eEps);
+    } catch(e) {}
+    
+    // Deduplicate and take top 6
+    const seen = new Set();
+    const unique = allItems.filter(e => {
+      const t = e.title || '';
+      if (seen.has(t)) return false;
+      seen.add(t);
+      // Skip generic titles like just "Ekot 12:30" or "Nyheter P4 Halland"
+      return t.length > 15 && !/^(Ekot \d|Nyheter P4)$/.test(t.trim());
+    }).slice(0, 6);
+    
+    if (unique.length === 0) {
+      // Fallback: show whatever we got
+      renderNewsItems(allItems.slice(0, 6), body);
+    } else {
+      renderNewsItems(unique, body);
+    }
   } catch (e) {
     body.innerHTML = '<div class="error-state">Kunde inte hämta nyheter: ' + e.message + '</div>';
   }
@@ -772,7 +840,9 @@ function renderNewsItems(articles, body) {
   body.innerHTML = articles.slice(0, 6).map((item, i) => {
     const title = item.title || '';
     const t = new Date(item.publicationdate || '');
-    const timeStr = isNaN(t) ? '' : t.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+    const dateMatch = (item.publishdateutc || '').match(/(\d+)/);
+    const ts = dateMatch ? new Date(parseInt(dateMatch[1])) : t;
+    const timeStr = !isNaN(ts) ? ts.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }) : '';
     return '<div class="news-item"><span class="news-num">' + (i+1) + '</span><span class="news-headline">' + title + '</span>' + (timeStr ? '<div class="news-meta">SR · ' + timeStr + '</div>' : '') + '</div>';
   }).join('');
 }
@@ -899,12 +969,16 @@ document.getElementById('clearSettingsBtn').onclick = () => {
   updateRouteDisplay();
   document.getElementById('resultsBody').innerHTML = '<div class="empty-state">Konfigurera stationer i inställningar (\u2699).</div>';
 };
+// Share link generator
+document.getElementById('shareLinkBtn').onclick = () => {
+  const el = document.getElementById('shareLink');
+  if (!config.apiKey) { el.textContent = 'Spara en API-nyckel först.'; return; }
+  let url = window.location.origin + window.location.pathname + '?t=sommar26';
+  if (lastStations.from) url += '&from=' + encodeURIComponent(lastStations.from.id + ':' + lastStations.from.name);
+  if (lastStations.to) url += '&to=' + encodeURIComponent(lastStations.to.id + ':' + lastStations.to.name);
+  navigator.clipboard.writeText(url).then(() => { el.textContent = 'Kopierad! ✓'; }).catch(() => { el.textContent = url; });
+};
 
-// ============ ROUTE DISPLAY ============
-function updateRouteDisplay() {
-  document.getElementById('routeFrom').textContent = lastStations.from ? lastStations.from.name : '\u2014';
-  document.getElementById('routeTo').textContent = lastStations.to ? lastStations.to.name : '\u2014';
-}
 
 // ============ INIT ============
 loadConfig();
