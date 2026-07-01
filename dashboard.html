@@ -401,7 +401,7 @@ body{
 <div class="kiosk-right">
 <div class="news-section">
   <span id="newsRegionLabel" style="display:none;"></span>
-  <div id="newsBody"><div class="empty-state">Hämtar nyheter...</div></div>
+  <div id="newsBody"><div class="empty-state">Nyheter visas baserat på vald från-station.</div></div>
 </div>
 
 <div class="weather-section">
@@ -919,6 +919,10 @@ async function fetchNews() {
     ).join('');
   } catch (e) {
     body.innerHTML = '<div class="error-state">Kunde inte h\u00e4mta nyheter: ' + e.message + '</div>';
+  }
+}
+  } catch (e) {
+    body.innerHTML = '<div class="error-state">Kunde inte hämta nyheter: ' + e.message + '</div>';
   }
 }
 
