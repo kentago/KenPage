@@ -1,0 +1,58 @@
+<!--
+  Modul: Väder
+  -------------
+  Visar 3-dagarsprognos (idag, imorgon, övermorgon) för vald "från"-station,
+  med fallback till Kungsbacka om ingen matchning hittas.
+
+  Beroenden från huvudskalet (dashboard.html) — måste finnas laddade FÖRE denna modul:
+    - stations                (globalt state-objekt)
+    - COORDS                  (stad -> {lat,lon}-uppslag, delas även med work info-modulen)
+    - coordsForStationName()  (hjälpfunktion för att matcha stationsnamn mot COORDS)
+
+  Publikt gränssnitt mot skalet: inget — modulen kör sig själv (initialt anrop + var 30:e minut).
+-->
+<div class="weather" id="weather"></div>
+
+<style>
+  .weather{display:flex;gap:20px;padding:14px 0;border-top:1px solid var(--border);margin-top:12px}
+  .weather-day{flex:1}
+  .weather-lbl{font:600 11px/1 'Oswald',sans-serif;letter-spacing:1px;text-transform:uppercase;color:var(--ice);margin-bottom:4px}
+  .weather-ico{font-size:24px;line-height:1}
+  .weather-tmp{font:600 20px/1 'Oswald',sans-serif;color:var(--text);margin-top:3px}
+  .weather-tmp .lo{color:var(--muted);font-size:14px;margin-left:3px}
+  .weather-dsc{font-size:11px;color:var(--muted);margin-top:2px}
+</style>
+
+<script>
+  const WMO = {
+    0: '☀️ Klart', 1: '🌤️ Mest klart', 2: '⛅ Växlande', 3: '☁️ Mulet', 45: '🌫️ Dimma',
+    51: '🌦️ Duggregn', 61: '🌧️ Regn', 63: '🌧️ Regn', 65: '🌧️ Kraftigt regn',
+    71: '🌨️ Snö', 73: '🌨️ Snö', 80: '🌦️ Skurar', 95: '⛈️ Åska'
+  };
+
+  async function weather() {
+    const c = coordsForStationName(stations.from?.name, COORDS.kungsbacka);
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Europe/Stockholm&forecast_days=3`;
+      const d = await (await fetch(url)).json();
+      const lbl = ['Idag', 'Imorgon', 'Övermorgon'];
+      document.getElementById('weather').innerHTML = d.daily.time.map((t, i) => {
+        const w = WMO[d.daily.weathercode[i]] || '❓ Okänt';
+        const [ico, dsc] = w.split(' ');
+        return `<div class="weather-day">
+          <div class="weather-lbl">${lbl[i]}</div>
+          <div class="weather-ico">${ico}</div>
+          <div class="weather-tmp">${Math.round(d.daily.temperature_2m_max[i])}°<span class="lo">${Math.round(d.daily.temperature_2m_min[i])}°</span></div>
+          <div class="weather-dsc">${dsc || ''}</div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      document.getElementById('weather').innerHTML = '<div class="empty">Väder ej tillgängligt</div>';
+    }
+  }
+
+  window.addEventListener('dashboard:refresh-weather', weather);
+
+  weather();
+  setInterval(weather, 1800000);
+</script>
