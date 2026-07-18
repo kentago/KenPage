@@ -1,0 +1,73 @@
+<!--
+  Modul: Work info
+  -----------------
+  Kollar om det väntas regn i Kungsbacka eller Göteborg under pendlingsfönstret
+  07–18, och visar paraply- eller sol-emoji beroende på utfallet.
+
+  Beroenden från huvudskalet (dashboard.html) — måste finnas laddade FÖRE denna modul:
+    - COORDS   (stad -> {lat,lon}-uppslag, delas med väder-modulen)
+
+  Publikt gränssnitt mot skalet: inget — modulen kör sig själv (initialt anrop + var 30:e minut).
+-->
+<div class="workinfo" id="workinfoWrap">
+  <div class="workinfo-title">Work info</div>
+  <div id="workinfoContent"><span class="empty">Hämtar...</span></div>
+</div>
+
+<style>
+  .workinfo{border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
+  .workinfo-title{font:600 11px/1 'Oswald',sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--ice);margin-bottom:10px}
+  .workinfo-row{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px 14px}
+  .workinfo-icon{font-size:26px;line-height:1}
+  .workinfo-text{font-size:13px;color:var(--text)}
+  .workinfo-sub{font-size:11px;color:var(--muted);margin-top:2px}
+</style>
+
+<script>
+  const RAIN_CODES = new Set([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99]);
+
+  async function checkTownRain(lat, lon) {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation_probability,precipitation,weathercode&timezone=Europe/Stockholm&forecast_days=1`;
+    const d = await (await fetch(url)).json();
+    const h = d.hourly;
+    let maxProb = 0;
+    let anyRainCode = false;
+    for (let i = 0; i < h.time.length; i++) {
+      const hour = parseInt(h.time[i].slice(11, 13), 10);
+      if (hour < 7 || hour > 18) continue;
+      const prob = h.precipitation_probability?.[i] ?? 0;
+      const precip = h.precipitation?.[i] ?? 0;
+      const code = h.weathercode?.[i];
+      if (prob > maxProb) maxProb = prob;
+      if (precip > 0.1 || RAIN_CODES.has(code)) anyRainCode = true;
+    }
+    return { rain: anyRainCode || maxProb >= 40, maxProb };
+  }
+
+  async function workInfo() {
+    const el = document.getElementById('workinfoContent');
+    try {
+      const [kungsbacka, goteborg] = await Promise.all([
+        checkTownRain(COORDS.kungsbacka.lat, COORDS.kungsbacka.lon),
+        checkTownRain(COORDS.göteborg.lat, COORDS.göteborg.lon)
+      ]);
+      const rain = kungsbacka.rain || goteborg.rain;
+      const icon = rain ? '☔' : '☀️';
+      const text = rain ? 'Regn väntas — ta med paraply' : 'Uppehåll väntas hela dagen';
+      el.innerHTML = `<div class="workinfo-row">
+        <span class="workinfo-icon">${icon}</span>
+        <div>
+          <div class="workinfo-text">${text}</div>
+          <div class="workinfo-sub">Kungsbacka & Göteborg · 07–18</div>
+        </div>
+      </div>`;
+    } catch (e) {
+      el.innerHTML = '<span class="empty">Work info ej tillgängligt</span>';
+    }
+  }
+
+  window.addEventListener('dashboard:refresh-workinfo', workInfo);
+
+  workInfo();
+  setInterval(workInfo, 1800000);
+</script>
