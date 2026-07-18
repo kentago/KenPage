@@ -1,17 +1,28 @@
 <!--
-  Modul: Väder
-  -------------
-  Visar 3-dagarsprognos (idag, imorgon, övermorgon) för vald "från"-station,
+  Modul: Väder + Work info
+  -------------------------
+  Väder: 3-dagarsprognos (idag, imorgon, övermorgon) för vald "från"-station,
   med fallback till Kungsbacka om ingen matchning hittas.
+
+  Work info: kollar om det väntas regn på samma ort under pendlingsfönstret
+  07–18, och visar paraply- eller en glad emoji beroende på utfallet. Följer
+  alltså samma ort som väderprognosen ovan — slås ihop till en fil eftersom
+  de logiskt hör ihop och delar samma platslogik.
 
   Beroenden från huvudskalet (dashboard.html) — måste finnas laddade FÖRE denna modul:
     - stations                (globalt state-objekt)
-    - COORDS                  (stad -> {lat,lon}-uppslag, delas även med work info-modulen)
+    - COORDS                  (stad -> {lat,lon}-uppslag)
     - coordsForStationName()  (hjälpfunktion för att matcha stationsnamn mot COORDS)
 
-  Publikt gränssnitt mot skalet: inget — modulen kör sig själv (initialt anrop + var 30:e minut).
+  Publikt gränssnitt mot skalet:
+    - Lyssnar på eventet "dashboard:refresh-weather" (uppdaterar BÅDA delarna)
+    - Kör weather() och workInfo() själv vid laddning + var 30:e minut
 -->
 <div class="weather" id="weather"></div>
+<div class="workinfo" id="workinfoWrap">
+  <div class="workinfo-title">Work info</div>
+  <div id="workinfoContent"><span class="empty">Hämtar...</span></div>
+</div>
 
 <style>
   .weather{display:flex;gap:20px;padding:14px 0;border-top:1px solid var(--border);margin-top:12px}
@@ -21,6 +32,13 @@
   .weather-tmp{font:600 20px/1 'Oswald',sans-serif;color:var(--text);margin-top:3px}
   .weather-tmp .lo{color:var(--muted);font-size:14px;margin-left:3px}
   .weather-dsc{font-size:11px;color:var(--muted);margin-top:2px}
+
+  .workinfo{border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
+  .workinfo-title{font:600 11px/1 'Oswald',sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--ice);margin-bottom:10px}
+  .workinfo-row{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px 14px}
+  .workinfo-icon{font-size:26px;line-height:1}
+  .workinfo-text{font-size:13px;color:var(--text)}
+  .workinfo-sub{font-size:11px;color:var(--muted);margin-top:2px}
 </style>
 
 <script>
@@ -51,8 +69,53 @@
     }
   }
 
-  window.addEventListener('dashboard:refresh-weather', weather);
+  // --- Work info: regnkoll för samma ort som väderprognosen, fönster 07–18 ---
+  const RAIN_CODES = new Set([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99]);
 
-  weather();
-  setInterval(weather, 1800000);
+  async function checkTownRain(lat, lon) {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation_probability,precipitation,weathercode&timezone=Europe/Stockholm&forecast_days=1`;
+    const d = await (await fetch(url)).json();
+    const h = d.hourly;
+    let maxProb = 0;
+    let anyRainCode = false;
+    for (let i = 0; i < h.time.length; i++) {
+      const hour = parseInt(h.time[i].slice(11, 13), 10);
+      if (hour < 7 || hour > 18) continue;
+      const prob = h.precipitation_probability?.[i] ?? 0;
+      const precip = h.precipitation?.[i] ?? 0;
+      const code = h.weathercode?.[i];
+      if (prob > maxProb) maxProb = prob;
+      if (precip > 0.1 || RAIN_CODES.has(code)) anyRainCode = true;
+    }
+    return { rain: anyRainCode || maxProb >= 40, maxProb };
+  }
+
+  async function workInfo() {
+    const el = document.getElementById('workinfoContent');
+    const c = coordsForStationName(stations.from?.name, COORDS.kungsbacka);
+    const placeName = stations.from?.name || 'Kungsbacka';
+    try {
+      const { rain } = await checkTownRain(c.lat, c.lon);
+      const icon = rain ? '☔' : '😊';
+      const text = rain ? 'Regn väntas — ta med paraply' : 'Fint väder väntas hela dagen';
+      el.innerHTML = `<div class="workinfo-row">
+        <span class="workinfo-icon">${icon}</span>
+        <div>
+          <div class="workinfo-text">${text}</div>
+          <div class="workinfo-sub">${placeName} · 07–18</div>
+        </div>
+      </div>`;
+    } catch (e) {
+      el.innerHTML = '<span class="empty">Work info ej tillgängligt</span>';
+    }
+  }
+
+  function refreshBoth() {
+    weather();
+    workInfo();
+  }
+  window.addEventListener('dashboard:refresh-weather', refreshBoth);
+
+  refreshBoth();
+  setInterval(refreshBoth, 1800000);
 </script>
