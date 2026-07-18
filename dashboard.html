@@ -221,12 +221,12 @@ let stations = { from: null, to: null };
 // Which dashboard sections can be toggled on/off, and where they live in the DOM.
 // checkboxId follows the pattern "tog" + Capitalized key (e.g. travel -> togTravel).
 const SECTION_TOGGLES = [
-  { key: 'travel',  elId: 'main',        checkboxId: 'togTravel' },
-  { key: 'news',    elId: 'news',        checkboxId: 'togNews' },
-  { key: 'weather', elId: 'weather',     checkboxId: 'togWeather' },
-  { key: 'bath',    elId: 'bathWrap',    checkboxId: 'togBath' },
-  { key: 'elpris',  elId: 'elprisWrap',  checkboxId: 'togElpris' },
-  { key: 'stocks',  elId: 'stocksWrap',  checkboxId: 'togStocks' }
+  { key: 'travel',  elId: 'main',                        checkboxId: 'togTravel' },
+  { key: 'news',    elId: 'news',                         checkboxId: 'togNews' },
+  { key: 'weather', elId: ['weather', 'workinfoWrap'],    checkboxId: 'togWeather' },
+  { key: 'bath',    elId: 'bathWrap',                     checkboxId: 'togBath' },
+  { key: 'elpris',  elId: 'elprisWrap',                   checkboxId: 'togElpris' },
+  { key: 'stocks',  elId: 'stocksWrap',                   checkboxId: 'togStocks' }
 ];
 
 function save() {
@@ -239,7 +239,11 @@ function saveS() {
 
 function applyToggles() {
   for (const { key, elId } of SECTION_TOGGLES) {
-    document.getElementById(elId).style.display = cfg.show[key] ? '' : 'none';
+    const ids = Array.isArray(elId) ? elId : [elId];
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = cfg.show[key] ? '' : 'none';
+    }
   }
 }
 
@@ -320,16 +324,45 @@ setInterval(tick, 1000);
 tick();
 
 // --- Nameday ---
+async function fetchJsonWithTimeout(url, timeoutMs = 6000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, { signal: controller.signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function nameday() {
   const n = new Date();
-  const url = `https://sholiday.faboul.se/dagar/v2.1/${n.getFullYear()}/${String(n.getMonth() + 1).padStart(2, '0')}/${String(n.getDate()).padStart(2, '0')}`;
+  const y = n.getFullYear();
+  const m = String(n.getMonth() + 1).padStart(2, '0');
+  const d = String(n.getDate()).padStart(2, '0');
+  const el = document.getElementById('nameday');
+
+  // Primärkälla: Svenska Dagar (Faboul AB)
   try {
-    const d = await api(url);
-    const names = d.dagar?.[0]?.namnsdag;
-    document.getElementById('nameday').textContent = names?.length ? 'Namnsdag: ' + names.join(' & ') : '';
-  } catch (e) {
-    document.getElementById('nameday').textContent = '';
-  }
+    const data = await fetchJsonWithTimeout(`https://sholiday.faboul.se/dagar/v2.1/${y}/${m}/${d}`);
+    const names = data.dagar?.[0]?.namnsdag;
+    if (names?.length) { el.textContent = 'Namnsdag: ' + names.join(' & '); return; }
+  } catch (e) { /* prova reservkällan nedan */ }
+
+  // Reservkälla: Workgroup.se:s namnsdags-API
+  try {
+    const data = await fetchJsonWithTimeout(`https://workgroup.se/api/namnsdag?datum=${y}-${m}-${d}`);
+    // Vi känner inte till exakt fältnamn i svaret, så vi provar några rimliga varianter
+    // och plattar ut till en enkel array av namn oavsett struktur.
+    const raw = data.namn || data.names || data.namnsdag || data.result || data.dagens || data;
+    const names = Array.isArray(raw)
+      ? raw.map(x => (typeof x === 'string' ? x : x?.namn || x?.name)).filter(Boolean)
+      : (typeof raw === 'string' ? raw.split(/,\s*/) : []);
+    if (names.length) { el.textContent = 'Namnsdag: ' + names.join(' & '); return; }
+  } catch (e) { /* båda källorna misslyckades */ }
+
+  el.textContent = '';
 }
 
 // --- Weather ---
@@ -641,6 +674,10 @@ async function loadModule(slot) {
       else newScript.textContent = oldScript.textContent;
       oldScript.replaceWith(newScript);
     });
+    // Modulens DOM-element finns nu — se till att visa/dölj-inställningen
+    // faktiskt appliceras på dem (annars hinner den tidigare applyToggles()-
+    // körningen i Init-sektionen inte påverka element som inte fanns än).
+    applyToggles();
   } catch (e) {
     slot.innerHTML = `<div class="empty">Kunde inte ladda modul: ${src}</div>`;
   }
