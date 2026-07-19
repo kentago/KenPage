@@ -53,6 +53,18 @@
     return 'SE4'; // default: Kungsbacka = SE4
   }
 
+  async function fetchWithTimeout(url, timeoutMs = 8000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const r = await fetch(url, { signal: controller.signal });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function elpris() {
     const el = document.getElementById('elprisContent');
     const zone = getElZone();
@@ -62,9 +74,7 @@
     const dateStr = now.getFullYear() + '/' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
 
     try {
-      const r = await fetch(`https://www.elprisetjustnu.se/api/v1/prices/${dateStr}_${zone}.json`);
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const data = await r.json();
+      const data = await fetchWithTimeout(`https://www.elprisetjustnu.se/api/v1/prices/${dateStr}_${zone}.json`);
       if (!data.length) { el.innerHTML = '<span class="empty">Inga priser</span>'; return; }
 
       const prices = data.map(d => d.SEK_per_kWh);

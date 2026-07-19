@@ -55,10 +55,12 @@
       .replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
   }
 
-  async function parseAtom(url, max) {
+  async function parseAtom(url, max, timeoutMs = 8000) {
     const items = [];
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const r = await fetch(url);
+      const r = await fetch(url, { signal: controller.signal });
       if (!r.ok) return items;
       const xml = new DOMParser().parseFromString(await r.text(), 'text/xml');
       for (const e of xml.querySelectorAll('entry')) {
@@ -72,7 +74,10 @@
         }
         if (items.length >= max) break;
       }
-    } catch (e) { /* feed unreachable — return what we have (possibly nothing) */ }
+    } catch (e) { /* feed unreachable eller timeout — return what we have (possibly nothing) */
+    } finally {
+      clearTimeout(timer);
+    }
     return items;
   }
 

@@ -35,6 +35,18 @@
   let bathCache = null;
   let bathFcCache = null;
 
+  async function fetchWithTimeout(url, timeoutMs = 8000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const r = await fetch(url, { signal: controller.signal });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function bathTemp() {
     const el = document.getElementById('bathItems');
     const c = cfg.bathLocation && COORDS[cfg.bathLocation]
@@ -44,18 +56,15 @@
     try {
       // Fetch all bathing waters + all forecasts (cached for the session)
       if (!bathCache) {
-        const allRes = await fetch(HAV_BASE + '/bathing-waters');
-        if (!allRes.ok) throw new Error('HTTP ' + allRes.status);
-        const allData = await allRes.json();
+        const allData = await fetchWithTimeout(HAV_BASE + '/bathing-waters');
         bathCache = allData.watersAndAdvisories || [];
       }
       if (!bathFcCache) {
-        const fcRes = await fetch(HAV_BASE + '/forecasts');
-        if (fcRes.ok) {
-          const fcData = await fcRes.json();
+        try {
+          const fcData = await fetchWithTimeout(HAV_BASE + '/forecasts');
           bathFcCache = {};
           for (const f of fcData.forecasts || []) bathFcCache[f.bathingWaterId] = f.waterForecasts || [];
-        } else {
+        } catch (e) {
           bathFcCache = {};
         }
       }
