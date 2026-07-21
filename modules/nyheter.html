@@ -55,7 +55,7 @@
       .replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
   }
 
-  async function parseAtom(url, max, timeoutMs = 8000) {
+  async function parseAtom(url, max, urlType = 'artikel', timeoutMs = 8000) {
     const items = [];
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -66,7 +66,7 @@
       for (const e of xml.querySelectorAll('entry')) {
         const title = (e.querySelector('title')?.textContent || '').trim();
         const slug = slugify(title);
-        const link = slug ? 'https://www.sverigesradio.se/artikel/' + slug : 'https://sverigesradio.se';
+        const link = slug ? `https://www.sverigesradio.se/${urlType}/${slug}` : 'https://sverigesradio.se';
         const pub = (e.querySelector('published') || e.getElementsByTagName('published')[0])?.textContent || '';
         if (title.length > 10) {
           const t = new Date(pub);
@@ -85,7 +85,7 @@
     const el = document.getElementById('news');
     const region = findRegion(stations.from?.name);
     let items = [];
-    if (region) items = await parseAtom('https://api.sr.se/api/rss/program/' + region.id, 2);
+    if (region) items = await parseAtom('https://api.sr.se/api/rss/program/' + region.id, 2, 'avsnitt');
     const nat = await parseAtom('https://api.sr.se/api/rss/program/4540', 4);
     items.push(...nat.map(n => ({ ...n, title: n.title.replace(/^Ekot \d{2}:\d{2}\s*/, '') })).filter(n => n.title.length > 5));
     items = items.slice(0, 6);
