@@ -1,0 +1,128 @@
+<!--
+  Modul: Valutakurser
+  --------------------
+  Visar växelkurs SEK -> valda valutor (Frankfurter API, ECB-baserad, gratis,
+  ingen nyckel). Standard är EUR och USD, men fler kan läggas till/tas bort i
+  inställningsmodalen, exakt som aktielistan.
+
+  Beroenden från huvudskalet (dashboard.html) — måste finnas laddade FÖRE denna modul:
+    - cfg   (globalt state-objekt, cfg.currencies är listan över valda valutakoder)
+
+  OBS: element som #currencyList, #inAddCurrency och #btnAddCurrency ligger
+  fysiskt i huvudskalets inställningsmodal (inte i denna moduls egen platsdel),
+  men det spelar ingen roll — DOM:en är sidövergripande.
+
+  Publikt gränssnitt mot skalet:
+    - Lyssnar på eventet "dashboard:refresh-currency"
+    - Kör currencyRates() själv vid laddning + var 60:e minut (ECB uppdaterar
+      bara en gång per dygn, så tätare uppdatering är onödigt)
+    - pendingCurrencies och renderCurrencyList() nås som vanliga globala
+      funktioner/variabler av openSettings()/saveSettings() i skalet.
+-->
+<div class="currency" id="currencyWrap">
+  <div class="currency-title">💱 Valutakurser</div>
+  <div id="currencyContent"><span class="empty">Hämtar...</span></div>
+</div>
+
+<style>
+  .currency{border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
+  .currency-title{font:600 11px/1 'Oswald',sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--ice);margin-bottom:10px}
+  .currency-items{display:flex;gap:12px;flex-wrap:wrap}
+  .currency-item{flex:1;min-width:110px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center}
+  .currency-pair{font:500 12px/1.2 'Oswald',sans-serif;color:var(--muted);margin-bottom:4px}
+  .currency-val{font:700 20px/1 'Oswald',sans-serif;color:var(--amber)}
+  .currency-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px}
+  .currency-row .rm{color:var(--bad);cursor:pointer;font-size:14px;line-height:1;padding:0 4px}
+</style>
+
+<script>
+  // Top 10 valutor som brukar vara relevanta att kunna välja mellan.
+  const CURRENCY_OPTIONS = [
+    { code: 'EUR', label: 'Euro' },
+    { code: 'USD', label: 'US-dollar' },
+    { code: 'GBP', label: 'Brittiskt pund' },
+    { code: 'NOK', label: 'Norsk krona' },
+    { code: 'DKK', label: 'Dansk krona' },
+    { code: 'JPY', label: 'Japansk yen' },
+    { code: 'CHF', label: 'Schweizisk franc' },
+    { code: 'CNY', label: 'Kinesisk yuan' },
+    { code: 'CAD', label: 'Kanadensisk dollar' },
+    { code: 'AUD', label: 'Australisk dollar' }
+  ];
+  const MAX_CURRENCIES = 8;
+
+  function currencyLabel(code) {
+    return (CURRENCY_OPTIONS.find(o => o.code === code) || {}).label || code;
+  }
+
+  async function fetchCurrencyWithTimeout(url, timeoutMs = 8000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const r = await fetch(url, { signal: controller.signal });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function currencyRates() {
+    const el = document.getElementById('currencyContent');
+    if (!cfg.currencies.length) {
+      el.innerHTML = '<span class="empty">Inga valutor valda.</span>';
+      return;
+    }
+    try {
+      const symbols = cfg.currencies.join(',');
+      const data = await fetchCurrencyWithTimeout(`https://api.frankfurter.dev/v1/latest?base=SEK&symbols=${symbols}`);
+      const rates = data.rates || {};
+      el.innerHTML = `<div class="currency-items">` + cfg.currencies.map(code => {
+        const rate = rates[code];
+        return `<div class="currency-item">
+          <div class="currency-pair">SEK → ${code}</div>
+          <div class="currency-val">${rate !== undefined ? rate.toFixed(4) : '—'}</div>
+        </div>`;
+      }).join('') + `</div>`;
+    } catch (e) {
+      el.innerHTML = '<span class="empty">Kunde ej hämta valutakurser</span>';
+    }
+  }
+
+  // Valutor under redigering i inställningsmodalen, skrivs till cfg.currencies först vid Spara.
+  let pendingCurrencies = [];
+
+  function renderCurrencyList() {
+    const listEl = document.getElementById('currencyList');
+    if (!listEl) return;
+    listEl.innerHTML = pendingCurrencies.map((code, i) =>
+      `<div class="currency-row"><span>SEK → ${code} (${currencyLabel(code)})</span><span class="rm" data-i="${i}">✕</span></div>`
+    ).join('') || '<div class="hint">Inga valutor valda.</div>';
+
+    listEl.querySelectorAll('.rm').forEach(rm => rm.onclick = () => {
+      pendingCurrencies.splice(parseInt(rm.dataset.i), 1);
+      renderCurrencyList();
+    });
+
+    const addSel = document.getElementById('inAddCurrency');
+    const available = CURRENCY_OPTIONS.filter(o => !pendingCurrencies.includes(o.code));
+    addSel.innerHTML = '<option value="">— välj valuta att lägga till —</option>' +
+      available.map(o => `<option value="${o.code}">${o.code} — ${o.label}</option>`).join('');
+  }
+
+  const btnAddCurrency = document.getElementById('btnAddCurrency');
+  if (btnAddCurrency) {
+    btnAddCurrency.onclick = () => {
+      const v = document.getElementById('inAddCurrency').value;
+      if (v && pendingCurrencies.length < MAX_CURRENCIES && !pendingCurrencies.includes(v)) {
+        pendingCurrencies.push(v);
+        renderCurrencyList();
+      }
+    };
+  }
+
+  window.addEventListener('dashboard:refresh-currency', currencyRates);
+
+  currencyRates();
+  setInterval(currencyRates, 3600000);
+</script>
