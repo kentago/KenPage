@@ -131,6 +131,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     <div class="module-slot" data-module="modules/badtemperatur.html"></div>
     <div class="module-slot" data-module="modules/elpris.html"></div>
     <div class="module-slot" data-module="modules/aktier.html"></div>
+    <div class="module-slot" data-module="modules/valuta.html"></div>
   </div>
 </div>
 
@@ -195,6 +196,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <select id="inAddStock" style="flex:1;"></select>
       <button type="button" id="btnAddStock" class="btn" style="width:auto;padding:0 12px;border-radius:6px;">+ Lägg till</button>
     </div>
+    <label>Valutor i listan (max 8)</label>
+    <div id="currencyList" style="display:flex;flex-direction:column;gap:4px;"></div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <select id="inAddCurrency" style="flex:1;"></select>
+      <button type="button" id="btnAddCurrency" class="btn" style="width:auto;padding:0 12px;border-radius:6px;">+ Lägg till</button>
+    </div>
     <div class="actions">
       <button class="secondary" id="btnClear">Rensa</button>
       <button class="primary" id="btnSave">Spara</button>
@@ -212,7 +219,8 @@ let cfg = {
   bathLocation: '',
   elZone: '',
   stocks: ['OMXSTO:OMXS30', 'OMXSTO:VOLV_B', 'OMXSTO:ERIC_B', 'OMXSTO:HM_B', 'OMXSTO:ABB', 'OMXSTO:SEB_A'],
-  show: { travel: true, news: true, weather: true, bath: true, elpris: true, stocks: true }
+  currencies: ['EUR', 'USD'],
+  show: { travel: true, news: true, weather: true, bath: true, elpris: true, stocks: true, currency: true }
 };
 let stations = { from: null, to: null };
 
@@ -226,7 +234,8 @@ const SECTION_TOGGLES = [
   { key: 'weather', elId: ['weather', 'workinfoWrap'],    checkboxId: 'togWeather' },
   { key: 'bath',    elId: 'bathWrap',                     checkboxId: 'togBath' },
   { key: 'elpris',  elId: 'elprisWrap',                   checkboxId: 'togElpris' },
-  { key: 'stocks',  elId: 'stocksWrap',                   checkboxId: 'togStocks' }
+  { key: 'stocks',  elId: 'stocksWrap',                   checkboxId: 'togStocks' },
+  { key: 'currency', elId: 'currencyWrap',                checkboxId: 'togCurrency' }
 ];
 
 function save() {
@@ -255,6 +264,7 @@ function load() {
       cfg.bathLocation = raw.bathLocation || '';
       cfg.elZone = raw.elZone || '';
       if (Array.isArray(raw.stocks) && raw.stocks.length) cfg.stocks = raw.stocks;
+      if (Array.isArray(raw.currencies) && raw.currencies.length) cfg.currencies = raw.currencies;
       cfg.show = {};
       for (const { key } of SECTION_TOGGLES) {
         cfg.show[key] = raw.show?.[key] !== false;
@@ -558,6 +568,8 @@ function openSettings() {
 
   pendingStocks = [...cfg.stocks];
   renderStocksList();
+  pendingCurrencies = [...cfg.currencies];
+  renderCurrencyList();
 }
 
 function saveSettings() {
@@ -565,6 +577,7 @@ function saveSettings() {
   cfg.bathLocation = document.getElementById('inBathLoc').value;
   cfg.elZone = document.getElementById('inElZone').value;
   if (pendingStocks.length) cfg.stocks = [...pendingStocks];
+  if (pendingCurrencies.length) cfg.currencies = [...pendingCurrencies];
 
   const show = {};
   for (const { key, checkboxId } of SECTION_TOGGLES) {
@@ -590,6 +603,7 @@ function clearSettings() {
   cfg = {
     apiKey: '', bathLocation: '', elZone: '',
     stocks: ['OMXSTO:OMXS30', 'OMXSTO:VOLV_B', 'OMXSTO:ERIC_B', 'OMXSTO:HM_B', 'OMXSTO:ABB', 'OMXSTO:SEB_A'],
+    currencies: ['EUR', 'USD'],
     show: cfg.show
   };
   stations = { from: null, to: null };
