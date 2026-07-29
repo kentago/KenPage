@@ -1,0 +1,40 @@
+<!--
+  Modul: Snabbsökning
+  --------------------
+  Sökruta för snabba faktafrågor ("Sveriges huvudstad", "kungen i Norge").
+  Försöker först ge ett direkt svar via svenska Wikipedia (gratis, ingen
+  nyckel, bra på just den typen av entitetsfrågor). Visar alltid en
+  Google-länk som reserv/komplement, öppnas i ny flik.
+
+  Inga beroenden från huvudskalet — helt fristående modul.
+
+  Publikt gränssnitt mot skalet: inget särskilt, styrs via visa/dölj-kryssrutan
+  precis som övriga sektioner (elId "sokWrap" i SECTION_TOGGLES).
+-->
+<div class="sok" id="sokWrap">
+  <div class="sok-title">🔍 Snabbsökning</div>
+  <div class="sok-inputrow">
+    <input type="text" id="sokInput" placeholder="t.ex. Sveriges huvudstad, kungen i Norge...">
+    <button type="button" id="sokBtn">Sök</button>
+  </div>
+  <div id="sokResult"></div>
+</div>
+
+<style>
+  .sok{border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
+  .sok-title{font:600 11px/1 'Oswald',sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--ice);margin-bottom:10px}
+  .sok-inputrow{display:flex;gap:6px}
+  .sok-inputrow input{flex:1;padding:9px 11px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font:14px 'JetBrains Mono',monospace}
+  .sok-inputrow input:focus{outline:none;border-color:var(--amber)}
+  .sok-inputrow button{font:600 13px/1 'Oswald',sans-serif;padding:0 16px;border-radius:6px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1px;background:var(--amber);color:#1a1306}
+  #sokResult{margin-top:10px}
+  .sok-card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;gap:12px}
+  .sok-thumb{width:56px;height:56px;border-radius:6px;object-fit:cover;flex-shrink:0}
+  .sok-card-title{font:600 14px/1.2 'Oswald',sans-serif;color:var(--text);margin-bottom:4px}
+  .sok-card-extract{font-size:12px;line-height:1.4;color:var(--muted)}
+  .sok-card-link{font-size:11px;color:var(--ice);text-decoration:none;display:inline-block;margin-top:6px}
+  .sok-google{font-size:12px;color:var(--muted);margin-top:8px;display:inline-block}
+  .sok-google a{color:var(--ice);text-decoration:none}
+</style>
+
+<script src="scripts/sok.js"></script>
