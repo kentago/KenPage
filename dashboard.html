@@ -32,6 +32,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 .btn-primary{background:var(--amber);color:#1a1306;border:none;border-radius:6px;width:auto;padding:8px 16px;text-transform:uppercase;letter-spacing:1px}
 
 .grid{display:grid;grid-template-columns:1.4fr 1fr;height:calc(100vh - 75px);gap:1px;background:var(--border)}
+.grid.cols-3{grid-template-columns:1.2fr 1fr 1fr}
 .col{background:var(--bg);overflow-y:auto;padding:20px 28px}
 
 .trip{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:10px}
@@ -110,7 +111,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
   </div>
 </div>
 
-<div class="grid">
+<div class="grid" id="grid">
   <div class="col" id="main">
     <div class="controls" id="controls">
       <div class="mode-toggle">
@@ -124,15 +125,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <button class="btn btn-primary" id="refresh">Uppdatera</button>
     </div>
     <div id="tripResults"><div class="empty">Konfigurera stationer i ⚙</div></div>
+    <div id="col1Modules"></div>
   </div>
-  <div class="col">
-    <div class="module-slot" data-module="modules/nyheter.html"></div>
-    <div class="module-slot" data-module="modules/vader.html"></div>
-    <div class="module-slot" data-module="modules/badtemperatur.html"></div>
-    <div class="module-slot" data-module="modules/elpris.html"></div>
-    <div class="module-slot" data-module="modules/aktier.html"></div>
-    <div class="module-slot" data-module="modules/valuta.html"></div>
-  </div>
+  <div class="col" id="col2"></div>
+  <div class="col" id="col3" style="display:none"></div>
 </div>
 
 <div class="modal-bg" id="modalBg">
@@ -159,7 +155,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togElpris" checked style="accent-color:var(--amber)"> Elpris</label>
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togStocks" checked style="accent-color:var(--amber)"> Aktier</label>
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togCurrency" checked style="accent-color:var(--amber)"> Valutor</label>
+      <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togSok" checked style="accent-color:var(--amber)"> Snabbsökning</label>
     </div>
+    <label>Antal kolumner</label>
+    <select id="inColumnCount">
+      <option value="2">2 kolumner</option>
+      <option value="3">3 kolumner</option>
+    </select>
+    <label>Modulplacering</label>
+    <div id="moduleColumnList" style="display:flex;flex-direction:column;gap:6px;"></div>
+    <div class="hint">Kolumn 1 lägger modulen direkt under reseplaneraren. Kolumn 3 syns bara om du valt 3 kolumner ovan (annars visas modulen i kolumn 2 istället).</div>
     <label>Badtemperatur — plats</label>
     <select id="inBathLoc">
       <option value="">Auto (närmast från-station)</option>
@@ -215,13 +220,27 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 const STORE = 'sjokrans-cfg';
 const STORE_S = 'sjokrans-stations';
 
+// Register över alla flyttbara moduler (reseplaneraren är alltid fast i kolumn 1).
+// Nyckeln används i cfg.moduleColumns för att komma ihåg vilken kolumn varje modul ligger i.
+const MODULE_REGISTRY = [
+  { key: 'nyheter',       path: 'modules/nyheter.html',       label: 'Nyheter' },
+  { key: 'vader',         path: 'modules/vader.html',         label: 'Väder + Work info' },
+  { key: 'badtemperatur', path: 'modules/badtemperatur.html', label: 'Badtemperatur' },
+  { key: 'elpris',        path: 'modules/elpris.html',        label: 'Elpris' },
+  { key: 'aktier',        path: 'modules/aktier.html',        label: 'Aktier' },
+  { key: 'valuta',        path: 'modules/valuta.html',        label: 'Valutor' },
+  { key: 'sok',           path: 'modules/sok.html',           label: 'Snabbsökning' }
+];
+
 let cfg = {
   apiKey: '',
   bathLocation: '',
   elZone: '',
   stocks: ['OMXSTO:OMXS30', 'OMXSTO:VOLV_B', 'OMXSTO:ERIC_B', 'OMXSTO:HM_B', 'OMXSTO:ABB', 'OMXSTO:SEB_A'],
   currencies: ['EUR', 'USD'],
-  show: { travel: true, news: true, weather: true, bath: true, elpris: true, stocks: true, currency: true }
+  columnCount: 2,
+  moduleColumns: { nyheter: 2, vader: 2, badtemperatur: 2, elpris: 2, aktier: 2, valuta: 2, sok: 2 },
+  show: { travel: true, news: true, weather: true, bath: true, elpris: true, stocks: true, currency: true, search: true }
 };
 let stations = { from: null, to: null };
 
@@ -236,7 +255,8 @@ const SECTION_TOGGLES = [
   { key: 'bath',    elId: 'bathWrap',                     checkboxId: 'togBath' },
   { key: 'elpris',  elId: 'elprisWrap',                   checkboxId: 'togElpris' },
   { key: 'stocks',  elId: 'stocksWrap',                   checkboxId: 'togStocks' },
-  { key: 'currency', elId: 'currencyWrap',                checkboxId: 'togCurrency' }
+  { key: 'currency', elId: 'currencyWrap',                checkboxId: 'togCurrency' },
+  { key: 'search',  elId: 'sokWrap',                       checkboxId: 'togSok' }
 ];
 
 function save() {
@@ -266,6 +286,14 @@ function load() {
       cfg.elZone = raw.elZone || '';
       if (Array.isArray(raw.stocks) && raw.stocks.length) cfg.stocks = raw.stocks;
       if (Array.isArray(raw.currencies) && raw.currencies.length) cfg.currencies = raw.currencies;
+      if (raw.columnCount === 2 || raw.columnCount === 3) cfg.columnCount = raw.columnCount;
+      if (raw.moduleColumns) {
+        for (const { key } of MODULE_REGISTRY) {
+          if ([1, 2, 3].includes(raw.moduleColumns[key])) {
+            cfg.moduleColumns[key] = raw.moduleColumns[key];
+          }
+        }
+      }
       cfg.show = {};
       for (const { key } of SECTION_TOGGLES) {
         cfg.show[key] = raw.show?.[key] !== false;
@@ -553,6 +581,27 @@ function setupAC(inputId, sugId, selId, key) {
 // --- Settings modal ---
 const modal = document.getElementById('modalBg');
 
+// Modulplacering under redigering i inställningsmodalen, skrivs till cfg
+// först vid Spara — samma mönster som aktielistan.
+let pendingModuleColumns = {};
+
+function renderModuleColumnList() {
+  const listEl = document.getElementById('moduleColumnList');
+  listEl.innerHTML = MODULE_REGISTRY.map(({ key, label }) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <span style="font-size:12px;color:var(--text);">${label}</span>
+      <select data-module-key="${key}" style="width:auto;padding:5px 8px;">
+        <option value="1" ${pendingModuleColumns[key] === 1 ? 'selected' : ''}>Kolumn 1 (under resor)</option>
+        <option value="2" ${pendingModuleColumns[key] === 2 ? 'selected' : ''}>Kolumn 2</option>
+        <option value="3" ${pendingModuleColumns[key] === 3 ? 'selected' : ''}>Kolumn 3</option>
+      </select>
+    </div>`).join('');
+
+  listEl.querySelectorAll('select[data-module-key]').forEach(sel => sel.onchange = () => {
+    pendingModuleColumns[sel.dataset.moduleKey] = parseInt(sel.value);
+  });
+}
+
 function openSettings() {
   modal.classList.add('open');
   document.getElementById('inKey').value = cfg.apiKey;
@@ -562,6 +611,7 @@ function openSettings() {
   document.getElementById('selTo').textContent = stations.to ? '✓ ' + stations.to.name : '';
   document.getElementById('inBathLoc').value = cfg.bathLocation || '';
   document.getElementById('inElZone').value = cfg.elZone || '';
+  document.getElementById('inColumnCount').value = String(cfg.columnCount);
 
   for (const { key, checkboxId } of SECTION_TOGGLES) {
     document.getElementById(checkboxId).checked = cfg.show[key];
@@ -571,12 +621,16 @@ function openSettings() {
   renderStocksList();
   pendingCurrencies = [...cfg.currencies];
   renderCurrencyList();
+  pendingModuleColumns = { ...cfg.moduleColumns };
+  renderModuleColumnList();
 }
 
 function saveSettings() {
   cfg.apiKey = document.getElementById('inKey').value.trim();
   cfg.bathLocation = document.getElementById('inBathLoc').value;
   cfg.elZone = document.getElementById('inElZone').value;
+  cfg.columnCount = parseInt(document.getElementById('inColumnCount').value);
+  cfg.moduleColumns = { ...pendingModuleColumns };
   if (pendingStocks.length) cfg.stocks = [...pendingStocks];
   if (pendingCurrencies.length) cfg.currencies = [...pendingCurrencies];
 
@@ -593,11 +647,11 @@ function saveSettings() {
   modal.classList.remove('open');
 
   refresh();
-  window.dispatchEvent(new CustomEvent('dashboard:refresh-news'));
-  window.dispatchEvent(new CustomEvent('dashboard:refresh-weather'));
-  window.dispatchEvent(new CustomEvent('dashboard:refresh-bath'));
-  window.dispatchEvent(new CustomEvent('dashboard:refresh-elpris'));
-  renderStocksWidget();
+  // renderModuleColumns() bygger om kolumn 2/3 och laddar (om) varje modul från
+  // grunden — det uppdaterar automatiskt allt innehåll (nyheter, väder, badtemp,
+  // elpris, aktier, valutor) åt oss, så vi behöver inte längre skicka enskilda
+  // dashboard:refresh-*-event eller anropa renderStocksWidget() manuellt här.
+  renderModuleColumns();
 }
 
 function clearSettings() {
@@ -605,6 +659,8 @@ function clearSettings() {
     apiKey: '', bathLocation: '', elZone: '',
     stocks: ['OMXSTO:OMXS30', 'OMXSTO:VOLV_B', 'OMXSTO:ERIC_B', 'OMXSTO:HM_B', 'OMXSTO:ABB', 'OMXSTO:SEB_A'],
     currencies: ['EUR', 'USD'],
+    columnCount: 2,
+    moduleColumns: { nyheter: 2, vader: 2, badtemperatur: 2, elpris: 2, aktier: 2, valuta: 2, sok: 2 },
     show: cfg.show
   };
   stations = { from: null, to: null };
@@ -612,11 +668,7 @@ function clearSettings() {
   localStorage.removeItem(STORE_S);
   updateRoute();
   document.getElementById('tripResults').innerHTML = '<div class="empty">Konfigurera i ⚙</div>';
-  window.dispatchEvent(new CustomEvent('dashboard:refresh-news'));
-  window.dispatchEvent(new CustomEvent('dashboard:refresh-weather'));
-  window.dispatchEvent(new CustomEvent('dashboard:refresh-bath'));
-  window.dispatchEvent(new CustomEvent('dashboard:refresh-elpris'));
-  renderStocksWidget();
+  renderModuleColumns();
 }
 
 function shareLink() {
@@ -697,10 +749,40 @@ async function loadModule(slot) {
     slot.innerHTML = `<div class="empty">Kunde inte ladda modul: ${src}</div>`;
   }
 }
-document.querySelectorAll('[data-module]').forEach(loadModule);
+// Bygger om kolumn 1 (under reseplaneraren), kolumn 2 och kolumn 3 utifrån
+// cfg.columnCount och cfg.moduleColumns, och laddar (om) varje moduls
+// innehåll i sin tilldelade kolumn.
+function renderModuleColumns() {
+  const grid = document.getElementById('grid');
+  const col1 = document.getElementById('col1Modules');
+  const col2 = document.getElementById('col2');
+  const col3 = document.getElementById('col3');
+
+  grid.classList.toggle('cols-3', cfg.columnCount === 3);
+  col3.style.display = cfg.columnCount === 3 ? '' : 'none';
+
+  col1.innerHTML = '';
+  col2.innerHTML = '';
+  col3.innerHTML = '';
+
+  for (const { key, path } of MODULE_REGISTRY) {
+    // Om en modul råkar vara tilldelad kolumn 3 men vi bara visar 2 kolumner,
+    // faller den tillbaka till kolumn 2 så den inte försvinner ur sikte.
+    let assigned = cfg.moduleColumns[key] || 2;
+    if (assigned === 3 && cfg.columnCount !== 3) assigned = 2;
+    const target = assigned === 1 ? col1 : assigned === 3 ? col3 : col2;
+
+    const slot = document.createElement('div');
+    slot.className = 'module-slot';
+    slot.dataset.module = path;
+    target.appendChild(slot);
+    loadModule(slot);
+  }
+}
 
 // --- Init ---
 load();
+renderModuleColumns();
 setupAC('inFrom', 'sugFrom', 'selFrom', 'from');
 setupAC('inTo', 'sugTo', 'selTo', 'to');
 updateRoute();
