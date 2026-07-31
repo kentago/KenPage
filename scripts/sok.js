@@ -21,17 +21,31 @@ async function fetchSokTimeout(url, timeoutMs = 6000) {
     resEl.innerHTML = '<span class="empty">Söker...</span>';
 
     try {
-      // Steg 1: hitta bästa matchande Wikipedia-artikel för sökfrasen
-      const searchUrl = `https://sv.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(q)}&limit=1&namespace=0&format=json&origin=*`;
-      const searchData = await fetchSokTimeout(searchUrl);
-      const title = searchData?.[1]?.[0];
+      // Steg 1: försök hitta en exakt artikelrubrik/omdirigering (snabbt, precist,
+      // men fungerar bara om frasen faktiskt är eller omdirigerar till en titel —
+      // t.ex. "Sveriges huvudstad" har en sådan omdirigering, men de flesta
+      // beskrivande frågor har det inte).
+      const openSearchUrl = `https://sv.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(q)}&limit=1&namespace=0&format=json&origin=*`;
+      const openSearchData = await fetchSokTimeout(openSearchUrl);
+      let title = openSearchData?.[1]?.[0];
+
+      // Steg 2: om det inte gav träff, prova en riktig fulltextsökning istället —
+      // den matchar mot artikelinnehåll, inte bara rubriker, och hittar därför
+      // betydligt oftare rätt artikel för beskrivande frågor som
+      // "Kanadas huvudstad" (ingen egen rubrik, men texten finns i Kanada- eller
+      // Ottawa-artikeln).
+      if (!title) {
+        const fullTextUrl = `https://sv.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=1&format=json&origin=*`;
+        const fullTextData = await fetchSokTimeout(fullTextUrl);
+        title = fullTextData?.query?.search?.[0]?.title;
+      }
 
       if (!title) {
         resEl.innerHTML = `<span class="empty">Inget snabbsvar hittades.</span>` + googleLink(q);
         return;
       }
 
-      // Steg 2: hämta en kort sammanfattning av artikeln
+      // Steg 3: hämta en kort sammanfattning av artikeln
       const summaryUrl = `https://sv.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
       const summary = await fetchSokTimeout(summaryUrl);
       const extract = summary.extract || '';
