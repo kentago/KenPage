@@ -1,0 +1,35 @@
+<!--
+  Modul: Sol & Måne
+  ------------------
+  Sol upp/ner: samma Open-Meteo-anrop som väder-modulen gör (bara med
+  sunrise/sunset tillagt i daily-parametern), för samma ort som "från"-
+  stationen pekar på (fallback Kungsbacka).
+
+  Månfas: beräknas helt lokalt utifrån dagens datum — inget API-anrop alls,
+  eftersom månens cykel är matematiskt förutsägbar.
+
+  Beroenden från huvudskalet (dashboard.html) — måste finnas laddade FÖRE denna modul:
+    - stations                (globalt state-objekt)
+    - COORDS                  (stad -> {lat,lon}-uppslag)
+    - coordsForStationName()  (hjälpfunktion för att matcha stationsnamn mot COORDS)
+
+  Publikt gränssnitt mot skalet:
+    - Lyssnar på eventet "dashboard:refresh-weather" (samma station-beroende som väder)
+    - Kör solMane() själv vid laddning + var 30:e minut
+-->
+<div class="solmane" id="solmaneWrap">
+  <div class="solmane-title">🌞 Sol & Måne</div>
+  <div id="solmaneContent"><span class="empty">Hämtar...</span></div>
+</div>
+
+<style>
+  .solmane{border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
+  .solmane-title{font:600 11px/1 'Oswald',sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--ice);margin-bottom:10px}
+  .solmane-row{display:flex;gap:12px}
+  .solmane-card{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center}
+  .solmane-icon{font-size:24px;line-height:1;margin-bottom:4px}
+  .solmane-label{font:500 11px/1.2 'Oswald',sans-serif;color:var(--muted);margin-bottom:2px}
+  .solmane-val{font:600 15px/1.2 'Oswald',sans-serif;color:var(--text)}
+</style>
+
+<script src="scripts/solmane.js"></script>
