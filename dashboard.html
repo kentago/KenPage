@@ -151,6 +151,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togTravel" checked style="accent-color:var(--amber)"> Resor</label>
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togNews" checked style="accent-color:var(--amber)"> Nyheter</label>
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togWeather" checked style="accent-color:var(--amber)"> Väder</label>
+      <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togSolmane" checked style="accent-color:var(--amber)"> Sol & Måne</label>
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togBath" checked style="accent-color:var(--amber)"> Badtemp</label>
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togElpris" checked style="accent-color:var(--amber)"> Elpris</label>
       <label style="margin:0;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="togStocks" checked style="accent-color:var(--amber)"> Aktier</label>
@@ -225,6 +226,7 @@ const STORE_S = 'sjokrans-stations';
 const MODULE_REGISTRY = [
   { key: 'nyheter',       path: 'modules/nyheter.html',       label: 'Nyheter' },
   { key: 'vader',         path: 'modules/vader.html',         label: 'Väder + Work info' },
+  { key: 'solmane',       path: 'modules/solmane.html',       label: 'Sol & Måne' },
   { key: 'badtemperatur', path: 'modules/badtemperatur.html', label: 'Badtemperatur' },
   { key: 'elpris',        path: 'modules/elpris.html',        label: 'Elpris' },
   { key: 'aktier',        path: 'modules/aktier.html',        label: 'Aktier' },
@@ -239,8 +241,8 @@ let cfg = {
   stocks: ['OMXSTO:OMXS30', 'OMXSTO:VOLV_B', 'OMXSTO:ERIC_B', 'OMXSTO:HM_B', 'OMXSTO:ABB', 'OMXSTO:SEB_A'],
   currencies: ['EUR', 'USD'],
   columnCount: 2,
-  moduleColumns: { nyheter: 2, vader: 2, badtemperatur: 2, elpris: 2, aktier: 2, valuta: 2, sok: 2 },
-  show: { travel: true, news: true, weather: true, bath: true, elpris: true, stocks: true, currency: true, search: true }
+  moduleColumns: { nyheter: 2, vader: 2, solmane: 2, badtemperatur: 2, elpris: 2, aktier: 2, valuta: 2, sok: 2 },
+  show: { travel: true, news: true, weather: true, solmane: true, bath: true, elpris: true, stocks: true, currency: true, search: true }
 };
 let stations = { from: null, to: null };
 
@@ -252,6 +254,7 @@ const SECTION_TOGGLES = [
   { key: 'travel',  elId: 'main',                        checkboxId: 'togTravel' },
   { key: 'news',    elId: 'news',                         checkboxId: 'togNews' },
   { key: 'weather', elId: ['weather', 'workinfoWrap'],    checkboxId: 'togWeather' },
+  { key: 'solmane', elId: 'solmaneWrap',                  checkboxId: 'togSolmane' },
   { key: 'bath',    elId: 'bathWrap',                     checkboxId: 'togBath' },
   { key: 'elpris',  elId: 'elprisWrap',                   checkboxId: 'togElpris' },
   { key: 'stocks',  elId: 'stocksWrap',                   checkboxId: 'togStocks' },
@@ -660,7 +663,7 @@ function clearSettings() {
     stocks: ['OMXSTO:OMXS30', 'OMXSTO:VOLV_B', 'OMXSTO:ERIC_B', 'OMXSTO:HM_B', 'OMXSTO:ABB', 'OMXSTO:SEB_A'],
     currencies: ['EUR', 'USD'],
     columnCount: 2,
-    moduleColumns: { nyheter: 2, vader: 2, badtemperatur: 2, elpris: 2, aktier: 2, valuta: 2, sok: 2 },
+    moduleColumns: { nyheter: 2, vader: 2, solmane: 2, badtemperatur: 2, elpris: 2, aktier: 2, valuta: 2, sok: 2 },
     show: cfg.show
   };
   stations = { from: null, to: null };
