@@ -11,7 +11,9 @@
     - Lyssnar på eventet "dashboard:refresh-news" (dispatchas t.ex. när station bytts)
     - Kör news() själv vid laddning + var 15:e minut
 -->
-<div id="news"><div class="empty">Hämtar nyheter...</div></div>
+<div id="newsWrap">
+  <div id="news"><div class="empty">Hämtar nyheter...</div></div>
+</div>
 
 <style>
   .news-item{display:block;text-decoration:none;padding:8px;margin:0 -8px;border-radius:4px;border-bottom:1px solid var(--border);transition:background .15s}

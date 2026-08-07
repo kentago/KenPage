@@ -18,10 +18,12 @@
     - Lyssnar på eventet "dashboard:refresh-weather" (uppdaterar BÅDA delarna)
     - Kör weather() och workInfo() själv vid laddning + var 30:e minut
 -->
-<div class="weather" id="weather"></div>
-<div class="workinfo" id="workinfoWrap">
-  <div class="workinfo-title">Work info</div>
-  <div id="workinfoContent"><span class="empty">Hämtar...</span></div>
+<div id="vaderWrap">
+  <div class="weather" id="weather"></div>
+  <div class="workinfo" id="workinfoWrap">
+    <div class="workinfo-title">Work info</div>
+    <div id="workinfoContent"><span class="empty">Hämtar...</span></div>
+  </div>
 </div>
 
 <style>
