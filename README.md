@@ -26,6 +26,7 @@ dashboard.html          ← "skalet": layout, delat state, inställningar, modul
 modules/
   nyheter.html           ← markup + <style> + <script src="scripts/nyheter.js">
   vader.html             ← väder + "work info" (regnkoll), samma fil/modul
+  solmane.html           ← sol upp/ner + månfas
   badtemperatur.html
   elpris.html
   aktier.html
@@ -34,11 +35,17 @@ modules/
 scripts/                 ← EGEN mapp på samma nivå som modules/, INTE inuti den
   nyheter.js
   vader.js
+  solmane.js
   badtemperatur.js
   elpris.js
   aktier.js
   valuta.js
   sok.js
+buttons/                 ← delade, återanvändbara snabbknappar (se eget avsnitt nedan)
+  core.js                 ← MÅSTE laddas först, ger delad knapprad-bas
+  reload.js
+  hide.js
+  move.js
 ```
 
 `index.html` finns också i repot men är en **helt orelaterad välkomstsida**
@@ -171,13 +178,55 @@ sig (kör sig själv + sätter sin egen `setInterval` så fort den laddats),
 dels att gå över till händelsebaserad uppdatering för externt triggade
 uppdateringar.
 
-## API:er som används (alla gratis, ingen betald nyckel utom ResRobot)
+### Snabbknappar (`buttons/`-mappen)
+
+Varje modul kan visa upp till fyra små knappar i sitt övre högra hörn:
+🔄 (ladda om), ← / → (flytta ett kolumnsteg), − (dölj). De löser samma sak
+som redan går att göra via ⚙ Inställningar, men snabbare, utan att öppna
+modalen.
+
+**`core.js` måste laddas FÖRST** (se `<head>` i `dashboard.html`) — den ger
+en delad `getButtonBar()`/`makeModuleBtn()`-bas som resten av knapp-filerna
+bygger på. Poängen är att ingen enskild knapp-fil hårdkodar sin egen
+pixel-position — de lägger sig bara i en gemensam rad, så nya knappar kan
+läggas till utan att krocka med befintliga.
+
+Varje modulscript avslutar med några rader i stil med:
+
+```js
+addReloadButton('vader', '#weather');
+addHideButton('vader', '#weather', 'weather');
+addMoveButtons('vader', '#weather');
+```
+
+- **`reload.js`** — `addReloadButton(modulnyckel, wrapperSelector)`. Hittar
+  modulens slot via `data-module-key` (satt av `renderModuleColumns()`) och
+  kör om `loadModule()` för just den.
+- **`hide.js`** — `addHideButton(modulnyckel, wrapperSelector, showNyckel)`.
+  Sätter `cfg.show[showNyckel] = false` — samma fält som kryssrutorna i
+  inställningarna styr. Tredje argumentet behövs bara när modul- och
+  show-nyckeln skiljer sig åt (t.ex. väder-modulens nyckel är `vader` men
+  dess show-nyckel är `weather` — jämför mot `SECTION_TOGGLES`).
+- **`move.js`** — `addMoveButtons(modulnyckel, wrapperSelector)`. Flyttar
+  ett kolumnsteg åt gången (aldrig direkt 3→1). Vilka pilar som visas beror
+  både på modulens nuvarande kolumn och `cfg.columnCount` — en modul i
+  kolumn 2 visar bara ← om bara 2 kolumner är aktiva just nu, eftersom det
+  då inte finns någon synlig kolumn 3 att gå till.
+
+**Lägg till en ny knapp-typ:** skapa en ny fil i `buttons/`, använd
+`getButtonBar(wrapperSelector)` för att hämta knappraden och
+`makeModuleBtn(symbol, titel, onClick)` för att skapa själva knappen, lägg
+till en `<script src="buttons/dinfil.js">`-tagg i `dashboard.html` (efter
+`core.js`), och anropa din nya funktion från de moduler som ska ha knappen.
+
+
 
 | Modul | API | Nyckel krävs? | Anteckningar |
 |---|---|---|---|
 | Resor/Avgångar (skalet) | ResRobot v2.1, Trafiklab | Ja, gratis nivå | `trip`, `departureBoard`, `location.name` (autocomplete) |
 | Nyheter | Sveriges Radio (`api.sr.se/api/rss/program/{id}`) | Nej | Regionala program-ID:n i `REGIONS`, nationellt Ekot = id 4540. Regionala länkar använder `/avsnitt/`, nationella `/artikel/` (SR:s faktiska URL-mönster). |
 | Väder + Work info | Open-Meteo | Nej | Väder = 3-dagarsprognos. Work info = regnkoll timme 07–18 samma ort som väder, visar ☔ eller 😊. |
+| Sol & Måne | Open-Meteo (sol), lokal beräkning (måne) | Nej | Sol upp/ner via samma Open-Meteo-mönster som väder (station-baserad plats). Månfas kräver inget API — beräknas matematiskt utifrån dagens datum, ±1 dygns noggrannhet. |
 | Badtemperatur | Havs- och vattenmyndigheten (`gw.havochvatten.se`) | Nej | Hittar 3 närmaste badplatser till referenspunkt. |
 | Elpris | elprisetjustnu.se | Nej | Auto-detekterar SE1-4 från "från"-station, eller manuell override. |
 | Aktier | TradingView symbol-overview widget | Nej (extern embed) | ~30 valbara OMX Stockholm-bolag, max 8 valda. |
@@ -229,6 +278,9 @@ laddningsordning.
    en ny modul eller ändrar en befintlig.
 4. Kom ihåg de tre registreringsställena för en ny modul (registry, toggle-
    lista, faktisk checkbox-HTML) — glöm inte det tredje.
+5. Om modulen ska ha snabbknappar: titta på `buttons/core.js` +
+   `buttons/reload.js` för mönstret, lägg till motsvarande anrop sist i
+   modulens eget script.
 5. Testa alltid syntax lokalt (`node --check`) på extraherad `<script>`-
    eller `.js`-kod innan filer levereras — flera buggar i det här projektet
    hade fångats direkt av det.
