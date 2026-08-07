@@ -15,9 +15,13 @@
     - Kolumn 2 (när bara 2 kolumner är aktiva): bara ← (ingen kolumn 3 att gå till)
     - Kolumn 3: bara ←
 
-  Beroenden: core.js (måste vara laddad före denna fil), cfg, save() och
-  renderModuleColumns() från skalets inline-skript. Måste laddas som vanlig
-  <script src>, INTE type="module" (se README.md för varför).
+  Beroenden: core.js (måste vara laddad före denna fil), cfg och save() från
+  skalets inline-skript. Flytten sker genom att den redan laddade slot-diven
+  förflyttas till rätt kolumn-behållare (appendChild på ett befintligt
+  element flyttar det) — INGEN ny nätverkshämtning behövs, till skillnad
+  från t.ex. inställningsmodalens Spara-knapp som bygger om allt från
+  grunden. Måste laddas som vanlig <script src>, INTE type="module"
+  (se README.md för varför).
 
   Användning från en modulscript:
     addMoveButtons('vader', '#weather');
@@ -42,7 +46,16 @@ function moveModule(key, direction) {
   if (next < 1 || next > cfg.columnCount) return; // redan vid kanten, gör inget
   cfg.moduleColumns[key] = next;
   save();
-  renderModuleColumns();
+
+  // Flytta den BEFINTLIGA slot-diven till rätt kolumn-behållare istället för
+  // att bygga om allt från grunden. appendChild() på ett element som redan
+  // finns i dokumentet flyttar det (klonar inte) — allt innehåll, timers och
+  // knappar som modulen redan laddat följer med, helt utan ny nätverksanrop.
+  const slot = document.querySelector(`[data-module-key="${key}"]`);
+  if (!slot) return;
+  const targetId = next === 1 ? 'col1Modules' : next === 3 ? 'col3' : 'col2';
+  const target = document.getElementById(targetId);
+  if (target) target.appendChild(slot);
 }
 
 function addMoveButtons(key, wrapperSelector) {
