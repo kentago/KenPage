@@ -87,3 +87,7 @@
 
   currencyRates();
   setInterval(currencyRates, 3600000);
+
+addReloadButton('valuta', '#currencyWrap');
+addHideButton('valuta', '#currencyWrap', 'currency');
+addMoveButtons('valuta', '#currencyWrap');

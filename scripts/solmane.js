@@ -70,3 +70,7 @@ window.addEventListener('dashboard:refresh-weather', solMane);
 
 solMane();
 setInterval(solMane, 1800000);
+
+addReloadButton('solmane', '#solmaneWrap');
+addHideButton('solmane', '#solmaneWrap', 'solmane');
+addMoveButtons('solmane', '#solmaneWrap');

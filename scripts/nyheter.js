@@ -78,3 +78,7 @@ const REGIONS = [
 
   news();
   setInterval(news, 15 * 60000);
+
+addReloadButton('nyheter', '#news');
+addHideButton('nyheter', '#news', 'news');
+addMoveButtons('nyheter', '#news');

@@ -93,3 +93,7 @@ const STOCK_OPTIONS = [
   window.addEventListener('dashboard:refresh-stocks', renderStocksWidget);
 
   renderStocksWidget();
+
+addReloadButton('aktier', '#stocksWrap');
+addHideButton('aktier', '#stocksWrap', 'stocks');
+addMoveButtons('aktier', '#stocksWrap');

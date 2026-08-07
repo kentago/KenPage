@@ -71,3 +71,7 @@ async function fetchSokTimeout(url, timeoutMs = 6000) {
   document.getElementById('sokInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') runSok();
   });
+
+addReloadButton('sok', '#sokWrap');
+addHideButton('sok', '#sokWrap', 'search');
+addMoveButtons('sok', '#sokWrap');

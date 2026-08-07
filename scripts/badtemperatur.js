@@ -85,3 +85,7 @@ const HAV_BASE = 'https://gw.havochvatten.se/external-public/bathing-waters/v2';
 
   bathTemp();
   setInterval(bathTemp, 3600000);
+
+addReloadButton('badtemperatur', '#bathWrap');
+addHideButton('badtemperatur', '#bathWrap', 'bath');
+addMoveButtons('badtemperatur', '#bathWrap');

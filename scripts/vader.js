@@ -85,3 +85,7 @@ const WMO = {
 
   refreshBoth();
   setInterval(refreshBoth, 1800000);
+
+addReloadButton('vader', '#weather');
+addHideButton('vader', '#weather', 'weather');
+addMoveButtons('vader', '#weather');

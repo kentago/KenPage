@@ -89,3 +89,7 @@ const ELZONES = {
 
   elpris();
   setInterval(elpris, 15 * 60000);
+
+addReloadButton('elpris', '#elprisWrap');
+addHideButton('elpris', '#elprisWrap', 'elpris');
+addMoveButtons('elpris', '#elprisWrap');
