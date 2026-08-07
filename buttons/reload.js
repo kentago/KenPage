@@ -12,6 +12,10 @@
     addReloadButton('vader', '#weather');
 */
 
+if (typeof getButtonBar !== 'function') {
+  throw new Error('buttons/reload.js kräver buttons/core.js — kontrollera att <script src="buttons/core.js"> står FÖRE denna tagg i dashboard.html <head>.');
+}
+
 function reloadModule(key) {
   const slot = document.querySelector(`[data-module-key="${key}"]`);
   if (slot) loadModule(slot);

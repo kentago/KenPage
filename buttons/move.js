@@ -26,6 +26,10 @@
 // Samma "vilken kolumn ligger modulen egentligen i just nu"-logik som
 // renderModuleColumns() använder, så knapparna alltid stämmer med det som
 // faktiskt visas på skärmen.
+if (typeof getButtonBar !== 'function') {
+  throw new Error('buttons/move.js kräver buttons/core.js — kontrollera att <script src="buttons/core.js"> står FÖRE denna tagg i dashboard.html <head>.');
+}
+
 function effectiveModuleColumn(key) {
   let assigned = cfg.moduleColumns[key] || 2;
   if (assigned === 3 && cfg.columnCount !== 3) assigned = 2;

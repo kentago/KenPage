@@ -17,6 +17,10 @@
   SECTION_TOGGLES i dashboard.html om osäker).
 */
 
+if (typeof getButtonBar !== 'function') {
+  throw new Error('buttons/hide.js kräver buttons/core.js — kontrollera att <script src="buttons/core.js"> står FÖRE denna tagg i dashboard.html <head>.');
+}
+
 function hideModule(showKey) {
   cfg.show[showKey] = false;
   save();
