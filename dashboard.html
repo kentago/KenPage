@@ -96,7 +96,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
   .trip-time{font-size:22px}
   html,body{height:auto;overflow-y:auto}
 }
+.module-btn-bar{position:absolute;top:6px;right:6px;display:flex;gap:1px;z-index:5}
+.module-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:12px;line-height:1;padding:4px 5px;opacity:.4;transition:opacity .15s}
+.module-btn:hover{opacity:1;color:var(--amber)}
+.module-btn.hide-btn:hover{color:var(--bad)}
+.module-btn.reload-btn:active{transform:rotate(180deg);display:inline-block}
 </style>
+<script src="buttons/core.js"></script>
+<script src="buttons/reload.js"></script>
+<script src="buttons/hide.js"></script>
+<script src="buttons/move.js"></script>
 </head>
 <body>
 <div class="gear" id="gear">⚙</div>
@@ -733,15 +742,27 @@ document.getElementById('refresh').onclick = refresh;
 // för att uppdatera sig när inställningar sparas eller station byts.
 async function loadModule(slot) {
   const src = slot.dataset.module;
+  // Cache-busting: en unik parameter per anrop tvingar webbläsaren (och
+  // eventuell CDN-cache framför sajten) att hämta färskt innehåll varje
+  // gång, istället för att riskera visa en gammal, sparad kopia efter att
+  // inställningar ändrats eller ny kod driftsatts. Detta var trolig orsaken
+  // till att en hård omladdning (Ctrl+F5) verkade krävas för att se
+  // uppdateringar.
+  const cacheBust = `v=${Date.now()}`;
+  const bustedSrc = src + (src.includes('?') ? '&' : '?') + cacheBust;
   try {
-    const html = await (await fetch(src)).text();
+    const html = await (await fetch(bustedSrc, { cache: 'no-store' })).text();
     slot.innerHTML = html;
     // innerHTML kör inte <script>-taggar automatiskt — skapa nya script-element
     // och klistra in dem så att de faktiskt exekveras.
     slot.querySelectorAll('script').forEach(oldScript => {
       const newScript = document.createElement('script');
-      if (oldScript.src) newScript.src = oldScript.src;
-      else newScript.textContent = oldScript.textContent;
+      if (oldScript.src) {
+        const s = oldScript.src;
+        newScript.src = s + (s.includes('?') ? '&' : '?') + cacheBust;
+      } else {
+        newScript.textContent = oldScript.textContent;
+      }
       oldScript.replaceWith(newScript);
     });
     // Modulens DOM-element finns nu — se till att visa/dölj-inställningen
@@ -778,6 +799,7 @@ function renderModuleColumns() {
     const slot = document.createElement('div');
     slot.className = 'module-slot';
     slot.dataset.module = path;
+    slot.dataset.moduleKey = key;
     target.appendChild(slot);
     loadModule(slot);
   }
