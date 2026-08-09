@@ -12,10 +12,14 @@
     - Kör news() själv vid laddning + var 15:e minut
 -->
 <div id="newsWrap">
+  <div class="news-head"><span class="news-title">📰 Nyheter</span></div>
   <div id="news"><div class="empty">Hämtar nyheter...</div></div>
 </div>
 
 <style>
+  #newsWrap{position:relative}
+  .news-head{margin-bottom:6px}
+  .news-title{font:600 11px/1 'Oswald',sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--ice)}
   .news-item{display:block;text-decoration:none;padding:8px;margin:0 -8px;border-radius:4px;border-bottom:1px solid var(--border);transition:background .15s}
   .news-item:hover{background:rgba(245,166,35,.05)}
   .news-item:last-child{border-bottom:none}

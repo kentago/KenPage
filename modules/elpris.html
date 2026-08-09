@@ -12,15 +12,15 @@
     - Kör elpris() själv vid laddning + var 15:e minut
 -->
 <div class="elpris" id="elprisWrap">
-  <div class="elpris-head"><span class="elpris-title">⚡ Elpris</span><span class="elpris-zone" id="elprisZone"></span></div>
+  <div class="elpris-head"><span class="elpris-title">⚡ Elpris</span></div>
   <div id="elprisContent"><span class="empty">Hämtar...</span></div>
 </div>
 
 <style>
-  .elpris{border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
-  .elpris-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+  .elpris{border-top:1px solid var(--border);margin-top:12px;padding-top:12px;position:relative}
+  .elpris-head{margin-bottom:8px}
   .elpris-title{font:600 11px/1 'Oswald',sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--ice)}
-  .elpris-zone{font-size:10px;color:var(--muted)}
+  .elpris-zone{font-size:10px;color:var(--muted);margin-top:6px;display:block}
   .elpris-now{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
   .elpris-val{font:700 28px/1 'Oswald',sans-serif;color:var(--amber)}
   .elpris-unit{font-size:12px;color:var(--muted)}
