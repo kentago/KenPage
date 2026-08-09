@@ -19,6 +19,7 @@
     - Kör weather() och workInfo() själv vid laddning + var 30:e minut
 -->
 <div id="vaderWrap">
+  <div class="weather-head"><span class="weather-title">☀️ Väder</span></div>
   <div class="weather" id="weather"></div>
   <div class="workinfo" id="workinfoWrap">
     <div class="workinfo-title">Work info</div>
@@ -27,7 +28,10 @@
 </div>
 
 <style>
-  .weather{display:flex;gap:20px;padding:14px 0;border-top:1px solid var(--border);margin-top:12px}
+  #vaderWrap{border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:12px;position:relative}
+  .weather-head{margin-bottom:8px}
+  .weather-title{font:600 11px/1 'Oswald',sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--ice)}
+  .weather{display:flex;gap:20px;padding:4px 0}
   .weather-day{flex:1}
   .weather-lbl{font:600 11px/1 'Oswald',sans-serif;letter-spacing:1px;text-transform:uppercase;color:var(--ice);margin-bottom:4px}
   .weather-ico{font-size:24px;line-height:1}
