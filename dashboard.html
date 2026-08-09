@@ -97,11 +97,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
   html,body{height:auto;overflow-y:auto}
 }
 .module-btn-bar{position:absolute;top:6px;right:6px;display:flex;gap:1px;z-index:5}
-.module-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:12px;line-height:1;padding:4px 5px;opacity:.4;transition:opacity .15s}
-.module-btn:hover{opacity:1;color:var(--amber)}
-.module-btn.hide-btn:hover{color:var(--bad)}
+.module-btn{background:transparent;border:none;color:#ff3b30;cursor:pointer;font-size:13px;line-height:1;padding:4px 5px;opacity:.85;transition:opacity .15s,transform .15s}
+.module-btn:hover{opacity:1;transform:scale(1.15)}
 .module-btn.reload-btn:active{transform:rotate(180deg);display:inline-block}
 </style>
+<!-- core.js MÅSTE stå FÖRST i denna lista — övriga knapp-filer kraschar
+     medvetet med ett tydligt felmeddelande annars (se guard-klausulen
+     överst i varje fil). Lägg nya knapp-filer sist, efter core.js. -->
 <script src="buttons/core.js"></script>
 <script src="buttons/reload.js"></script>
 <script src="buttons/hide.js"></script>
