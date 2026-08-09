@@ -32,14 +32,14 @@ const ELZONES = {
   async function elpris() {
     const el = document.getElementById('elprisContent');
     const zone = getElZone();
-    document.getElementById('elprisZone').textContent = zone + (cfg.elZone ? ' (manuellt)' : '');
+    const zoneLabel = zone + (cfg.elZone ? ' (manuellt)' : '');
 
     const now = new Date();
     const dateStr = now.getFullYear() + '/' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
 
     try {
       const data = await fetchWithTimeout(`https://www.elprisetjustnu.se/api/v1/prices/${dateStr}_${zone}.json`);
-      if (!data.length) { el.innerHTML = '<span class="empty">Inga priser</span>'; return; }
+      if (!data.length) { el.innerHTML = `<span class="empty">Inga priser</span><span class="elpris-zone">${zoneLabel}</span>`; return; }
 
       const prices = data.map(d => d.SEK_per_kWh);
       const mn = Math.min(...prices);
@@ -78,9 +78,10 @@ const ELZONES = {
           <span class="elpris-lbl">just nu</span>
         </div>
         <div class="elpris-range">↓ ${mn.toFixed(2)} · snitt ${avg.toFixed(2)} · ↑ ${mx.toFixed(2)} kr/kWh</div>
-        <div class="elpris-bar">${bars}</div>`;
+        <div class="elpris-bar">${bars}</div>
+        <span class="elpris-zone">${zoneLabel}</span>`;
     } catch (e) {
-      el.innerHTML = '<span class="empty">Kunde ej hämta elpris</span>';
+      el.innerHTML = `<span class="empty">Kunde ej hämta elpris</span><span class="elpris-zone">${zoneLabel}</span>`;
     }
   }
 
