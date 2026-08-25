@@ -5,6 +5,4 @@ compatibility_date = "2026-08-25"
 [[d1_databases]]
 binding = "DB"
 database_name = "infinite-dungeon"
-database_id = "6651a970-0417-4e4d-ba64-29a757a8a35a"
-
-# ADMIN_SECRET must be added as a Cloudflare Worker secret; never commit its value.
+database_id = "REPLACE_WITH_YOUR_EXISTING_D1_DATABASE_ID"
