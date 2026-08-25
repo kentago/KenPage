@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#11100d">
+  <title>Infinite Dungeon</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <h1>INFINITE DUNGEON</h1>
+      <p class="subtitle">Explore. Descend. Survive.</p>
+    </div>
+    <button id="newRunBtn" class="danger">New Run</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <span class="eyebrow">PERMADEATH CRAWLER</span>
+        <h2 id="roomTitle">The Entrance</h2>
+        <p id="roomDesc">A cold passage disappears into darkness.</p>
+      </div>
+      <div class="depth">
+        <span>FLOOR</span><strong id="floor">1</strong>
+      </div>
+    </section>
+
+    <section class="grid">
+      <aside class="panel character">
+        <h3>Character</h3>
+        <div class="level">Level <b id="level">1</b> · XP <b id="xp">0</b></div>
+        <div class="stats">
+          <div><span>STR</span><b id="str">1</b></div>
+          <div><span>DEX</span><b id="dex">1</b></div>
+          <div><span>INT</span><b id="int">1</b></div>
+          <div><span>CHA</span><b id="cha">1</b></div>
+        </div>
+        <div class="bar"><i id="hpBar"></i></div>
+        <div class="hptext"><span>HP</span><b id="hp">10 / 10</b></div>
+        <h3>Inventory</h3>
+        <div id="inventory" class="inventory"></div>
+      </aside>
+
+      <section class="panel dungeon">
+        <div class="mapWrap">
+          <h3>Dungeon Map</h3>
+          <div id="map" class="map"></div>
+        </div>
+        <div class="actions">
+          <h3>Actions</h3>
+          <div id="actions"></div>
+        </div>
+        <div id="log" class="log"></div>
+      </section>
+
+      <aside class="panel run">
+        <h3>Run</h3>
+        <div class="facts"><span>Exploration</span><b id="exploration">0%</b></div>
+        <div class="facts"><span>Danger</span><b id="danger">1.0×</b></div>
+        <div class="facts"><span>Dungeon seed</span><b id="seed">—</b></div>
+        <hr>
+        <p class="hint">Explore before descending. Deeper floors offer better loot, but rushing makes survival much harder.</p>
+        <p class="hint">A natural 20 is always a critical success. The harder the challenge, the greater the critical reward.</p>
+      </aside>
+    </section>
+  </main>
+
+  <footer>Every run is a new expedition. Death is permanent.</footer>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
