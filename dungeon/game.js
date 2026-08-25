@@ -1,5 +1,5 @@
-/* Infinite Dungeon v6 — self-contained client game. Optional global API: set API_URL below. */
-const API_URL = ""; // e.g. https://infinite-dungeon-api.example.workers.dev
+/* Infinite Dungeon v7 — self-contained client game. Optional global API: set API_URL below. */
+const API_URL = "https://bitter-tree-d030.kesj04.workers.dev"; // e.g. https://infinite-dungeon-api.example.workers.dev
 const SAVE='infiniteDungeonV7';
 const DIRS={N:{dx:0,dy:-1,key:'w',name:'North',arrow:'↑'},E:{dx:1,dy:0,key:'d',name:'East',arrow:'→'},S:{dx:0,dy:1,key:'s',name:'South',arrow:'↓'},W:{dx:-1,dy:0,key:'a',name:'West',arrow:'←'}};
 const SLOTN=['Amulet','Helmet','Ring 1','Ring 2','Ring 3','Ring 4','Ring 5','Ring 6','Ring 7','Ring 8','Ring 9','Ring 10','Body Armor','Boots','Shoulders','Leggings','Cape'];
