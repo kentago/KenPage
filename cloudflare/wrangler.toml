@@ -1,0 +1,10 @@
+name = "infinite-dungeon-api"
+main = "worker.js"
+compatibility_date = "2026-08-25"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "infinite-dungeon"
+database_id = "REPLACE_WITH_YOUR_EXISTING_D1_DATABASE_ID"
+
+# ADMIN_SECRET must be added as a Cloudflare Worker secret; never commit its value.

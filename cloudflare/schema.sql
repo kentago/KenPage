@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS seasons (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, started_at TEXT NOT NULL, ended_at TEXT);
+CREATE TABLE IF NOT EXISTS expeditions (id INTEGER PRIMARY KEY AUTOINCREMENT, season_id INTEGER, expedition_id TEXT UNIQUE NOT NULL, hero_name TEXT NOT NULL, expedition_name TEXT NOT NULL, level INTEGER NOT NULL, floor INTEGER NOT NULL, xp INTEGER NOT NULL, inventory_count INTEGER NOT NULL DEFAULT 0, gold INTEGER NOT NULL DEFAULT 0, country TEXT, region TEXT, city TEXT, death_cause TEXT, finished_at TEXT NOT NULL, FOREIGN KEY(season_id) REFERENCES seasons(id));
+CREATE INDEX IF NOT EXISTS idx_expeditions_score ON expeditions(xp DESC, level DESC, floor DESC, inventory_count DESC);
+INSERT INTO seasons(name,active,started_at) SELECT 'Season 1',1,datetime('now') WHERE NOT EXISTS (SELECT 1 FROM seasons);
