@@ -36,7 +36,7 @@ function newGame(){
  return {hero:`${pick(names)} ${pick(beards)}`,nickname:"",showCountry:false,country:"",
  expeditionId:id(),expeditionTitle:op[0],opening:`${cap(pick(causes))}. You descend because you ${pick(motives)}. The elders whisper that ${pick(beliefs)}.`,
  level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,gold:100,stats:{int:1,str:1,cha:1,dex:1},
- inventory:[],equipment:{amulet:null,helmet:null,body:null,boots:null,shoulders:null,legs:null,cape:null,rings:Array(10).fill(null)},
+ inventory:[],quests:[],equipment:{amulet:null,helmet:null,body:null,boots:null,shoulders:null,legs:null,cape:null,rings:Array(10).fill(null)},
  fingers:Array(10).fill(true),rooms:{},logs:[],rareLuck:0,intro:true,dead:false,setupDone:false};
 }
 function migrate(s){
@@ -45,7 +45,7 @@ function migrate(s){
  s.maxHp=Math.max(10,num(s.maxHp,10));s.hp=Math.max(0,Math.min(s.maxHp,num(s.hp,s.maxHp)));
  s.floor=Math.max(1,num(s.floor,1));s.x=num(s.x,0);s.y=num(s.y,0);s.gold=Math.max(0,num(s.gold,0));
  s.stats=s.stats||{};for(const k of ["int","str","cha","dex"])s.stats[k]=Math.max(1,num(s.stats[k],1));
- s.inventory=Array.isArray(s.inventory)?s.inventory:[];s.rooms=s.rooms&&typeof s.rooms==="object"?s.rooms:{};
+ s.inventory=Array.isArray(s.inventory)?s.inventory:[];s.quests=Array.isArray(s.quests)?s.quests:[];s.rooms=s.rooms&&typeof s.rooms==="object"?s.rooms:{};
  s.logs=Array.isArray(s.logs)?s.logs:[];s.fingers=Array.isArray(s.fingers)&&s.fingers.length===10?s.fingers:Array(10).fill(true);
  s.equipment=s.equipment||{};if(!Array.isArray(s.equipment.rings)||s.equipment.rings.length!==10)s.equipment.rings=Array(10).fill(null);
  s.nickname=(typeof s.nickname==="string"?s.nickname.trim():"")||"Secret Hero";s.showCountry=!!s.showCountry;s.country=typeof s.country==="string"?s.country:"";
@@ -67,7 +67,7 @@ function gen(){
  const m=noFoe?null:monster();
  const hp=m?m[1]*4+r(5):0;
  return {foe:m?{name:m[0],power:m[1],kind:m[2],hp,maxHp:hp,defeated:false}:null,
- searched:false,exits:{N:null,E:null,S:null,W:null},ladderDown:Math.random()<.13,
+ searched:false,questId:null,exits:{N:null,E:null,S:null,W:null},ladderDown:Math.random()<.13,
  ladderUp:S.floor>1&&Math.random()<.18,npc:null,trader:null,rest:null,loot:null};
 }
 function room(){const k=key();if(!S.rooms[k])S.rooms[k]=gen();return S.rooms[k]}
@@ -141,15 +141,47 @@ function item(x){return{name:x[0],power:x[1]+r(3)-1,slot:x[2],trait:x[3],value:x
 function loot(){const special=Math.random()<.025+S.rareLuck*.015;if(special){S.rareLuck=0;return item(pick(rare))}S.rareLuck=Math.min(8,S.rareLuck+1);return item(pick(common))}
 function lootFoe(f){const sp=rare.filter(x=>x[0].toLowerCase().includes(f.kind.toLowerCase())||f.kind==="skeletonKing"&&x[0].includes("Skeleton King")||f.kind==="dragon"&&x[0].includes("Dragon")||f.kind==="basilisk"&&x[0].includes("Basilisk")||f.kind==="medusa"&&x[0].includes("Medusa"));if(Math.random()<.18+S.rareLuck*.02){S.rareLuck=0;return item(pick(sp.length?sp:rare))}return loot()}
 function search(){
- const rm=room();if(rm.foe&&!rm.foe.defeated)return log("You cannot search while fighting.");if(rm.searched)return log("This room has already been searched.");
- rm.searched=true;const q=r(100);
- if(q<=18){const i=loot();rm.loot=i;log(`🔎 You find ${i.name} in a cache.`,"good")}
- else if(q<=38){const i=loot();rm.loot=i;log(`🔎 You find ${i.name} in the room.`,"good")}
- else if(rm.foe&&rm.foe.defeated&&q<=68){const i=lootFoe(rm.foe);rm.loot=i;log(`☠️ You find ${i.name} on the corpse of the ${rm.foe.name}.`,"rare")}
- else if(q<=74){rm.npc={name:`${pick(names)} ${pick(beards)}`,title:pick(["Keeper of the Blue Hall","Quest-Bearer","Lorewarden","Warden of Lost Things"])};log(`🔵 You encounter ${rm.npc.name}, ${rm.npc.title}.`,"gold")}
- else if(q<=82){rm.trader=makeTrader();log(`💲 You encounter ${rm.trader.name}, ${rm.trader.title}.`,"gold")}
- else if(q<=89){rm.rest={uses:r(4)+1,heal:Math.max(2,Math.floor(S.maxHp*.35))};log("💚 You discover a source of rest.")}
- else log("🔎 You find nothing useful.");
+ const rm=room();
+ if(rm.foe&&!rm.foe.defeated)return log("You cannot search while fighting.");
+ if(rm.searched)return log("This room has already been searched.");
+ rm.searched=true;
+ const q=r(100);
+
+ // Active quest items can be found while exploring future rooms.
+ const active=S.quests.filter(x=>!x.found&&!x.delivered);
+ if(active.length && Math.random()<0.18){
+   const quest=pick(active);
+   quest.found=true;
+   rm.questId=quest.id;
+   log(`🔎 You find the quest item ${quest.itemName}. It is now ready to deliver.`,"good");
+ } else if(q<=18){
+   const i=loot();rm.loot=i;log(`🔎 You find ${i.name} in a cache.`,"good");
+ } else if(q<=38){
+   const i=loot();rm.loot=i;log(`🔎 You find ${i.name} in the room.`,"good");
+ } else if(rm.foe&&rm.foe.defeated&&q<=68){
+   const i=lootFoe(rm.foe);rm.loot=i;log(`☠️ You find ${i.name} on the corpse of the ${rm.foe.name}.`,"rare");
+ } else if(q<=74){
+   const questItems=[
+    ["Moonstone Pick","a moonstone pick used to open an old royal seal"],
+    ["Ashen Crown Shard","a shard of the Ashen Crown"],
+    ["Deepforge Medallion","the lost medallion of the Deepforge clan"],
+    ["King's Lost Signet","the missing signet of a forgotten dwarf king"],
+    ["Emberheart Trinket","a small emberheart trinket that still glows"],
+    ["Black Vein Crystal","a black crystal taken from the oldest mine"],
+    ["Frostfire Charm","a charm said to balance frost and flame"]
+   ];
+   const qi=pick(questItems);
+   const quest={id:id(),itemName:qi[0],description:qi[1],found:false,delivered:false,xp:100+S.floor*50,npcRoom:key()};
+   S.quests.push(quest);
+   rm.questId=quest.id;
+   rm.npc={name:`${pick(names)} ${pick(beards)}`,title:pick(["Keeper of the Blue Hall","Quest-Bearer","Lorewarden","Warden of Lost Things"])};
+   log(`🔵 You encounter ${rm.npc.name}, ${rm.npc.title}.`,"gold");
+   log(`🔵 ${rm.npc.name} has a quest: find ${qi[0]} — ${qi[1]}. Return it for ${quest.xp} XP.`,"gold");
+ } else if(q<=82){
+   rm.trader=makeTrader();log(`💲 You encounter ${rm.trader.name}, ${rm.trader.title}.`,"gold");
+ } else if(q<=89){
+   rm.rest={uses:r(4)+1,heal:Math.max(2,Math.floor(S.maxHp*.35))};log("💚 You discover a source of rest.");
+ } else log("🔎 You find nothing useful.");
  save();render();
 }
 function makeTrader(){let stock=[];for(let i=0;i<3;i++)stock.push(item(pick(Math.random()<.18?rare:common)));return{name:`${pick(names)} ${pick(beards)}`,title:pick(["the Merchant","the Trader","the Collector","the Gatherer","the Huntsman","Trading Master"]),stock}}
@@ -158,6 +190,19 @@ function renderTrade(){const rm=tradeRoom;if(!rm){document.getElementById("trade
  <h3>Buy</h3><div class="tradegrid">${rm.trader.stock.map((x,i)=>`<div class="item"><b>${esc(x.name)}</b><br>Power +${x.power}<br><span class="small">${esc(x.trait)}</span><br><b>${x.value}g</b><br><button onclick="buy(${i})" ${S.gold<x.value||S.inventory.length>=30?"disabled":""}>Buy</button></div>`).join("")}</div>
  <h3>Sell</h3><div class="tradegrid">${S.inventory.length?S.inventory.map((x,i)=>`<div class="item"><b>${esc(x.name)}</b><br>${Math.max(1,Math.floor(x.value*.5))}g<br><button onclick="sell(${i})">Sell permanently</button></div>`).join(""):"<span class='small'>You carry nothing to sell.</span>"}</div>
  <button onclick="tradeRoom=null;render()">Leave trade</button>`;
+}
+function deliverQuest(){
+ const rm=room();
+ if(!rm.npc)return;
+ const quest=S.quests.find(x=>x.id===rm.questId&&!x.delivered);
+ if(!quest)return log("🔵 There is no active quest to deliver here.");
+ if(!quest.found)return log(`🔵 ${rm.npc.name} still needs the ${quest.itemName}.`);
+ quest.delivered=true;
+ S.xp+=quest.xp;
+ log(`✅ You deliver ${quest.itemName} to ${rm.npc.name}. The quest item is removed from your quest section.`,"good");
+ log(`🏆 ${rm.npc.name} rewards you with ${quest.xp} XP.`,"gold");
+ rm.npc=null;rm.questId=null;
+ level();save();render();
 }
 function trade(){const rm=room();if(!rm.trader)return;tradeRoom=rm;log(`💲 ${rm.trader.name} opens the trade counter. "Take your time, deepdelver."`,"gold");renderTrade()}
 function buy(i){const rm=tradeRoom,x=rm?.trader?.stock[i];if(!x||S.gold<x.value||S.inventory.length>=30)return;S.gold-=x.value;S.inventory.push({...x});rm.trader.stock.splice(i,1);log(`💲 You bought ${x.name} for ${x.value} gold.`,"good");save();render()}
@@ -192,14 +237,16 @@ function render(){
  let f=rm.foe&&!rm.foe.defeated?`<div>⚔️ <b>${esc(rm.foe.name)}</b> — ${Math.max(0,rm.foe.hp)}/${rm.foe.maxHp} HP</div>`:rm.foe?`<div>☠️ ${esc(rm.foe.name)} — 0/${rm.foe.maxHp} HP</div>`:"";
  document.getElementById("room").innerHTML=`<h2>Chamber</h2>${f}${rm.loot?`<div>🎁 <b>${esc(rm.loot.name)}</b> · +${rm.loot.power} · ${rm.loot.value}g</div>`:""}${!f&&rm.ladderDown?"<div>🟢 ↓ Ladder down</div>":""}${!f&&rm.ladderUp?"<div>🟢 ↑ Ladder up</div>":""}${rm.npc?`<div>🔵 ${esc(rm.npc.name)}, ${esc(rm.npc.title)}</div>`:""}${rm.trader?`<div>💲 ${esc(rm.trader.name)}, ${esc(rm.trader.title)}</div>`:""}${rm.rest?`<div>💚 Rest source: ${rm.rest.uses} uses</div>`:""}`;
  let h="";
- if(f)h+=`<button onclick="fight()">⚔️ Fight</button><button onclick="flee()">🏃 Flee</button>`;
+ const liveFoe=!!(rm.foe&&!rm.foe.defeated&&S.hp>0&&!S.dead);
+ if(liveFoe)h+=`<button onclick="fight()">⚔️ Fight</button><button onclick="flee()">🏃 Flee</button>`;
  else if(S.setupDone&&!S.dead){
   h+=`<button onclick="search()" ${rm.searched?"disabled":""}>🔎 Search</button><div class="compass"><span></span><button onclick="move('N')">↑ W</button><span></span><button onclick="move('W')">← A</button><button onclick="useF()">F</button><button onclick="move('E')">→ D</button><span></span><button onclick="move('S')">↓ S</button><span></span></div>`;
-  if(rm.ladderDown)h+=`<button onclick="ladder('down')">↓ Descend</button>`;if(rm.ladderUp)h+=`<button onclick="ladder('up')">↑ Ascend</button>`;if(rm.trader)h+=`<button onclick="trade()">💲 Trade</button>`;if(rm.npc)h+=`<button onclick="useF()">🔵 Talk</button>`;if(rm.rest)h+=`<button onclick="rest()">💚 Rest</button>`;
+  if(rm.ladderDown)h+=`<button onclick="ladder('down')">↓ Descend</button>`;if(rm.ladderUp)h+=`<button onclick="ladder('up')">↑ Ascend</button>`;if(rm.trader)h+=`<button onclick="trade()">💲 Trade</button>`;if(rm.npc){const qst=S.quests.find(q=>q.id===rm.questId&&!q.delivered);h+=qst&&qst.found?`<button onclick="deliverQuest()">🔵 Deliver quest item</button>`:`<button onclick="useF()">🔵 Talk</button>`;}if(rm.rest)h+=`<button onclick="rest()">💚 Rest</button>`;
  }
  if(S.setupDone)h+=`<hr><button onclick="reset()">New Run</button>`;
  document.getElementById("actions").innerHTML=h;
- document.getElementById("equipment").innerHTML=`<h2>🎒 Equipment</h2><div class="equipgrid">${Object.entries(S.equipment).filter(([k])=>k!=="rings").map(([k,v])=>`<div class="item"><b>${esc(k)}</b><br>${v?esc(v.name):"<span class='small'>empty</span>"}</div>`).join("")}</div><div class="small">Rings: ${S.equipment.rings.map((x,i)=>x?`💍 ${esc(x.name)}`:`○${i+1}`).join(" · ")}</div>`;
+ document.getElementById("equipment").innerHTML=`<h2>🎒 Equipment</h2><div class="equipgrid">${Object.entries(S.equipment).filter(([k])=>k!=="rings").map(([k,v])=>`<div class="item"><b>${esc(k)}</b><br>${v?esc(v.name):"<span class='small'>empty</span>"}</div>`).join("")}</div><div class="small">Rings: ${S.equipment.rings.map((x,i)=>x?`💍 ${esc(x.name)}`:`○${i+1}`).join(" · ")}</div>
+ <div class="quest-panel"><h2>🔎 Quest Search</h2>${S.quests.filter(q=>!q.delivered).map(q=>`<div class="item">${q.found?"<span class='good'>✅</span>":"🔎"} <b>${esc(q.itemName)}</b><br><span class="small">${q.found?"Found — ready to deliver.":"Searching the dungeon..."}</span></div>`).join("")||"<span class='small'>No active quest searches.</span>"}</div>`;
  document.getElementById("log").innerHTML=S.logs.join("");
  document.getElementById("hall").innerHTML=`<h2>🏆 Global Hall</h2><div class="small">Your public tag: <b>${esc(S.nickname||"Secret Hero")}</b>${S.showCountry&&S.country?" · "+esc(S.country):""}</div>`;
  renderTrade();

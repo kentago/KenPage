@@ -11,3 +11,5 @@ button:disabled{opacity:.35;cursor:not-allowed}.compass{display:grid;grid-templa
 .tile.known{background:#30271f}.tile.current{outline:2px solid #e7c77a;background:#4b3928}.tile.blocked{opacity:.45}.tile.ladder{color:#7cff7c}.tile.npc{color:#6cb7ff}.tile.trader{color:#7cff7c}.tile.rest{color:#8cff9b}
 .legend{font-size:.8em;opacity:.75;text-align:center}
 @media(max-width:600px){main{padding:8px}.compass{grid-template-columns:repeat(3,70px)}.tile{width:30px;height:30px}}
+
+.quest-panel{margin-top:14px;padding-top:8px;border-top:1px solid #5b4633}.quest-panel h2{margin-bottom:8px}
