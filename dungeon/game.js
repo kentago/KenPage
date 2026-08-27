@@ -11,8 +11,8 @@ const names={
   shoulders:["Iron Pauldrons","Dragon Mantle","Bone Shoulderguards","Obsidian Spaulders","Titan Shoulderplates","Crystal Epaulets","Shadow Shroud Pads","Deepforge Pauldrons","Flamecrest Guards","Runed Shouldercaps","Stormwall Spaulders","Ancient Battleguards"],
   trousers:["Leather Trousers","Chainmail Leggings","Dragon Hide Pants","Deepforge Greaves","Crystal Legguards","Shadow Weave Pants","Titan Legplates","Obsidian Cuisses","Flamebrace Leggings","Runed Trousers","Ancient Wardlegs","Stoneguard Tassets"],
   cape:["Traveler's Cape","Shadowweave Cape","Dragon Cape","Cloak of the Deep","Flamecloak","Crystal Shroud","Titan Mantle","Voidwrap","Moonsilver Cloak","Windcaller Cape","Ancient Drape","Obsidian Shawl","Bone Lord's Mantle","Stormweave Cape"],
-  amulet:["Stone Amulet","Moon Amulet","Dragon Tooth Pendant","Deepforge Medallion","Crystal Heart Necklace","Shadow Locket","Titan Torc","Obsidian Charm","Flame Pearl Amulet","Runed Gorget","Ancient Talisman","Bone Relic Chain","Stormstone Pendant","Void Eye Amulet"],
-  ring:["Iron Ring","Moonstone Ring","Bone Ring","Ember Ring","Dwarven Signet","Crystal Band","Shadow Loop","Titan Seal","Dragon Coil","Obsidian Circle","Flame Spark Ring","Runed Band","Ancient Vow Ring","Void Touch Ring","Deepforge Signet","Stormcaller Ring","Frozen Tear Ring","Goldheart Band","Spirit Whisper Ring","Bloodstone Ring"]
+  amulet:["Stone Amulet","Moon Amulet","Dragon Tooth Pendant","Deepforge Medallion","Crystal Heart Necklace","Shadow Locket","Titan Torc","Obsidian Charm","Flame Pearl Amulet","Runed Gorget","Ancient Talisman","Bone Relic Chain","Stormstone Pendant","Void Eye Amulet","Lucky Clover Charm","Fortune Coin Pendant","Starfall Locket","Seer's Eye Amulet","Dwarf King's Medallion","Phoenix Heart Pendant","Kraken Tooth Necklace","Moonwell Charm","Sunfire Torc","Frostweave Pendant","Earthblood Amulet","Windcaller Necklace","Shadowheart Locket","Titan Soulchain","Voidwalker's Charm","Dragonblood Pendant","Spirit Anchor","Deathward Amulet","Luck of the Deep","Gemheart Torc","Alchemist's Vial Pendant"],
+  ring:["Iron Ring","Moonstone Ring","Bone Ring","Ember Ring","Dwarven Signet","Crystal Band","Shadow Loop","Titan Seal","Dragon Coil","Obsidian Circle","Flame Spark Ring","Runed Band","Ancient Vow Ring","Void Touch Ring","Deepforge Signet","Stormcaller Ring","Frozen Tear Ring","Goldheart Band","Spirit Whisper Ring","Bloodstone Ring","Sapphire Promise","Ruby Wrath Ring","Emerald Life Band","Diamond Core Ring","Opal Shimmer","Topaz Fury Ring","Amethyst Dream","Garnet Fist Ring","Onyx Doom Ring","Pearl Wisdom Band","Jade Harmony Ring","Lapis Truth Ring","Amber Fossil Ring","Turquoise Sky Ring","Malachite Coil","Serpentine Loop","Aquamarine Flow","Citrine Sun Ring","Peridot Growth Band","Moonquartz Ring","Starstone Signet","Voidglass Ring","Dragonbone Band","Firecore Ring","Frostbite Loop","Thunderstone Ring","Earthheart Band","Shadowgem Coil","Soulstone Ring","Wraithband","Titanforge Ring","Doomstone Signet","Phoenix Ash Ring","Kraken Eye Ring","Lichfinger Band","Abyssal Loop","Celestial Ring","Golemcore Band","Wyrmscale Coil","Nethergem Ring"]
 };
 const arts={
   weapon:["⚔️","🪓","🗡️","🔨","⛏️","🏹","🔱"],
@@ -23,7 +23,7 @@ const arts={
   trousers:["👖","🩳","🦿"],
   cape:["🧥","🦇","🌬️","✨"],
   amulet:["📿","🔮","💎","🪬","🧿"],
-  ring:["💍","💎","🔴","🔵","🟡","⚪","🟢","🟣","🪨","✨","🖤","❤️"]
+  ring:["💍","💎","🔴","🔵","🟡","⚪","🟢","🟣","🪨","✨","🖤","❤️","🧿","🪬","⭕","🔮","💠","♦️","🌟","💫","🌙","☀️","❄️","🔥","⚡","🌊","🍀","👁️"]
 };
 const traits=[
   "Bone Rend","Grave Fortune","Dragonblood","Veilstep","Deep Luck","Poison Edge",
@@ -34,6 +34,33 @@ const traits=[
   "Elemental Ward","Deepforge Temper","Moonlight Heal","Thornmail","Echostrike",
   "Crit Amplifier","Dread Aura","Regeneration","Venomcoat","Battle Fury","Shieldbreaker"
 ];
+// Ring-specific traits — these give bonuses that synergize with other rings
+const ringTraits=[
+  "Gemlink (+1 STR per ring worn)","Jeweler's Pride (+1 DEX per ring worn)",
+  "Ringmaster (+1 INT per ring worn)","Crown of Fingers (+1 CHA per ring worn)",
+  "Paired Resonance (2× if matching element ring)","Finger Ward (reduces finger loss chance)",
+  "Gold Attraction (+10% gold from sells)","Lucky Find (+search bonus)",
+  "Gem Fortitude (+2 HP per ring worn)","Dual Spark (double trait chance on next ring)",
+  "Soul Chain (XP +5% per ring worn)","Void Link (ignore 1 damage per ring worn)",
+  "Elemental Harmony (resist element damage per ring)","Deep Radiance (loot quality +1 per ring)",
+  "Titan Grip (STR×rings for attack)","Arcane Loop (INT×rings for search)",
+  "Ring of Greed (find rings more often)","Dwarf King's Legacy (+all stats per 5 rings)",
+  "Constellation (+1 all stats if 8+ rings worn)","Perfect Ten (+5 all stats if all 10 slots filled)",
+  "Fortune's Favor (+2 Luck)","Serendipity (+1 Luck per ring worn)","Dwarf's Blessing (+3 Luck)"
+];
+// Amulet-specific traits — luck, potions, fortune, protection
+const amuletTraits=[
+  "Fortune's Heart (+3 Luck)","Lucky Star (+2 Luck, +5% crit)","Potion Amplifier (healing ×1.5)",
+  "Treasure Sense (better loot rolls)","Quest Compass (easier quest item discovery)",
+  "Death Ward (survive one fatal hit per floor)","Gold Magnet (+25% gold from sells)",
+  "Element Shield (reduce element damage by 50%)","Soul Keeper (retain 1 item on death)",
+  "Luck of the Ancients (+5 Luck)","Trinket Collector (double trinket drop chance)",
+  "Potion Brewer (rest heals 50% more)","Critical Fortune (crits give bonus gold)",
+  "Finger Ward Amulet (prevent finger loss)","XP Amplifier (+15% XP from all sources)",
+  "Second Chance (flee always succeeds once per floor)","Deep Sight (+3 INT for searching)",
+  "Merchant's Eye (sell items for double gold)","Life Pulse (+1 HP per room explored)",
+  "Dwarven Ancestry (+1 all stats)"
+];
 const rar=["common","uncommon","rare","mythical"], dep=["bronze","silver","gold","titan","glowing"];
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 let globalHall=[]; // Cached global leaderboard from D1
@@ -41,7 +68,7 @@ let globalHall=[]; // Cached global leaderboard from D1
 function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
-function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null})}
+function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null})}
 function d20(){return 1+Math.floor(Math.random()*20)}
 function msg(t){S.log.unshift(t);S.log=S.log.slice(0,100);save();render()}
 function makeItem(type){
@@ -60,7 +87,7 @@ function makeItem(type){
   let i={
     id:crypto.randomUUID(),
     type,
-    name:names[type][Math.floor(Math.random()*names[type].length)],
+    name:(type==="ring"||type==="amulet")?`${questPrefixes[Math.floor(Math.random()*questPrefixes.length)]} ${names[type][Math.floor(Math.random()*names[type].length)]}`:names[type][Math.floor(Math.random()*names[type].length)],
     rarity:rar[r],
     depth:dep[depIdx],
     art:arts[type][Math.floor(Math.random()*arts[type].length)],
@@ -101,12 +128,24 @@ function makeItem(type){
   // --- TRAITS ---
   // Chance increases with rarity and floor depth
   let traitChance=0.10+r*0.12+Math.min(0.2,S.floor*0.003);
+  // Rings have higher trait chance — they're the key equipment as a Dwarf!
+  if(type==="ring") traitChance+=0.20;
+  // Amulets are luck/utility focused — also higher trait chance
+  if(type==="amulet") traitChance+=0.25;
   if(Math.random()<traitChance){
-    i.trait=traits[Math.floor(Math.random()*traits.length)];
+    // Rings get ring-specific synergy traits 60% of the time
+    if(type==="ring"&&Math.random()<0.6){
+      i.trait=ringTraits[Math.floor(Math.random()*ringTraits.length)];
+    } else if(type==="amulet"&&Math.random()<0.7){
+      i.trait=amuletTraits[Math.floor(Math.random()*amuletTraits.length)];
+    } else {
+      i.trait=traits[Math.floor(Math.random()*traits.length)];
+    }
   }
   // Rare chance of DOUBLE trait on mythical
   if(r===3&&Math.random()<0.15){
-    let second=traits[Math.floor(Math.random()*traits.length)];
+    let pool=type==="ring"&&Math.random()<0.5?ringTraits:type==="amulet"&&Math.random()<0.5?amuletTraits:traits;
+    let second=pool[Math.floor(Math.random()*pool.length)];
     if(second!==i.trait) i.trait=i.trait+", "+second;
   }
 
@@ -615,57 +654,86 @@ const questItems=[
 // Quest difficulty determines how far away the item likely is
 const questDifficulty=["nearby","moderate","distant","legendary"];
 
+const questPrefixes=["Hydrogen","Helium","Lithium","Beryllium","Boron","Carbon","Nitrogen","Oxygen","Fluorine","Neon","Sodium","Magnesium","Aluminium","Silicon","Phosphorus","Sulfur","Chlorine","Argon","Potassium","Calcium","Titanium","Chromium","Iron","Cobalt","Nickel","Copper","Zinc","Gallium","Germanium","Arsenic","Selenium","Bromine","Krypton","Rubidium","Strontium","Zirconium","Niobium","Molybdenum","Silver","Tin","Antimony","Iodine","Xenon","Barium","Tungsten","Platinum","Gold","Mercury","Lead","Bismuth","Uranium","Plutonium","Osmium","Palladium","Rhodium","Iridium"];
+
+function uniqueQuestItemName(){
+  // Pick a base name, ensure it's not already active
+  let activeNames=S.quests.map(q=>q.itemName);
+  let attempts=0;
+  let name;
+  do{
+    name=questItems[Math.floor(Math.random()*questItems.length)];
+    if(!activeNames.includes(name)) return name;
+    // Duplicate — add periodic table prefix
+    let prefix=questPrefixes[Math.floor(Math.random()*questPrefixes.length)];
+    name=`${prefix} ${name}`;
+    attempts++;
+  } while(activeNames.includes(name)&&attempts<10);
+  return name;
+}
+
 function spawnNPC(){
   let name=npcNames[Math.floor(Math.random()*npcNames.length)];
   let title=npcTitles[Math.floor(Math.random()*npcTitles.length)];
-  let questItem=questItems[Math.floor(Math.random()*questItems.length)];
+  let questItem=uniqueQuestItemName();
 
-  // Difficulty scales with floor — deeper floors give harder quests with better rewards
+  // Difficulty = how many floors down the item is hidden
+  // This determines both reward AND where you need to search
+  let floorsDown=0;
   let diffRoll=Math.random();
-  let diff=diffRoll<0.4?"nearby":diffRoll<0.7?"moderate":diffRoll<0.9?"distant":"legendary";
+  if(diffRoll<0.35) floorsDown=0; // Same floor
+  else if(diffRoll<0.60) floorsDown=1; // 1 floor down
+  else if(diffRoll<0.80) floorsDown=2; // 2 floors down
+  else if(diffRoll<0.92) floorsDown=3; // 3 floors down
+  else floorsDown=4+Math.floor(Math.random()*3); // 4-6 floors down (legendary)
 
-  // XP reward scales with difficulty and floor (exponential like danger)
-  let dangerScale=Math.pow(S.floor,1.6);
-  let baseXP=diff==="nearby"?Math.round(dangerScale*0.5+20):
-             diff==="moderate"?Math.round(dangerScale*1.2+50):
-             diff==="distant"?Math.round(dangerScale*2.5+100):
-             Math.round(dangerScale*5+250);
+  let diff=floorsDown===0?"same floor":floorsDown===1?"1 floor down":floorsDown<=3?`${floorsDown} floors down`:"deep below";
+  let targetFloor=S.floor+floorsDown;
 
-  // Item reward chance (better quests might give equipment)
+  // XP reward scales with distance and danger at target floor
+  let targetDanger=Math.pow(targetFloor,1.6);
+  let baseXP=Math.round(targetDanger*(0.8+floorsDown*0.5)+20+floorsDown*30);
+
+  // Item reward chance (further = better rewards)
   let itemReward=null;
-  if(diff==="legendary"||(diff==="distant"&&Math.random()<0.4)){
-    itemReward=true; // Will generate an item on delivery
+  if(floorsDown>=4||(floorsDown>=3&&Math.random()<0.4)){
+    itemReward=true;
   }
 
-  // Hint about where to find it
-  let hint=diff==="nearby"?"It should be somewhere on this floor.":
-           diff==="moderate"?"You may need to explore deeper.":
-           diff==="distant"?"It lies far below, in the deep dark.":
-           "It is said to exist only in the most ancient depths.";
+  // Clear, specific hint so player knows exactly where to search
+  let hint=floorsDown===0?`"It is hidden somewhere on this very floor. Search every chamber."`:
+           floorsDown===1?`"I last saw it one floor below. Descend and search carefully."`:
+           floorsDown<=3?`"It lies ${floorsDown} floors beneath us. You must descend and explore floor ${targetFloor}."`:
+           `"It is buried deep — floor ${targetFloor} or beyond. A perilous journey awaits."`;
 
-  return{name,title,questItem,xpReward:baseXP,difficulty:diff,hint,itemReward,completed:false};
+  return{name,title,questItem,xpReward:baseXP,difficulty:diff,targetFloor,floorsDown,hint,itemReward,completed:false};
 }
 
 function talkNPC(){
   let r=room();
   if(!r.npc||r.npc.completed)return;
 
-  // Check if player has the quest item already
-  let existingQuest=S.quests.find(q=>q.itemName===r.npc.questItem&&q.found);
+  // Each NPC has unique ID by room location
+  if(!r.npc.id) r.npc.id=`npc_${S.floor}:${S.x}:${S.y}`;
+
+  // Check if player has THIS NPC's quest item found
+  let existingQuest=S.quests.find(q=>q.npcId===r.npc.id&&q.found);
   if(existingQuest){
     deliverQuest(r.npc,existingQuest);
     return;
   }
 
-  // Check if quest is already active
-  let active=S.quests.find(q=>q.itemName===r.npc.questItem);
+  // Check if THIS NPC's quest is already active
+  let active=S.quests.find(q=>q.npcId===r.npc.id);
   if(active){
     msg(`🔵 ${r.npc.name} says: "Still searching for the ${r.npc.questItem}? ${r.npc.hint}"`);
     return;
   }
 
-  // Give new quest
+  // Give new quest tied to THIS specific NPC
   let quest={
+    npcId:r.npc.id,
+    npcName:r.npc.name,
     itemName:r.npc.questItem,
     found:false,
     npcFloor:S.floor,
@@ -685,17 +753,51 @@ function deliverQuest(npc,quest){
   // Award XP
   S.xp+=quest.xpReward;
 
-  // Award item if applicable
+  // --- REWARD ROLL (d20 + luck) ---
+  // Even low-floor quests can give items with a lucky roll!
+  let luckBonus=S.stats.luck||0; // Luck stat from trinkets/potions/ring traits
+  let rewardRoll=d20()+luckBonus;
+  let giveItem=false;
+
   if(quest.itemReward){
+    // Guaranteed item for deep quests
+    giveItem=true;
+  } else if(rewardRoll>=20){
+    // Lucky roll! Bonus item even on nearby quests
+    giveItem=true;
+    msg(`🍀 Lucky reward! The NPC is so grateful they give you something extra!`);
+  } else if(rewardRoll>=17&&(quest.floorsDown||0)>=1){
+    // Good roll + at least 1 floor distance
+    giveItem=true;
+    msg(`🍀 Bonus reward!`);
+  }
+
+  if(giveItem){
     let rewardItem=makeItem(types[Math.floor(Math.random()*types.length)]);
     // Quest reward items are at least uncommon and get a bonus
     if(rewardItem.rarity==="common") rewardItem.rarity="uncommon";
-    // Boost stats by 30-80%
-    let boost=1.3+Math.random()*0.5;
+    // Boost scales with quest distance
+    let boost=1.2+Math.random()*0.4+(quest.floorsDown||0)*0.15;
     for(let k in rewardItem.stats) rewardItem.stats[k]=Math.round(rewardItem.stats[k]*boost);
     // Ensure a trait
-    if(!rewardItem.trait) rewardItem.trait=traits[Math.floor(Math.random()*traits.length)];
+    if(!rewardItem.trait){
+      let pool=rewardItem.type==="ring"&&Math.random()<0.6?ringTraits:traits;
+      rewardItem.trait=pool[Math.floor(Math.random()*pool.length)];
+    }
     msg(`🎁 ${npc.name} rewards you with: ${rewardItem.name}! ${obtain(rewardItem)}`);
+  }
+
+  // Chance of bonus potion/trinket on high luck
+  if(rewardRoll>=18){
+    let potionRoll=Math.random();
+    if(potionRoll<0.3){
+      S.stats.luck=(S.stats.luck||0)+1;
+      msg(`🧪 ${npc.name} also slips you a Lucky Trinket. (+1 Luck permanently!)`);
+    } else if(potionRoll<0.5){
+      let healAmt=Math.round(S.maxHp*0.3);
+      S.hp=Math.min(S.maxHp,S.hp+healAmt);
+      msg(`🧪 ${npc.name} gives you a Healing Potion. (+${healAmt} HP!)`);
+    }
   }
 
   // Remove quest from active quests
@@ -724,6 +826,125 @@ function checkLevelUp(){
     needed=S.level*50+S.level*S.level*10;
   }
 }
+
+// --- REST SYSTEM ---
+// Rest sources are permanent room features with limited uses (d20 determines sips)
+// Healing scales as % of maxHP so it stays relevant at all levels
+const restSources=[
+  {name:"Fountain of Youth",emoji:"⛲",type:"heal"},
+  {name:"Stream of Life",emoji:"🌊",type:"heal"},
+  {name:"Healing Spring",emoji:"💧",type:"heal"},
+  {name:"Dwarven Ale Barrel",emoji:"🍺",type:"heal"},
+  {name:"Glowing Mushroom Patch",emoji:"🍄",type:"heal"},
+  {name:"Ancient Crystal Pool",emoji:"💎",type:"heal"},
+  {name:"Ember Hearth",emoji:"🔥",type:"heal"},
+  {name:"Moonwell",emoji:"🌙",type:"heal"},
+  {name:"Blessed Shrine",emoji:"⛩️",type:"heal"},
+  {name:"Spirit Wellspring",emoji:"👻",type:"heal"},
+  {name:"Fountain of Fortune",emoji:"🍀",type:"luck"},
+  {name:"Wishing Well",emoji:"🪙",type:"luck"},
+  {name:"Seer's Pool",emoji:"🔮",type:"luck"},
+  {name:"Basin of Fate",emoji:"✨",type:"luck"},
+  {name:"Starlight Spring",emoji:"⭐",type:"luck"}
+];
+
+function spawnRestSource(){
+  let source=restSources[Math.floor(Math.random()*restSources.length)];
+  // d20 determines how many sips (3-12 range, higher = luckier)
+  let sips=3+Math.floor(d20()*0.5);
+  // Heal amount = % of maxHP (15-35%, so always relevant)
+  let healPct=0.15+Math.random()*0.20;
+  return{name:source.name,emoji:source.emoji,type:source.type,sips,maxSips:sips,healPct,depleted:false};
+}
+
+function useRest(){
+  let r=room();
+  if(!r.rest||r.rest.depleted)return;
+  if(r.rest.sips<=0){
+    r.rest.depleted=true;
+    msg(`${r.rest.emoji} ${r.rest.name} is depleted. Nothing remains.`);
+    save();render();
+    return;
+  }
+
+  // D20 roll — critical fail means polluted/cursed!
+  let roll=d20();
+
+  if(roll===1){
+    // CRITICAL FAIL — poisoned/cursed!
+    r.rest.sips--;
+    if(r.rest.type==="luck"){
+      // Cursed luck fountain — LOSE luck
+      let luckLoss=1+Math.floor(Math.random()*2);
+      S.stats.luck=Math.max(0,(S.stats.luck||0)-luckLoss);
+      msg(`🔮 The ${r.rest.name} is CURSED! Misfortune washes over you. -${luckLoss} Luck!`);
+    } else {
+      let poisonDmg=Math.max(2,Math.round(S.maxHp*r.rest.healPct*0.8));
+      msg(`☠️ The ${r.rest.name} is POLLUTED! You drink tainted water and take ${poisonDmg} poison damage!`);
+      damage(poisonDmg);
+    }
+    // 20% chance permanently corrupted
+    if(Math.random()<0.20){
+      r.rest.depleted=true;
+      if(r.rest.type==="luck"){
+        msg(`💀 The ${r.rest.name} dims and goes dark. Its magic is forever broken.`);
+      } else {
+        msg(`🟤 The ${r.rest.name} turns foul and black. It is permanently corrupted.`);
+      }
+    }
+    save();render();
+    return;
+  }
+
+  if(roll<=3){
+    // Bad sip — reduced effect + minor negative
+    r.rest.sips--;
+    if(r.rest.type==="luck"){
+      msg(`${r.rest.emoji} The ${r.rest.name} flickers dimly... No effect this time. ${r.rest.sips}/${r.rest.maxSips} sips left.`);
+    } else {
+      let weakHeal=Math.max(1,Math.round(S.maxHp*r.rest.healPct*0.3));
+      let poisonDmg=Math.max(1,Math.round(S.maxHp*0.05));
+      let net=weakHeal-poisonDmg;
+      S.hp=Math.min(S.maxHp,Math.max(0,S.hp+net));
+      msg(`${r.rest.emoji} The ${r.rest.name} tastes bitter... +${weakHeal} HP but -${poisonDmg} poison. (${S.hp}/${S.maxHp}) ${r.rest.sips}/${r.rest.maxSips} sips left.`);
+    }
+    save();render();
+    return;
+  }
+
+  // --- GOOD SIP ---
+  r.rest.sips--;
+
+  if(r.rest.type==="luck"){
+    // Luck fountain — boost luck and other finding bonuses
+    let luckGain=roll>=20?3:roll>=17?2:1;
+    S.stats.luck=(S.stats.luck||0)+luckGain;
+    let bonusMsg=roll>=20?" 💥 The stars align! Massive fortune!":roll>=17?" ✨ Fortune smiles upon you!":"";
+    if(r.rest.sips<=0){
+      r.rest.depleted=true;
+      msg(`${r.rest.emoji} You gaze into the ${r.rest.name}.${bonusMsg} +${luckGain} Luck! (Total: ${S.stats.luck}) 🍀 Depleted — the magic fades.`);
+    } else {
+      msg(`${r.rest.emoji} You gaze into the ${r.rest.name}.${bonusMsg} +${luckGain} Luck! (Total: ${S.stats.luck}) ${r.rest.sips}/${r.rest.maxSips} sips remaining.`);
+    }
+  } else {
+    // Heal fountain
+    let healMult=roll>=20?1.5:roll>=17?1.2:1.0;
+    let healAmt=Math.max(1,Math.round(S.maxHp*r.rest.healPct*healMult));
+    let oldHp=S.hp;
+    S.hp=Math.min(S.maxHp,S.hp+healAmt);
+    let actualHeal=S.hp-oldHp;
+    let bonusMsg=roll>=20?" 💥 The waters glow with divine power!":roll>=17?" ✨ An exceptionally refreshing sip!":"";
+
+    if(r.rest.sips<=0){
+      r.rest.depleted=true;
+      msg(`${r.rest.emoji} You drink from the ${r.rest.name}.${bonusMsg} +${actualHeal} HP (${S.hp}/${S.maxHp}). 💚 Depleted — no sips remain.`);
+    } else {
+      msg(`${r.rest.emoji} You drink from the ${r.rest.name}.${bonusMsg} +${actualHeal} HP (${S.hp}/${S.maxHp}). ${r.rest.sips}/${r.rest.maxSips} sips remaining.`);
+    }
+  }
+  save();render();
+}
+window.useRest=useRest;
 
 // --- TRADER SYSTEM ---
 const traderNames=["Will Stonehand","Borin the Merchant","Durin the Collector","Kargan the Huntsman","Nori the Broker","Thrain Goldbarter","Gimli Coinkeeper","Farin Gemdealer"];
@@ -779,20 +1000,20 @@ function sellItem(idx,value){
 function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Search is unavailable during combat.");if(r.searched)return;r.searched=true;
 
   // --- QUEST ITEM DISCOVERY (d20 based) ---
-  let activeQuests=S.quests.filter(qq=>!qq.found);
+  // Items can ONLY be found on the quest's target floor (or current floor for "same floor" quests)
+  let activeQuests=S.quests.filter(qq=>!qq.found&&(qq.targetFloor===S.floor||(!qq.targetFloor&&qq.npcFloor===S.floor)));
   if(activeQuests.length>0){
     let searchRoll=d20();
-    // Base find chance depends on quest difficulty and floors explored since quest start
     let quest=activeQuests[Math.floor(Math.random()*activeQuests.length)];
-    let floorsSearched=Math.abs(S.floor-quest.npcFloor);
-    let findThreshold=quest.difficulty==="nearby"?8:quest.difficulty==="moderate"?12:quest.difficulty==="distant"?15:18;
-    // Bonus from floors explored (deeper = more likely to find distant items)
-    findThreshold-=Math.min(5,floorsSearched);
-    // INT bonus
-    findThreshold-=Math.floor(S.stats.int/20);
+    // Base threshold — easier to find on the correct floor (you're in the right place!)
+    let findThreshold=12;
+    // INT bonus helps searching
+    findThreshold-=Math.floor(S.stats.int/15);
+    // Clamp minimum
+    findThreshold=Math.max(4,findThreshold);
 
     if(searchRoll===20){
-      // CRITICAL SUCCESS — find quest item + bonus
+      // CRITICAL SUCCESS — always find it
       quest.found=true;
       if(r.secret) quest.xpReward=Math.floor(quest.xpReward*3);
       msg(`💥 CRITICAL SEARCH! You discover the ${quest.itemName} in a hidden alcove! ✅ Ready to deliver.${r.secret?" (Secret passage bonus: 3× XP!)":""}`);
@@ -945,9 +1166,55 @@ function move(d){
     if(!x.enemy&&!x.ladder&&Math.random()<0.10){
       x.ladder={dir:"down",used:false,targetKey:null};
     }
+    // Spawn rest source? (~7% chance)
+    if(!x.rest&&Math.random()<0.07){
+      x.rest=spawnRestSource();
+    }
   }
 
+  // --- FLOOR COMPLETION CHECK ---
+  // If all exits are explored/blocked and no ladder down exists, spawn a portal
+  checkFloorEscape();
+
   save();render();
+}
+
+function checkFloorEscape(){
+  // Check if there's any ladder down on this floor
+  let hasLadderDown=false;
+  // Check if there's any room with unexplored exits
+  let hasUnexploredExit=false;
+
+  for(let k of Object.keys(S.rooms)){
+    let parts=k.split(":");
+    if(parseInt(parts[0])!==S.floor)continue;
+    let rm=S.rooms[k];
+
+    if(rm.ladder&&rm.ladder.dir==="down") hasLadderDown=true;
+
+    let rx=parseInt(parts[1]),ry=parseInt(parts[2]);
+    for(let dir of["N","S","E","W"]){
+      if(rm.blocked&&rm.blocked[dir])continue;
+      let nx=rx+DIR_DX[dir],ny=ry+DIR_DY[dir];
+      let nk=`${S.floor}:${nx}:${ny}`;
+      if(!S.rooms[nk]){
+        hasUnexploredExit=true;
+        break;
+      }
+    }
+    if(hasLadderDown&&hasUnexploredExit)return;
+  }
+
+  if(hasLadderDown)return; // Ladder exists somewhere on this floor
+
+  if(!hasUnexploredExit){
+    // All exits blocked, no ladder — spawn a mysterious portal in current room
+    let r=room();
+    if(!r.ladder){
+      r.ladder={dir:"down",used:false,targetKey:null};
+      msg("🌀 The walls shimmer... A mysterious portal materializes! The dungeon demands you descend.");
+    }
+  }
 }
 
 function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if(hit===1){msg(`💥 Critical miss! ${r.enemy.name} counterattacks.`);let counterDmg=Math.max(1,(r.enemy.atk||3)+d20()%3);damage(counterDmg);if(Math.random()<0.08)loseFinger();return}
@@ -1203,6 +1470,9 @@ function drawMap(){
         } else if(rm.secret){
           symbol="✦";
           cellClass+=" secret";
+        } else if(rm.rest&&!rm.rest.depleted){
+          symbol="💚";
+          cellClass+=" rest-source";
         } else {
           symbol="·";
           cellClass+=" visited";
@@ -1232,9 +1502,9 @@ function render(){
   if(ni&&document.activeElement!==ni) ni.value=S.nickname||"";
   let sc=document.getElementById("showCountry");
   if(sc) sc.checked=!!(S.country);
-  stats.innerHTML=[`❤️ HP ${Math.max(0,S.hp)}/${S.maxHp}`,`⭐ Level ${S.level}`,`XP ${S.xp}`].map(x=>`<div>${x}</div>`).join("")+renderStatButtons()+`<div>💰 ${S.gold}</div>`;
+  stats.innerHTML=[`❤️ HP ${Math.max(0,S.hp)}/${S.maxHp}`,`⭐ Level ${S.level}`,`XP ${S.xp}`,`🍀 Luck ${S.stats.luck||0}`].map(x=>`<div>${x}</div>`).join("")+renderStatButtons()+`<div>💰 ${S.gold}</div>`;
   roomTitle.textContent=`Floor ${S.floor} — Chamber`;
-  roomText.textContent=r.enemy&&r.enemy.hp>0?`⚔️ ${r.enemy.name} (${r.enemy.hp} HP)${r.enemy.element?` [${r.enemy.element}]`:""} blocks the chamber.`:r.npc&&!r.npc.completed?`🔵 ${r.npc.name}, ${r.npc.title}, is here.`:r.trader?`💲 ${r.trader.name}, ${r.trader.title}, awaits.`:"The chamber is quiet.";
+  roomText.textContent=r.enemy&&r.enemy.hp>0?`⚔️ ${r.enemy.name} (${r.enemy.hp} HP)${r.enemy.element?` [${r.enemy.element}]`:""} blocks the chamber.`:r.npc&&!r.npc.completed?`🔵 ${r.npc.name}, ${r.npc.title}, is here.`:r.trader?`💲 ${r.trader.name}, ${r.trader.title}, awaits.`:r.rest&&!r.rest.depleted?`${r.rest.emoji} A ${r.rest.name} flows here. (${r.rest.sips} sips remain)`:"The chamber is quiet.";
   map.innerHTML=drawMap();
   if(r.enemy&&r.enemy.hp>0){
     actions.innerHTML=`<div class="combat-actions"><button onclick="act('fight')">⚔️ Fight (F)</button><button onclick="act('flee')">🏃 Flee (R)</button></div>`;
@@ -1243,6 +1513,7 @@ function render(){
     if(!r.searched) extras+=`<button class="action-btn" onclick="act('search')">🔎 Search (E)</button>`;
     if(r.npc&&!r.npc.completed) extras+=`<button class="action-btn npc-btn" onclick="talkNPC()">🔵 Talk (T)</button>`;
     if(r.trader) extras+=`<button class="action-btn trader-btn" onclick="talkTrader()">💲 Trade (T)</button>`;
+    if(r.rest&&!r.rest.depleted) extras+=`<button class="action-btn ${r.rest.type==="luck"?"luck-btn":"rest-btn"}" onclick="useRest()">${r.rest.type==="luck"?"🍀":"💚"} ${r.rest.name} (${r.rest.sips}/${r.rest.maxSips})</button>`;
     if(r.ladder) extras+=`<button class="action-btn" onclick="act('${r.ladder.dir}')">🪜 ${r.ladder.dir==="down"?"↓ Descend":"↑ Ascend"}</button>`;
     actions.innerHTML=`<div class="compass">
       <div class="compass-row"><button class="compass-btn north${r.blocked&&r.blocked.N?" blocked":""}" onclick="act('N')"${r.blocked&&r.blocked.N?" disabled":""}>▲<br><span>W / ↑</span></button></div>
@@ -1255,19 +1526,20 @@ function render(){
   equipment.innerHTML=["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet"].map(k=>{
     let disabled=(k==="weapon"&&S.lostFingers&&S.lostFingers.right&&S.lostFingers.right.length>=5);
     return`<div class=card><b>${k.toUpperCase()}</b>${disabled?`<div class="small lost-finger">⚠️ Right hand mangled — cannot wield</div>`:S.equipment[k]?item(S.equipment[k],false,k):"<div class=small>Empty</div>"}</div>`;
-  }).join("")+`<div class=card><b>RINGS — Left Hand 🤚</b><div class=grid>${S.equipment.rings.slice(0,5).map((x,i)=>{
+  }).join("")+`<div class=card><b>RINGS — Left Hand 🫲</b><div class=grid>${S.equipment.rings.slice(0,5).map((x,i)=>{
     if(isFingerLost(i)) return`<div class="item lost-finger">❌ ${i+1}. Lost</div>`;
     return x?item(x,false,"ring"+i):`<div class=item>${i+1}. Empty</div>`;
-  }).join("")}</div>${S.lostFingers&&S.lostFingers.left&&S.lostFingers.left.length>=5?`<div class="small lost-finger">⚠️ Left hand mangled — no shield grip</div>`:""}</div><div class=card><b>RINGS — Right Hand ✋</b><div class=grid>${S.equipment.rings.slice(5).map((x,i)=>{
+  }).join("")}</div>${S.lostFingers&&S.lostFingers.left&&S.lostFingers.left.length>=5?`<div class="small lost-finger">⚠️ Left hand mangled — no shield grip</div>`:""}</div><div class=card><b>RINGS — Right Hand 🫱</b><div class=grid>${S.equipment.rings.slice(5).map((x,i)=>{
     if(isFingerLost(i+5)) return`<div class="item lost-finger">❌ ${i+1}. Lost</div>`;
     return x?item(x,false,"ring"+(i+5)):`<div class=item>${i+1}. Empty</div>`;
   }).join("")}</div>${S.lostFingers&&S.lostFingers.right&&S.lostFingers.right.length>=5?`<div class="small lost-finger">⚠️ Right hand mangled — no weapon grip</div>`:""}</div>`;
   inventory.innerHTML=S.inventory.length?S.inventory.map(x=>item(x,true,false)).join(""):"<div class=small>Empty</div>";
   quests.innerHTML=S.quests.length?S.quests.map(q=>{
-    let diffIcon=q.difficulty==="nearby"?"⚪":q.difficulty==="moderate"?"🔵":q.difficulty==="distant"?"🟠":"🟣";
-    return`<div class="card quest-card ${q.found?"quest-found":""}">
-      ${q.found?"✅":"🔎"} <b>${q.itemName}</b> ${diffIcon} ${q.difficulty||""}
-      <div class="small">${q.found?"Found — return to NPC!":"Searching..."} · Reward: ${q.xpReward} XP${q.itemReward?" + 🎁":""}
+    let floorHint=q.targetFloor?`Floor ${q.targetFloor}`:(q.difficulty||"?");
+    let onCorrectFloor=q.targetFloor===S.floor;
+    return`<div class="card quest-card ${q.found?"quest-found":""}${!q.found&&onCorrectFloor?" quest-active":""}">
+      ${q.found?"✅":"🔎"} <b>${q.itemName}</b>
+      <div class="small">${q.found?"Found — return to "+q.npcName+"!":`Search on: ${floorHint}${onCorrectFloor?" ← YOU ARE HERE":""}`} · Reward: ${q.xpReward} XP${q.itemReward?" + 🎁":""}
       </div></div>`;
   }).join(""):"<div class=small>No active quests.</div>";
   renderHall();
