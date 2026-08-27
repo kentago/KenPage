@@ -65,7 +65,7 @@ const rar=["common","uncommon","rare","mythical"], dep=["bronze","silver","gold"
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 let globalHall=[]; // Cached global leaderboard from D1
 
-function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
 function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null})}
@@ -490,7 +490,11 @@ async function submitToGlobalHall(){
     level:S.level,
     floor:S.floor,
     items:countItems(),
-    country:S.country||""
+    country:S.country||"",
+    kills:S.totalKills||0,
+    bestStreak:S.bestKillStreak||0,
+    gold:S.gold||0,
+    actions:S.actions||0
   };
 
   // Always save to localStorage as fallback
@@ -516,13 +520,20 @@ async function submitToGlobalHall(){
   }
 }
 
-async function fetchGlobalHall(){
+let currentSeason=null;
+let allSeasons=[];
+let viewingSeason=null; // null = current season
+
+async function fetchGlobalHall(seasonId){
   try{
-    const res=await fetch(`${API_BASE}/leaderboard`);
+    let url=`${API_BASE}/leaderboard`;
+    if(seasonId) url+=`?season=${seasonId}`;
+    const res=await fetch(url);
     if(res.ok){
       const data=await res.json();
       if(data.ok&&data.leaderboard){
         globalHall=data.leaderboard;
+        if(data.season) viewingSeason=data.season;
         renderHall();
         return;
       }
@@ -530,18 +541,48 @@ async function fetchGlobalHall(){
   }catch(err){
     console.warn("⚠️ Could not fetch Global Hall of Fame, using local fallback.",err);
   }
-  // Fallback: use localStorage
   globalHall=JSON.parse(localStorage.getItem("infiniteDungeonHall")||"[]");
   renderHall();
 }
 
+async function fetchSeasons(){
+  try{
+    const res=await fetch(`${API_BASE}/seasons`);
+    if(res.ok){
+      const data=await res.json();
+      if(data.ok) allSeasons=data.seasons||[];
+    }
+    const res2=await fetch(`${API_BASE}/season`);
+    if(res2.ok){
+      const data2=await res2.json();
+      if(data2.ok) currentSeason=data2.season;
+    }
+  }catch(err){
+    console.warn("⚠️ Could not fetch seasons.",err);
+  }
+}
+
+function viewSeason(seasonId){
+  fetchGlobalHall(seasonId||null);
+}
+window.viewSeason=viewSeason;
+
 function renderHall(){
   const list=globalHall.length?globalHall:JSON.parse(localStorage.getItem("infiniteDungeonHall")||"[]");
-  hall.innerHTML=list.slice(0,10).map((x,i)=>`<div class="card hall-entry">
+  let seasonLabel=viewingSeason?`${viewingSeason.name}${viewingSeason.ended_at?" (ended)":""}`:(currentSeason?currentSeason.name:"Season");
+  let seasonNav="";
+  if(allSeasons.length>0){
+    seasonNav=`<div class="season-nav"><select id="seasonSelect" onchange="viewSeason(this.value)">
+      ${allSeasons.map(s=>`<option value="${s.id}"${(viewingSeason&&viewingSeason.id===s.id)||(!viewingSeason&&!s.ended_at)?" selected":""}>${s.name}${s.ended_at?"":" ⚡ current"}</option>`).join("")}
+    </select></div>`;
+  }
+  hall.innerHTML=`<div class="season-header">🏆 ${seasonLabel}</div>${seasonNav}`+
+    (list.slice(0,10).map((x,i)=>`<div class="card hall-entry">
     <span class="hall-rank">#${i+1}</span>
     ${countryFlag(x.country)} <b>${x.nickname||"Secret Hero"}</b> — ${x.name}
     <div class="small">XP ${x.xp} · Level ${x.level} · Floor ${x.floor} · Items ${x.items}</div>
-  </div>`).join("")||"<div class=small>No completed expeditions yet.</div>";
+    <div class="small">⚔️ ${x.kills||0} kills · 🔥 ${x.bestStreak||0} streak · 💰 ${x.gold||0} gold</div>
+  </div>`).join("")||"<div class=small>No completed expeditions yet.</div>");
 }
 
 // --- DEATH HANDLING ---
@@ -630,6 +671,72 @@ function spawn(){
   }
 
   return{name,hp,atk,element,elementDmg,tier:pool===common?"common":pool===mid?"mid":pool===hard?"hard":pool===elite?"elite":"boss"};
+}
+
+// --- BOSS SYSTEM ---
+// Every 5th floor has a randomized boss guarding the ladder down
+// Same "role" each playthrough but different element, stats, abilities
+const bossTemplates=[
+  {name:"The Ironguard",titles:["of the Deep","of the Sealed Gate","of Forgotten Halls","of the Last Stand"]},
+  {name:"The Warden",titles:["of Bones","of Flame","of the Abyss","of Shattered Realms"]},
+  {name:"The Sentinel",titles:["of Crystal","of Shadow","of the Void","of Ancient Law"]},
+  {name:"The Gatekeeper",titles:["of Doom","of the Titan Hall","of Frozen Depths","of Dragonfire"]},
+  {name:"The Guardian",titles:["of the Crown","of Lost Souls","of the World Below","of Eternal Night"]},
+  {name:"The Colossus",titles:["of Stone","of Thunder","of the Forge","of Starfall"]},
+  {name:"The Devourer",titles:["of Light","of Hope","of the Living","of Worlds"]},
+  {name:"The Overlord",titles:["of Rot","of Iron","of the Pit","of Cursed Depths"]}
+];
+const bossAbilities=[
+  "Earthquake (stuns for 1 turn)","Fire Breath (burns for extra damage over 2 turns)",
+  "Shadow Cloak (50% miss chance for 1 attack)","Life Drain (heals from damage dealt)",
+  "Enrage (doubles attack when below 30% HP)","Armor Break (reduces your STR temporarily)",
+  "Poison Cloud (damage each turn)","Frost Nova (reduces your DEX temporarily)",
+  "Summon Minion (extra hit per turn)","Arcane Blast (ignores defense)",
+  "Titan Slam (massive single hit)","Fear Aura (flee threshold +3)",
+  "Regeneration (heals each turn)","Crystal Shield (absorbs first 2 hits)"
+];
+
+function floorHasBoss(){
+  // Check if any room on this floor already has a boss
+  for(let k of Object.keys(S.rooms)){
+    let parts=k.split(":");
+    if(parseInt(parts[0])!==S.floor)continue;
+    let rm=S.rooms[k];
+    if(rm.enemy&&rm.enemy.isBoss)return true;
+  }
+  return false;
+}
+
+function spawnBoss(){
+  let elements=["Earth","Fire","Water","Air","Shadow","Arcane"];
+  let template=bossTemplates[Math.floor(Math.random()*bossTemplates.length)];
+  let title=template.titles[Math.floor(Math.random()*template.titles.length)];
+  let element=elements[Math.floor(Math.random()*elements.length)];
+
+  // Boss name: "Tungsten Fire Ironguard of the Deep"
+  let prefix=questPrefixes[Math.floor(Math.random()*questPrefixes.length)];
+  let name=`${prefix} ${element} ${template.name} ${title}`;
+
+  // Stats scale with danger curve but 5-8× stronger than normal enemies
+  let dangerScale=Math.pow(S.floor,1.6);
+  let bossMultiplier=5+Math.random()*3; // 5-8×
+  let hp=Math.round(dangerScale*bossMultiplier*1.2);
+  let atk=Math.round(dangerScale*bossMultiplier*0.25);
+
+  // Random abilities (1-2)
+  let ability1=bossAbilities[Math.floor(Math.random()*bossAbilities.length)];
+  let ability2=Math.random()<0.4?bossAbilities[Math.floor(Math.random()*bossAbilities.length)]:null;
+  if(ability2===ability1) ability2=null;
+
+  // Element damage
+  let elementDmg=Math.round(dangerScale*0.12);
+
+  return{
+    name,hp,atk,element,elementDmg,
+    tier:"boss",isBoss:true,
+    abilities:[ability1,ability2].filter(x=>x),
+    xpMultiplier:5+Math.floor(S.floor/10) // Bosses give 5-10× XP
+  };
 }
 
 // --- NPC SYSTEM ---
@@ -914,6 +1021,10 @@ function useRest(){
 
   // --- GOOD SIP ---
   r.rest.sips--;
+  // Resting breaks kill streak
+  if(r.rest.type==="heal"&&S.killStreak>0){
+    S.killStreak=0;
+  }
 
   if(r.rest.type==="luck"){
     // Luck fountain — boost luck and other finding bonuses
@@ -1165,6 +1276,11 @@ function move(d){
     // Spawn ladder down? (~10% chance, no enemy blocking it)
     if(!x.enemy&&!x.ladder&&Math.random()<0.10){
       x.ladder={dir:"down",used:false,targetKey:null};
+      // Boss floors (every 5th floor) — boss guards the first ladder
+      if(S.floor%5===0&&!floorHasBoss()){
+        x.enemy=spawnBoss();
+        msg(`⚠️ A powerful guardian blocks the descent!`);
+      }
     }
     // Spawn rest source? (~7% chance)
     if(!x.rest&&Math.random()<0.07){
@@ -1230,12 +1346,26 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
   if(r.enemy.hp===0){
     let defeated=r.enemy.name;
     // XP reward based on enemy tier
-    let dangerXP=Math.pow(S.floor,1.4); // XP scales between loot (1.2) and danger (1.6)
-    let xpGain=Math.round(r.enemy.tier==="common"?dangerXP*1.5:r.enemy.tier==="mid"?dangerXP*3:r.enemy.tier==="hard"?dangerXP*6:r.enemy.tier==="elite"?dangerXP*12:dangerXP*25);
-    S.xp+=xpGain;
+    let dangerXP=Math.pow(S.floor,1.4);
+    let xpMult=r.enemy.isBoss?(r.enemy.xpMultiplier||5):1;
+    let xpGain=Math.round((r.enemy.tier==="common"?dangerXP*1.5:r.enemy.tier==="mid"?dangerXP*3:r.enemy.tier==="hard"?dangerXP*6:r.enemy.tier==="elite"?dangerXP*12:dangerXP*25)*xpMult);
+    let wasBoss=r.enemy.isBoss;
+    // Kill streak tracking
+    S.killStreak=(S.killStreak||0)+1;
+    S.totalKills=(S.totalKills||0)+1;
+    if(S.killStreak>(S.bestKillStreak||0)) S.bestKillStreak=S.killStreak;
+    // Combo XP multiplier: +10% per streak kill (caps at 3×)
+    let comboMult=Math.min(3,1+S.killStreak*0.1);
+    S.xp+=Math.round(xpGain*comboMult);
     checkLevelUp();
     r.enemy=null;
-    msg(`☠️ ${defeated} is defeated! +${xpGain} XP`);
+    let streakMsg=S.killStreak>=3?` 🔥 Kill streak: ${S.killStreak}× (${Math.round(comboMult*100)}% XP)`:"";
+    msg(`☠️ ${defeated} is defeated! +${Math.round(xpGain*comboMult)} XP${streakMsg}`);
+    // Boss guaranteed legendary drop
+    if(wasBoss){
+      let bossLoot=makeLegendaryItem();
+      msg(`👑 The ${defeated} drops a legendary treasure!\n🎁 ${bossLoot.name}! ${obtain(bossLoot)}`);
+    }
   } else {
     msg(`⚔️ You hit ${r.enemy.name} for ${n}. (${r.enemy.hp} HP left)`);
     // Enemy attacks back using its atk stat
@@ -1303,7 +1433,7 @@ function retreatToPrevRoom(){
   }
   save();
 }
-function act(a){if(S.hp<=0)return;if(a==="search")search();else if(a==="fight")fight();else if(a==="flee")flee();else if(["N","S","E","W"].includes(a))move(a);else if(a==="down")useLadder("down");else if(a==="up")useLadder("up");save();render()}
+function act(a){if(S.hp<=0)return;S.actions=(S.actions||0)+1;if(a==="search")search();else if(a==="fight")fight();else if(a==="flee")flee();else if(["N","S","E","W"].includes(a))move(a);else if(a==="down")useLadder("down");else if(a==="up")useLadder("up");save();render()}
 
 function useLadder(dir){
   let r=room();
@@ -1504,7 +1634,7 @@ function render(){
   if(sc) sc.checked=!!(S.country);
   stats.innerHTML=[`❤️ HP ${Math.max(0,S.hp)}/${S.maxHp}`,`⭐ Level ${S.level}`,`XP ${S.xp}`,`🍀 Luck ${S.stats.luck||0}`].map(x=>`<div>${x}</div>`).join("")+renderStatButtons()+`<div>💰 ${S.gold}</div>`;
   roomTitle.textContent=`Floor ${S.floor} — Chamber`;
-  roomText.textContent=r.enemy&&r.enemy.hp>0?`⚔️ ${r.enemy.name} (${r.enemy.hp} HP)${r.enemy.element?` [${r.enemy.element}]`:""} blocks the chamber.`:r.npc&&!r.npc.completed?`🔵 ${r.npc.name}, ${r.npc.title}, is here.`:r.trader?`💲 ${r.trader.name}, ${r.trader.title}, awaits.`:r.rest&&!r.rest.depleted?`${r.rest.emoji} A ${r.rest.name} flows here. (${r.rest.sips} sips remain)`:"The chamber is quiet.";
+  roomText.textContent=r.enemy&&r.enemy.hp>0?`⚔️ ${r.enemy.name} (${r.enemy.hp} HP)${r.enemy.element?` [${r.enemy.element}]`:""}${r.enemy.isBoss?` 👑 BOSS — ${r.enemy.abilities.join(" | ")}`:""} blocks the chamber.`:r.npc&&!r.npc.completed?`🔵 ${r.npc.name}, ${r.npc.title}, is here.`:r.trader?`💲 ${r.trader.name}, ${r.trader.title}, awaits.`:r.rest&&!r.rest.depleted?`${r.rest.emoji} A ${r.rest.name} flows here. (${r.rest.sips} sips remain)`:"The chamber is quiet.";
   map.innerHTML=drawMap();
   if(r.enemy&&r.enemy.hp>0){
     actions.innerHTML=`<div class="combat-actions"><button onclick="act('fight')">⚔️ Fight (F)</button><button onclick="act('flee')">🏃 Flee (R)</button></div>`;
@@ -1586,4 +1716,4 @@ document.addEventListener("keydown",(e)=>{
 });
 
 render();
-fetchGlobalHall(); // Fetch global leaderboard on page load
+fetchSeasons().then(()=>fetchGlobalHall()); // Fetch seasons + leaderboard on page load
