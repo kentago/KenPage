@@ -1,7 +1,8 @@
 name = "infinite-dungeon-api"
 main = "worker.js"
-compatibility_date = "2026-08-25"
+compatibility_date = "2026-08-26"
 
+# D1 Database binding
 [[d1_databases]]
 binding = "DB"
 database_name = "infinite-dungeon"

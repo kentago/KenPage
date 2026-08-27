@@ -1,3 +1,31 @@
-CREATE TABLE IF NOT EXISTS seasons(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,started_at INTEGER NOT NULL,ended_at INTEGER,active INTEGER NOT NULL DEFAULT 1);
-CREATE TABLE IF NOT EXISTS expeditions(id INTEGER PRIMARY KEY AUTOINCREMENT,expedition_id TEXT NOT NULL UNIQUE,hero_name TEXT NOT NULL,nickname TEXT NOT NULL DEFAULT 'Secret Hero',show_country INTEGER NOT NULL DEFAULT 0,country TEXT,expedition_name TEXT NOT NULL,season_id INTEGER NOT NULL,level INTEGER NOT NULL,floor INTEGER NOT NULL,total_xp INTEGER NOT NULL,inventory_count INTEGER NOT NULL DEFAULT 0,death_cause TEXT,started_at INTEGER,finished_at INTEGER);
-INSERT INTO seasons(name,started_at,active) SELECT 'Season I — The Deep Calls',strftime('%s','now')*1000,1 WHERE NOT EXISTS(SELECT 1 FROM seasons WHERE active=1);
+-- Infinite Dungeon — Hall of Fame D1 Schema (with Seasons)
+-- Run with: wrangler d1 execute infinite-dungeon --file=schema.sql
+
+-- Seasons table
+CREATE TABLE IF NOT EXISTS seasons (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL DEFAULT 'Season 1',
+  started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  ended_at DATETIME DEFAULT NULL
+);
+
+-- Hall of Fame entries (linked to a season)
+CREATE TABLE IF NOT EXISTS hall_of_fame (
+  id TEXT PRIMARY KEY,
+  season_id INTEGER NOT NULL DEFAULT 1,
+  name TEXT NOT NULL,
+  nickname TEXT DEFAULT 'Secret Hero',
+  xp INTEGER NOT NULL DEFAULT 0,
+  level INTEGER NOT NULL DEFAULT 1,
+  floor INTEGER NOT NULL DEFAULT 1,
+  items INTEGER NOT NULL DEFAULT 0,
+  country TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (season_id) REFERENCES seasons(id)
+);
+
+-- Index for leaderboard queries per season
+CREATE INDEX IF NOT EXISTS idx_hof_season_xp ON hall_of_fame(season_id, xp DESC, level DESC, floor DESC, items DESC);
+
+-- Insert first season if none exists
+INSERT OR IGNORE INTO seasons (id, name) VALUES (1, 'Season 1');
