@@ -65,7 +65,7 @@ const rar=["common","uncommon","rare","mythical"], dep=["bronze","silver","gold"
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 let globalHall=[]; // Cached global leaderboard from D1
 
-function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
 function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null})}
@@ -303,9 +303,12 @@ function discardChoice(type,idx){
 
 // --- ITEM DISPLAY ---
 function item(i,inv,equipped){
+  let dead=S.hp<=0;
   let buttons="";
-  if(inv) buttons+=`<button onclick="equip('${i.id}')">⬆️ Equip</button><button onclick="discard('${i.id}')">🗑️ Drop</button>`;
-  if(equipped) buttons+=`<button onclick="unequip('${i.id}','${equipped}')">⬇️ Unequip</button>`;
+  if(!dead){
+    if(inv) buttons+=`<button onclick="equip('${i.id}')">⬆️ Equip</button><button onclick="discard('${i.id}')">🗑️ Drop</button>`;
+    if(equipped) buttons+=`<button onclick="unequip('${i.id}','${equipped}')">⬇️ Unequip</button>`;
+  }
   return`<div class="item ${i.rarity} ${i.depth}"><span class="art">${i.art}</span><b>${i.name}</b><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${i.trait?`<div class="trait">⚡ ${i.trait}</div>`:""}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)}</div>${buttons}</div>`;
 }
 
@@ -761,7 +764,7 @@ const questItems=[
 // Quest difficulty determines how far away the item likely is
 const questDifficulty=["nearby","moderate","distant","legendary"];
 
-const questPrefixes=["Hydrogen","Helium","Lithium","Beryllium","Boron","Carbon","Nitrogen","Oxygen","Fluorine","Neon","Sodium","Magnesium","Aluminium","Silicon","Phosphorus","Sulfur","Chlorine","Argon","Potassium","Calcium","Titanium","Chromium","Iron","Cobalt","Nickel","Copper","Zinc","Gallium","Germanium","Arsenic","Selenium","Bromine","Krypton","Rubidium","Strontium","Zirconium","Niobium","Molybdenum","Silver","Tin","Antimony","Iodine","Xenon","Barium","Tungsten","Platinum","Gold","Mercury","Lead","Bismuth","Uranium","Plutonium","Osmium","Palladium","Rhodium","Iridium"];
+const questPrefixes=["Hydrogen","Helium","Lithium","Beryllium","Boron","Carbon","Nitrogen","Oxygen","Fluorine","Neon","Sodium","Magnesium","Aluminium","Silicon","Phosphorus","Sulfur","Chlorine","Argon","Potassium","Calcium","Scandium","Titanium","Vanadium","Chromium","Manganese","Iron","Cobalt","Nickel","Copper","Zinc","Gallium","Germanium","Arsenic","Selenium","Bromine","Krypton","Rubidium","Strontium","Yttrium","Zirconium","Niobium","Molybdenum","Technetium","Ruthenium","Rhodium","Palladium","Silver","Cadmium","Indium","Tin","Antimony","Tellurium","Iodine","Xenon","Caesium","Barium","Lanthanum","Cerium","Praseodymium","Neodymium","Promethium","Samarium","Europium","Gadolinium","Terbium","Dysprosium","Holmium","Erbium","Thulium","Ytterbium","Lutetium","Hafnium","Tantalum","Tungsten","Rhenium","Osmium","Iridium","Platinum","Gold","Mercury","Thallium","Lead","Bismuth","Polonium","Astatine","Radon","Francium","Radium","Actinium","Thorium","Protactinium","Uranium","Neptunium","Plutonium","Americium","Curium","Berkelium","Californium","Einsteinium","Fermium","Mendelevium","Nobelium","Lawrencium","Rutherfordium","Dubnium","Seaborgium","Bohrium","Hassium","Meitnerium","Darmstadtium","Roentgenium","Copernicium","Nihonium","Flerovium","Moscovium","Livermorium","Tennessine","Oganesson"];
 
 function uniqueQuestItemName(){
   // Pick a base name, ensure it's not already active
@@ -817,6 +820,7 @@ function spawnNPC(){
 }
 
 function talkNPC(){
+  if(S.hp<=0)return;
   let r=room();
   if(!r.npc||r.npc.completed)return;
 
@@ -860,7 +864,10 @@ function talkNPC(){
 
 function deliverQuest(npc,quest){
   // Award XP
-  S.xp+=quest.xpReward;
+  // CHA bonus: +5% quest XP per CHA point (being charming = better rewards)
+  let chaXPBonus=1+(S.stats.cha||1)*0.05;
+  let finalQuestXP=Math.round(quest.xpReward*chaXPBonus);
+  S.xp+=finalQuestXP;
 
   // --- REWARD ROLL (d20 + luck) ---
   // Even low-floor quests can give items with a lucky roll!
@@ -915,7 +922,7 @@ function deliverQuest(npc,quest){
   npc.completed=true;
   // Check level up
   checkLevelUp();
-  msg(`✅ ${npc.name} accepts the ${quest.itemName}!\n🎉 +${quest.xpReward} XP awarded!`);
+  msg(`✅ ${npc.name} accepts the ${quest.itemName}!\n🎉 +${finalQuestXP} XP awarded!${chaXPBonus>1.1?` (CHA bonus: +${Math.round((chaXPBonus-1)*100)}%)`:""}`);
   save();render();
 }
 
@@ -923,15 +930,22 @@ function checkLevelUp(){
   let needed=S.level*50+S.level*S.level*10;
   while(S.xp>=needed){
     S.level++;
-    let hpGain=5+Math.floor(S.level*1.5);
+    // HP gain scales with level — deep players get tanky
+    let hpGain=5+Math.floor(S.level*2.5);
     S.maxHp+=hpGain;
-    let heal=Math.floor(hpGain*0.7);
+    let heal=Math.floor(hpGain*0.8);
     S.hp=Math.min(S.maxHp,S.hp+heal);
-    // Increase a random stat
-    let stats=["str","dex","int","cha"];
-    let pick=stats[Math.floor(Math.random()*stats.length)];
-    S.stats[pick]+=1+Math.floor(S.level/5);
-    msg(`📈 Level ${S.level}! +${hpGain} Max HP, healed ${heal} HP, +${1+Math.floor(S.level/5)} ${pick.toUpperCase()}`);
+    // Stat gains scale with level — keeps pace with floor^1.6 danger
+    // Every level: +1 to ALL stats, plus bonus to a random stat
+    let bonusStat=["str","dex","int","cha"][Math.floor(Math.random()*4)];
+    let baseGain=1+Math.floor(S.level/8); // +1 base, growing every 8 levels
+    let bonusGain=baseGain+Math.floor(Math.random()*(1+Math.floor(S.level/10)));
+    S.stats.str+=baseGain;
+    S.stats.dex+=baseGain;
+    S.stats.int+=baseGain;
+    S.stats.cha+=baseGain;
+    S.stats[bonusStat]+=bonusGain;
+    msg(`📈 Level ${S.level}! +${hpGain} Max HP, healed ${heal}. All stats +${baseGain}, ${bonusStat.toUpperCase()} +${bonusGain} extra!`);
     needed=S.level*50+S.level*S.level*10;
   }
 }
@@ -967,6 +981,7 @@ function spawnRestSource(){
 }
 
 function useRest(){
+  if(S.hp<=0)return;
   let r=room();
   if(!r.rest||r.rest.depleted)return;
   if(r.rest.sips<=0){
@@ -1070,6 +1085,7 @@ function spawnTrader(){
 }
 
 function talkTrader(){
+  if(S.hp<=0)return;
   let r=room();
   if(!r.trader)return;
 
@@ -1088,7 +1104,8 @@ function showTraderModal(trader){
       <h3>💲 ${trader.name}, ${trader.title}</h3>
       <p>"Show me what you've got. I'll pay fair gold."</p>
       <div class="discard-list">${S.inventory.map((x,i)=>{
-        let value=Math.max(1,Math.floor((Object.values(x.stats).reduce((a,b)=>a+b,0))*2+(rar.indexOf(x.rarity)+1)*5));
+        let chaBonus=1+(S.stats.cha||1)*0.03; // +3% price per CHA point
+        let value=Math.max(1,Math.floor(((Object.values(x.stats).reduce((a,b)=>a+b,0))*2+(rar.indexOf(x.rarity)+1)*5)*chaBonus));
         return`<div class="item ${x.rarity} ${x.depth}"><span class="art">${x.art}</span><b>${x.name}</b>
         <div>${Object.entries(x.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>
         <div class="small">${x.rarity} · ${x.depth}</div>
@@ -1162,16 +1179,18 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
   }
 
   // --- SECRET PASSAGE (separate chance, checked first) ---
-  if(Math.random()<0.10){
+  // INT increases secret passage discovery: base 10% + 0.5% per INT
+  let secretChance=0.10+Math.min(0.15,(S.stats.int||1)*0.005);
+  if(Math.random()<secretChance){
     r.secret={dir:["N","E","S","W"][Math.floor(Math.random()*4)]};
     msg("✨ A secret passage is revealed!");
     save();render();return;
   }
 
   // --- NORMAL SEARCH RESULTS (d20 based) ---
-  let searchRoll=d20();
+  let searchRoll=d20()+Math.floor((S.stats.int||1)/10); // INT bonus: +1 per 10 INT
 
-  if(searchRoll===20){
+  if(searchRoll===20||searchRoll>=20){
     // CRITICAL LOOT SUCCESS — legendary find, biased toward rings!
     let critType=Math.random()<0.4?"ring":types[Math.floor(Math.random()*types.length)];
     let i=makeLegendaryItem();
@@ -1199,7 +1218,12 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
     return;
   }
   if(searchRoll>=2){
-    // Trap!
+    // Trap! DEX gives a chance to dodge it
+    let trapDodge=Math.min(0.35,(S.stats.dex||1)*0.015); // +1.5% per DEX, max 35%
+    if(Math.random()<trapDodge){
+      msg("⚠️ A trap triggers but you leap aside! (DEX)");
+      return;
+    }
     msg("⚠️ A hidden trap strikes!");
     damage(Math.max(1,Math.round(Math.pow(S.floor,1.2)*0.2)));
     if(Math.random()<0.12)loseFinger();
@@ -1342,12 +1366,12 @@ function checkFloorEscape(){
 }
 
 function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if(hit===1){msg(`💥 Critical miss! ${r.enemy.name} counterattacks.`);let counterDmg=Math.max(1,(r.enemy.atk||3)+d20()%3);damage(counterDmg);if(Math.random()<0.08)loseFinger();return}
-  // Right hand mangled = severely reduced attack
+  // STR = attack damage
   let rightMangled=S.lostFingers&&S.lostFingers.right&&S.lostFingers.right.length>=5;
   let leftMangled=S.lostFingers&&S.lostFingers.left&&S.lostFingers.left.length>=5;
-  let atkBonus=rightMangled?1:Math.floor(S.stats.str/10);
-  let n=Math.max(1,d20()%6+atkBonus+Math.floor(S.stats.str*0.3));
-  if(rightMangled) n=Math.max(1,Math.floor(n*0.4));
+  let strDmg=Math.floor((S.stats.str||1)*0.4); // +0.4 damage per STR
+  let n=Math.max(1,1+d20()%8+strDmg); // d8 (1-8) + STR scaling
+  if(rightMangled) n=Math.max(1,Math.floor(n*0.4)); // 60% reduction without weapon hand
   // Critical hit on 20
   if(hit===20){n=Math.floor(n*2.5);msg(`💥 CRITICAL HIT!`);}
   r.enemy.hp=Math.max(0,r.enemy.hp-n);
@@ -1378,7 +1402,16 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
     msg(`⚔️ You hit ${r.enemy.name} for ${n}. (${r.enemy.hp} HP left)`);
     // Enemy attacks back using its atk stat
     let enemyAtk=r.enemy.atk||Math.max(1,d20()%6);
+    // DEX dodge chance — completely avoid the hit
+    let dodgeChance=Math.min(0.30,(S.stats.dex||1)*0.012); // +1.2% per DEX, max 30%
+    if(Math.random()<dodgeChance){
+      msg(`🌀 You dodge ${r.enemy.name}'s attack! (DEX)`);
+      return;
+    }
     let incomingDmg=Math.max(1,enemyAtk+d20()%3-1);
+    // CHA reduces incoming damage slightly — monsters find you endearing
+    let chaReduction=1-Math.min(0.25,(S.stats.cha||1)*0.01); // -1% per CHA, max -25%
+    incomingDmg=Math.max(1,Math.round(incomingDmg*chaReduction));
     // Element bonus damage
     let elemDmg=r.enemy.elementDmg||0;
     if(elemDmg>0){
@@ -1391,7 +1424,7 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
 function flee(){
   let r=room();
   if(!r.enemy||r.enemy.hp<=0)return;
-  let n=d20();
+  let n=d20()+Math.floor((S.stats.dex||1)/8); // DEX bonus to flee (+1 per 8 DEX)
 
   // Flee damage scales with danger (floor^1.6) — fleeing deep is risky
   let dangerScale=Math.pow(S.floor,1.6);
@@ -1520,6 +1553,81 @@ function boostStat(stat){
   save();render();
 }
 window.boostStat=boostStat;
+
+// --- STARTER RING CHOICE ---
+// At the start of each run, pick 1 of 3 unique starter rings
+const starterRings=[
+  {name:"Grandfather's Iron Band",art:"💍",stats:{str:2},trait:"Dwarven Fortitude",desc:"A simple band passed down for generations. Sturdy and reliable."},
+  {name:"Mother's Moonstone Loop",art:"🌙",stats:{cha:2},trait:"Lucky Star (+2 Luck, +5% crit)",desc:"A delicate ring that brings fortune to those who wear it."},
+  {name:"Scout's Shadow Ring",art:"🖤",stats:{dex:2},trait:"Windwalker",desc:"Worn by dungeon scouts. Helps you dodge and flee."},
+  {name:"Scholar's Crystal Eye",art:"🔮",stats:{int:2},trait:"Deep Sight (+3 INT for searching)",desc:"The gem pulses when secrets are near."},
+  {name:"Warrior's Bloodstone",art:"🔴",stats:{str:1,dex:1},trait:"Berserker Rage",desc:"Thrums with violent energy. For those who choose aggression."},
+  {name:"Merchant's Goldheart",art:"🟡",stats:{cha:1,luck:1},trait:"Gold Attraction (+10% gold from sells)",desc:"A trader's lucky charm. Gold seems to follow you."},
+  {name:"Seer's Void Eye",art:"👁️",stats:{int:1,luck:1},trait:"Treasure Sense (better loot rolls)",desc:"Whispers of hidden treasure echo from within."},
+  {name:"Survivor's Bonering",art:"🦴",stats:{str:1,cha:1},trait:"Finger Ward (reduces finger loss chance)",desc:"Carved from bone. Protects what you value most — your fingers."}
+];
+
+function showStarterRingChoice(){
+  if(S.starterRingPicked)return;
+  // Pick 3 random unique options
+  let options=[];
+  let pool=[...starterRings];
+  for(let i=0;i<3&&pool.length>0;i++){
+    let idx=Math.floor(Math.random()*pool.length);
+    let ring={...pool.splice(idx,1)[0]};
+    // Add periodic table element for uniqueness
+    let element=questPrefixes[Math.floor(Math.random()*questPrefixes.length)];
+    ring.name=`${element} ${ring.name}`;
+    options.push(ring);
+  }
+  S._starterOptions=options; // temp store
+
+  let html=`<div class="discard-overlay" id="starterRingModal">
+    <div class="discard-box">
+      <h3>💍 Choose Your Heirloom Ring</h3>
+      <p>Every Dwarf carries a family ring into the dungeon. Choose wisely — it will shape your journey.</p>
+      <div class="starter-ring-options">${options.map((r,i)=>`<div class="starter-ring-card" onclick="pickStarterRing(${i})">
+        <span class="art">${r.art}</span>
+        <b>${r.name}</b>
+        <div>${Object.entries(r.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>
+        <div class="trait">⚡ ${r.trait}</div>
+        <div class="small">${r.desc}</div>
+      </div>`).join("")}</div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend",html);
+}
+
+function pickStarterRing(idx){
+  let modal=document.getElementById("starterRingModal");
+  if(modal)modal.remove();
+  if(!S._starterOptions)return;
+
+  let chosen=S._starterOptions[idx];
+  // Create the actual ring item
+  let ring={
+    id:crypto.randomUUID(),
+    type:"ring",
+    name:chosen.name,
+    rarity:"uncommon",
+    depth:"bronze",
+    art:chosen.art,
+    stats:{...chosen.stats},
+    trait:chosen.trait
+  };
+  // Apply luck stat if present
+  if(ring.stats.luck){
+    S.stats.luck=(S.stats.luck||0)+ring.stats.luck;
+    delete ring.stats.luck;
+  }
+  // Equip on first finger
+  S.equipment.rings[0]=ring;
+  S.starterRingPicked=true;
+  delete S._starterOptions;
+  msg(`💍 You wear your heirloom: ${chosen.name}. "${chosen.desc}"`);
+  save();render();
+}
+window.pickStarterRing=pickStarterRing;
 
 function toggleCountry(checked){
   if(checked){
@@ -1684,6 +1792,8 @@ function render(){
       </div></div>`;
   }).join(""):"<div class=small>No active quests.</div>";
   renderHall();
+  // Show starter ring choice if not yet picked
+  if(!S.starterRingPicked&&!document.getElementById("starterRingModal")) showStarterRingChoice();
 }
 
 // --- INIT ---

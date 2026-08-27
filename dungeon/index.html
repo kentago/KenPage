@@ -21,35 +21,61 @@
 <tr><td><b>R</b></td><td>Flee / Run (in combat)</td></tr>
 </table>
 
+<h3>💍 Starting Your Run</h3>
+<p>At the start of each run you make two choices:</p>
+<ol>
+<li><b>Heirloom Ring</b> — Pick 1 of 3 random starter rings. Each has unique stats and a trait that shapes your early game.</li>
+<li><b>Stat Boost</b> — Pick one stat (STR/DEX/INT/CHA) to boost by +1. Green buttons, one-time choice.</li>
+</ol>
+
 <h3>⚔️ Combat & Flee</h3>
 <p>Enemies are <b>gatekeepers</b> — you must defeat them to pass through. If you flee successfully, you return to the previous room. The enemy stays alive, blocking that path until killed.</p>
 <p>Flee damage scales with floor depth — fleeing deep is dangerous!</p>
+
+<h3>👑 Floor Bosses</h3>
+<p>Every <b>5th floor</b> (5, 10, 15...) has a unique boss guarding the ladder down. Bosses are randomized each run — different name, element, abilities, and stats. Killing a boss gives <b>5-10× XP</b> and drops a <b>guaranteed legendary item</b>.</p>
 
 <h3>🔥 Kill Streak</h3>
 <p>Kill enemies without resting at a healing fountain to build a <b>kill streak</b>. Each kill in the streak gives <b>+10% bonus XP</b> (up to 3× max). Resting at a heal source resets your streak. Luck fountains do NOT break streaks.</p>
 
 <h3>💍 Rings & Fingers</h3>
 <p>You have <b>10 ring slots</b> across two hands: Left 🫲 (shield) and Right 🫱 (weapon). Rings are key equipment — many have synergy traits that get stronger the more rings you wear.</p>
-<p>⚠️ <b>Be careful!</b> Traps and critical combat failures can <b>permanently sever fingers</b>. A lost finger means that ring slot is gone forever. Lose all 5 on your right hand and you can't wield weapons. Lose all 5 on the left and you take 50% more damage.</p>
+<p>⚠️ <b>Be careful!</b> Traps and critical combat failures can <b>permanently sever fingers</b>. A lost finger means that ring slot is gone forever. Lose all 5 on your right hand and you can't wield weapons. Lose all 5 on the left and you take 50% more damage. Each finger lost makes the next one harder to lose (exponential protection).</p>
 
 <h3>🪜 Ladders & Floors</h3>
-<p>Ladders let you descend to deeper floors. <span style="color:#f39c12">Yellow 🪜</span> = undiscovered, <span style="color:#2ecc71">Green 🪜</span> = used (known connection). Each ladder always leads to the same spot. Explore a floor fully before descending — deeper floors are exponentially more dangerous!</p>
-<p>Every 5th floor has a <b>👑 Boss</b> guarding the ladder down.</p>
+<p>Ladders are portals — each one leads to a <b>unique position</b> on the next floor. Two ladders on the same floor lead to different spots below (separate "islands" that may or may not connect). <span style="color:#f39c12">Yellow 🪜</span> = undiscovered, <span style="color:#2ecc71">Green 🪜</span> = used. Ladders always go exactly one floor down/up.</p>
+<p>If you're completely stuck (all rooms explored, all searched, no ladder found), a 🌀 emergency portal will appear.</p>
 
 <h3>🔎 Searching</h3>
-<p>Each room can be searched once. Results are a d20 roll: loot, traps, secret passages, quest items, or legendary finds on a natural 20. Critical fail (roll 1) can trigger traps, spawn enemies, or destroy items.</p>
+<p>Each room can be searched once (d20 roll + INT bonus). Results: legendary items (20+), great loot (16-19), normal loot (10-15), nothing (6-9), traps (2-5, DEX can dodge), critical fail (1). Hidden ladders and secret passages can also be discovered!</p>
 
 <h3>🔵 NPCs & Quests</h3>
-<p>NPCs give quests to find specific items. The quest tells you <b>which floor</b> to search on. Return the item to the correct NPC for XP + possible item rewards. Deeper quests give better rewards.</p>
+<p>NPCs give quests to find specific items on a <b>specific floor</b>. The quest UI tells you exactly where to search. You must deliver the correct item to the correct NPC. Deeper quests = better rewards (XP + items). CHA boosts quest XP by +5% per point.</p>
 
 <h3>💲 Traders</h3>
-<p>Sell inventory items for gold at traders.</p>
+<p>Sell inventory items for gold at traders. CHA boosts sell prices by +3% per point.</p>
 
 <h3>💚 Fountains</h3>
-<p>Healing fountains restore HP. Luck fountains (🍀) grant permanent Luck. Each has limited sips (d20 determined). <b>Warning:</b> roll a 1 and the fountain may be polluted/cursed — or permanently corrupted!</p>
+<p><b>Healing fountains</b> (💚) restore HP (15-35% of max per sip). <b>Luck fountains</b> (🍀) grant permanent Luck stat. Each has limited sips (d20 determined). Every sip is a d20 roll:</p>
+<ul>
+<li><b>20</b> — Divine/massive effect (+50% heal or +3 Luck)</li>
+<li><b>17-19</b> — Great sip (+20% heal or +2 Luck)</li>
+<li><b>4-16</b> — Normal sip</li>
+<li><b>2-3</b> — Weak/no effect</li>
+<li><b>1</b> — ☠️ POLLUTED/CURSED! Damage or Luck loss. 20% chance permanently corrupted.</li>
+</ul>
 
-<h3>🏆 Hall of Fame</h3>
-<p>When you die, your run is submitted to the <b>Global Hall of Fame</b>. Compete worldwide across seasons! Set a Tag to be recognized. Opt-in to show your country flag.</p>
+<h3>📊 Stats</h3>
+<table class="instr-table">
+<tr><td><b>STR</b></td><td>Attack damage (+0.4 per point)</td></tr>
+<tr><td><b>DEX</b></td><td>Dodge attacks (max 30%), flee bonus (+1 per 8), trap dodge (max 35%)</td></tr>
+<tr><td><b>INT</b></td><td>Search roll bonus (+1 per 10), secret passage chance (+0.5% per point), quest finding</td></tr>
+<tr><td><b>CHA</b></td><td>+5% quest XP, +3% sell price, -1% incoming damage (per point)</td></tr>
+<tr><td><b>Luck</b></td><td>Reward rolls, bonus items from NPCs, better loot</td></tr>
+</table>
+
+<h3>🏆 Hall of Fame & Seasons</h3>
+<p>When you die, your run is submitted to the <b>Global Hall of Fame</b>. Compete worldwide! The admin resets seasons periodically — browse past seasons with the dropdown. Set a Tag to be recognized. Opt-in to show your country flag.</p>
 
 <h3>🗺️ Map Symbols</h3>
 <table class="instr-table">
@@ -65,18 +91,8 @@
 <tr><td style="color:#c0392b">▬</td><td>Red border = blocked wall</td></tr>
 </table>
 
-<h3>📊 Stats</h3>
-<table class="instr-table">
-<tr><td><b>STR</b></td><td>Attack damage</td></tr>
-<tr><td><b>DEX</b></td><td>Dodge / flee bonus</td></tr>
-<tr><td><b>INT</b></td><td>Search quality / quest finding</td></tr>
-<tr><td><b>CHA</b></td><td>NPC / trader interactions</td></tr>
-<tr><td><b>Luck</b></td><td>Reward rolls, loot quality, crits</td></tr>
-</table>
-<p>At the start of each run, pick <b>one stat to boost +1</b> (green buttons).</p>
-
 <h3>☠️ Permanent Death</h3>
-<p>When HP hits 0, the run ends forever. Your legacy lives on in the Hall of Fame. Start fresh with New Run.</p>
+<p>When HP hits 0, the run ends forever. All buttons are disabled — you can screenshot your gear but cannot interact. Your legacy lives on in the Hall of Fame. Start fresh with New Run.</p>
 </div>
 </details>
 <p id="intro"></p>

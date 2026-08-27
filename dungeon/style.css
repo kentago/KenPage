@@ -289,3 +289,11 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .discard-box h3{color:#e74c3c}
 .discard-box h4{color:#aaa;margin-top:16px}
 .discard-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;max-height:400px;overflow-y:auto}
+
+/* Starter ring choice */
+.starter-ring-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px}
+.starter-ring-card{background:#1a1a2e;border:2px solid #555;border-radius:10px;padding:12px;cursor:pointer;transition:all 0.2s;text-align:center}
+.starter-ring-card:hover{border-color:#f1c40f;background:#2a2a1a;transform:scale(1.03)}
+.starter-ring-card .art{font-size:36px;display:block;margin-bottom:6px}
+.starter-ring-card b{color:#f1c40f}
+.starter-ring-card .small{margin-top:6px;font-style:italic}
