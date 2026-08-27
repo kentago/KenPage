@@ -4,7 +4,19 @@ header{display:flex;justify-content:space-between;align-items:center}
 section{background:#202020;border:1px solid #444;border-radius:12px;padding:14px;margin:12px 0}
 .stats,.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
 .stats>div,.card,.item{background:#292929;border:1px solid #555;border-radius:9px;padding:9px}
+
+/* Stat boost buttons */
+.stat-btn{background:#292929;border:1px solid #555;border-radius:9px;padding:9px;font-weight:bold;text-align:center}
+.stat-btn.stat-available{background:#1a3a1a;border-color:#2ecc71;color:#2ecc71;cursor:pointer;transition:all 0.15s}
+.stat-btn.stat-available:hover{background:#2a4a2a;border-color:#4caf50;transform:scale(1.05)}
+.boost-hint{font-size:11px;color:#4caf50;margin-left:4px}
 button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;padding:9px;margin:4px;cursor:pointer}
+.nickname-row{display:flex;align-items:center;gap:8px;margin:8px 0}
+.nickname-row input{background:#1a1a1a;color:#f1c40f;border:1px solid #555;border-radius:6px;padding:6px 10px;font-size:15px;width:180px}
+.nickname-row input::placeholder{color:#666;font-style:italic}
+.nickname-row label{color:#aaa;font-size:14px}
+.country-opt{display:flex;align-items:center;gap:4px;font-size:13px;color:#888;margin-left:12px;cursor:pointer}
+.country-opt input{cursor:pointer}
 #log{height:220px;overflow:auto;background:#0c0c0c;padding:10px;border-radius:8px}
 .art{font-size:32px;float:right}
 .small{font-size:.85em;color:#aaa}

@@ -3,7 +3,9 @@
 <title>Infinite Dungeon</title><link rel="stylesheet" href="style.css"></head>
 <body><main>
 <header><h1>⚔️ Infinite Dungeon</h1><button onclick="newRun()">🔄 New Run</button></header>
-<p id="intro"></p><div id="stats" class="stats"></div>
+<p id="intro"></p>
+<div class="nickname-row"><label>🏷️ Tag: </label><input id="nicknameInput" type="text" placeholder="Secret Hero" maxlength="20" onchange="setNickname(this.value)"><label class="country-opt"><input id="showCountry" type="checkbox" onchange="toggleCountry(this.checked)"> Show my flag</label></div>
+<div id="stats" class="stats"></div>
 <section><h2 id="roomTitle"></h2><p id="roomText"></p><div id="map"></div><div id="actions"></div></section>
 <section><h2>📜 Activity Log</h2><div id="log"></div></section>
 <section><h2>⚔️ Equipment</h2><div id="equipment" class="grid"></div></section>

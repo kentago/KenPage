@@ -38,7 +38,7 @@ const rar=["common","uncommon","rare","mythical"], dep=["bronze","silver","gold"
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 let globalHall=[]; // Cached global leaderboard from D1
 
-function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
 function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null})}
@@ -450,7 +450,8 @@ async function submitToGlobalHall(){
     xp:S.xp,
     level:S.level,
     floor:S.floor,
-    items:countItems()
+    items:countItems(),
+    country:S.country||""
   };
 
   // Always save to localStorage as fallback
@@ -499,7 +500,7 @@ function renderHall(){
   const list=globalHall.length?globalHall:JSON.parse(localStorage.getItem("infiniteDungeonHall")||"[]");
   hall.innerHTML=list.slice(0,10).map((x,i)=>`<div class="card hall-entry">
     <span class="hall-rank">#${i+1}</span>
-    <b>${x.nickname||"Secret Hero"}</b> — ${x.name}
+    ${countryFlag(x.country)} <b>${x.nickname||"Secret Hero"}</b> — ${x.name}
     <div class="small">XP ${x.xp} · Level ${x.level} · Floor ${x.floor} · Items ${x.items}</div>
   </div>`).join("")||"<div class=small>No completed expeditions yet.</div>";
 }
@@ -995,8 +996,8 @@ function flee(){
 
   if(n===20){
     // Critical escape — no damage, return to previous room
-    msg("🏃 Critical escape! You slip away untouched.");
     retreatToPrevRoom();
+    msg("🏃 Critical escape! You slip away untouched.");
     return;
   }
   if(n<=4){
@@ -1009,32 +1010,31 @@ function flee(){
   if(n<=9){
     // Escape with heavy damage
     let dmg=fleeDmgHeavy+d4;
+    retreatToPrevRoom();
     msg(`🏃 You escape but ${r.enemy.name} strikes you for ${dmg} as you flee!`);
     damage(dmg);
-    if(S.hp>0) retreatToPrevRoom();
     return;
   }
   if(n<=13){
     // Escape with moderate damage
     let dmg=fleeDmgBase+d4;
+    retreatToPrevRoom();
     msg(`🏃 You escape with a wound. (${dmg} damage)`);
     damage(dmg);
-    if(S.hp>0) retreatToPrevRoom();
     return;
   }
   // Clean escape (14-19)
-  msg("🏃 You escape successfully!");
   retreatToPrevRoom();
+  msg("🏃 You escape successfully!");
 }
 
 function retreatToPrevRoom(){
-  // Move back to the room we came from
+  // Move back to the room we came from — position changes before render
   if(S.prevX!==undefined&&S.prevY!==undefined){
     S.x=S.prevX;
     S.y=S.prevY;
   }
-  // The enemy stays in its room — player is now safe in previous room
-  save();render();
+  save();
 }
 function act(a){if(S.hp<=0)return;if(a==="search")search();else if(a==="fight")fight();else if(a==="flee")flee();else if(["N","S","E","W"].includes(a))move(a);else if(a==="down")useLadder("down");else if(a==="up")useLadder("up");save();render()}
 
@@ -1085,6 +1085,65 @@ function useLadder(dir){
 }
 
 function newRun(){localStorage.removeItem(KEY);S=fresh();render()}
+
+function setNickname(val){
+  S.nickname=val.trim().slice(0,20);
+  save();
+}
+
+// --- STAT BOOST PER TURN ---
+// After each action, player can pick one stat to boost by 1
+// S.statBoostAvailable = true means player hasn't picked yet this turn
+
+function renderStatButtons(){
+  let available=S.statBoostAvailable&&S.hp>0;
+  return["str","dex","int","cha"].map(k=>{
+    if(available){
+      return`<div class="stat-btn stat-available" onclick="boostStat('${k}')">${k.toUpperCase()} ${S.stats[k]} <span class="boost-hint">+1</span></div>`;
+    }
+    return`<div class="stat-btn">${k.toUpperCase()} ${S.stats[k]}</div>`;
+  }).join("");
+}
+
+function boostStat(stat){
+  if(!S.statBoostAvailable||S.hp<=0)return;
+  S.stats[stat]+=1;
+  S.statBoostAvailable=false;
+  save();render();
+}
+window.boostStat=boostStat;
+
+function toggleCountry(checked){
+  if(checked){
+    // Detect country via timezone/locale (no external API, privacy-safe)
+    try{
+      let tz=Intl.DateTimeFormat().resolvedOptions().timeZone||"";
+      let locale=navigator.language||"en";
+      let countryCode=locale.split("-")[1]||tzToCountry(tz)||"";
+      S.country=countryCode.toUpperCase();
+    }catch(e){
+      S.country="";
+    }
+  } else {
+    S.country="";
+  }
+  save();render();
+}
+
+// Map common timezones to country codes (no external API needed)
+function tzToCountry(tz){
+  const map={"Europe/Stockholm":"SE","Europe/London":"GB","Europe/Berlin":"DE","Europe/Paris":"FR","Europe/Oslo":"NO","Europe/Helsinki":"FI","Europe/Copenhagen":"DK","Europe/Amsterdam":"NL","Europe/Brussels":"BE","Europe/Zurich":"CH","Europe/Vienna":"AT","Europe/Rome":"IT","Europe/Madrid":"ES","Europe/Lisbon":"PT","Europe/Warsaw":"PL","Europe/Prague":"CZ","Europe/Budapest":"HU","Europe/Bucharest":"RO","Europe/Athens":"GR","Europe/Dublin":"IE","America/New_York":"US","America/Chicago":"US","America/Denver":"US","America/Los_Angeles":"US","America/Toronto":"CA","America/Vancouver":"CA","America/Sao_Paulo":"BR","America/Mexico_City":"MX","Asia/Tokyo":"JP","Asia/Seoul":"KR","Asia/Shanghai":"CN","Asia/Kolkata":"IN","Asia/Singapore":"SG","Australia/Sydney":"AU","Australia/Melbourne":"AU","Pacific/Auckland":"NZ"};
+  return map[tz]||"";
+}
+
+// Convert country code to flag emoji
+function countryFlag(code){
+  if(!code||code.length!==2)return"🌍";
+  return String.fromCodePoint(...[...code.toUpperCase()].map(c=>0x1F1E6+c.charCodeAt(0)-65));
+}
+
+window.setNickname=setNickname;
+window.toggleCountry=toggleCountry;
 
 // --- MAP RENDERING: Grid of rectangular boxes ---
 function drawMap(){
@@ -1168,7 +1227,12 @@ function drawMap(){
 function render(){
   let r=room();
   intro.textContent=`${S.name} · Floor ${S.floor}`;
-  stats.innerHTML=[`❤️ HP ${Math.max(0,S.hp)}/${S.maxHp}`,`⭐ Level ${S.level}`,`XP ${S.xp}`,`STR ${S.stats.str}`,`DEX ${S.stats.dex}`,`INT ${S.stats.int}`,`CHA ${S.stats.cha}`,`💰 ${S.gold}`].map(x=>`<div>${x}</div>`).join("");
+  // Sync nickname input (don't overwrite if user is typing)
+  let ni=document.getElementById("nicknameInput");
+  if(ni&&document.activeElement!==ni) ni.value=S.nickname||"";
+  let sc=document.getElementById("showCountry");
+  if(sc) sc.checked=!!(S.country);
+  stats.innerHTML=[`❤️ HP ${Math.max(0,S.hp)}/${S.maxHp}`,`⭐ Level ${S.level}`,`XP ${S.xp}`].map(x=>`<div>${x}</div>`).join("")+renderStatButtons()+`<div>💰 ${S.gold}</div>`;
   roomTitle.textContent=`Floor ${S.floor} — Chamber`;
   roomText.textContent=r.enemy&&r.enemy.hp>0?`⚔️ ${r.enemy.name} (${r.enemy.hp} HP)${r.enemy.element?` [${r.enemy.element}]`:""} blocks the chamber.`:r.npc&&!r.npc.completed?`🔵 ${r.npc.name}, ${r.npc.title}, is here.`:r.trader?`💲 ${r.trader.name}, ${r.trader.title}, awaits.`:"The chamber is quiet.";
   map.innerHTML=drawMap();
