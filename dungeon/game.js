@@ -38,7 +38,7 @@ const rar=["common","uncommon","rare","mythical"], dep=["bronze","silver","gold"
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 let globalHall=[]; // Cached global leaderboard from D1
 
-function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
 function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null})}
@@ -113,6 +113,64 @@ function makeItem(type){
   return i;
 }
 function slot(i){return i.type==="ring"?"rings":i.type}
+
+// --- LEGENDARY ITEM GENERATION (critical success d20=20) ---
+// These are unique, powerful items that feel like "no one else has found this"
+const legendaryPrefixes=["Ancient","Eternal","Primordial","Godforged","Abyssal","Celestial","Void-Touched","Titanborn","Doomforged","Soulbound","Starfall","Worldbreaker","Mythkeeper's","Deathless","Dragonlord's"];
+const legendarySuffixes=["of the Endless Deep","of Forgotten Kings","of the First Flame","of Eternal Night","of the World Below","of Shattered Realms","of the Last Dwarf","of Titan's Blood","of the Void","of Dragonfire","of the Undying","of Starlight"];
+
+function makeLegendaryItem(){
+  let type=types[Math.floor(Math.random()*types.length)];
+  let lootScale=Math.pow(S.floor,1.2)+S.level*0.5;
+
+  // Always mythical or rare
+  let r=Math.random()<0.7?3:2; // 70% mythical, 30% rare
+
+  // Depth is always at least current floor's tier, possibly one higher
+  let depIdx=Math.min(4,Math.floor((S.floor-1)/10)+Math.floor(Math.random()*2));
+
+  // Generate a unique legendary name
+  let prefix=legendaryPrefixes[Math.floor(Math.random()*legendaryPrefixes.length)];
+  let baseName=names[type][Math.floor(Math.random()*names[type].length)];
+  let suffix=Math.random()<0.5?(" "+legendarySuffixes[Math.floor(Math.random()*legendarySuffixes.length)]):"";
+  let itemName=`${prefix} ${baseName}${suffix}`;
+
+  let i={
+    id:crypto.randomUUID(),
+    type,
+    name:itemName,
+    rarity:rar[r],
+    depth:dep[depIdx],
+    art:arts[type][Math.floor(Math.random()*arts[type].length)],
+    stats:{},
+    trait:null
+  };
+
+  // Stats are MASSIVELY boosted — top end of variance + guaranteed multiple stats
+  let p=["str","dex","int","cha"];
+  let primary=p[Math.floor(Math.random()*4)];
+  let primaryVal=Math.max(3,Math.round(lootScale*1.8*(1.2+Math.random()*0.8))); // 1.8x base, high variance
+  i.stats[primary]=primaryVal;
+
+  // Always has secondary stat
+  let secondary=p.filter(x=>x!==primary)[Math.floor(Math.random()*3)];
+  i.stats[secondary]=Math.max(1,Math.round(primaryVal*(0.4+Math.random()*0.4)));
+
+  // 60% chance of tertiary stat
+  if(Math.random()<0.6){
+    let tertiary=p.filter(x=>x!==primary&&x!==secondary)[Math.floor(Math.random()*2)];
+    i.stats[tertiary]=Math.max(1,Math.round(primaryVal*(0.2+Math.random()*0.3)));
+  }
+
+  // ALWAYS has a trait, 40% chance of double trait
+  i.trait=traits[Math.floor(Math.random()*traits.length)];
+  if(Math.random()<0.4){
+    let second=traits[Math.floor(Math.random()*traits.length)];
+    if(second!==i.trait) i.trait=i.trait+", "+second;
+  }
+
+  return i;
+}
 
 // --- OBTAIN: auto-equip if slot empty, else to inventory, else discard modal ---
 let pendingItem=null; // item waiting for discard decision
@@ -768,12 +826,52 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
     // Didn't find quest item — continue to normal search
   }
 
-  // --- NORMAL SEARCH RESULTS ---
-  let q=Math.random();
-  if(q<.12){r.secret={dir:["N","E","S","W"][Math.floor(Math.random()*4)]};msg("✨ A secret passage is revealed!");return}
-  if(q<.40){let i=makeItem(types[Math.floor(Math.random()*types.length)]);msg(`🎁 ${i.name} found. ${obtain(i)}`);return}
-  if(q<.52){msg("⚠️ A hidden trap strikes!");damage(Math.max(1,Math.round(Math.pow(S.floor,1.2)*0.2)));if(Math.random()<0.12)loseFinger();return}
-  msg("🔎 You find nothing of interest.");}
+  // --- SECRET PASSAGE (separate chance, checked first) ---
+  if(Math.random()<0.10){
+    r.secret={dir:["N","E","S","W"][Math.floor(Math.random()*4)]};
+    msg("✨ A secret passage is revealed!");
+    save();render();return;
+  }
+
+  // --- NORMAL SEARCH RESULTS (d20 based) ---
+  let searchRoll=d20();
+
+  if(searchRoll===20){
+    // CRITICAL LOOT SUCCESS — legendary find, forced high rarity + boosted stats
+    let i=makeLegendaryItem();
+    msg(`💥 CRITICAL FIND! Something extraordinary gleams in the darkness...\n🎁 ${i.name} found! ${obtain(i)}`);
+    return;
+  }
+  if(searchRoll>=16){
+    // Great find — guaranteed uncommon+
+    let i=makeItem(types[Math.floor(Math.random()*types.length)]);
+    if(i.rarity==="common"){i.rarity="uncommon";}
+    msg(`🎁 ${i.name} found! ${obtain(i)}`);
+    return;
+  }
+  if(searchRoll>=10){
+    // Normal loot
+    let i=makeItem(types[Math.floor(Math.random()*types.length)]);
+    msg(`🎁 ${i.name} found. ${obtain(i)}`);
+    return;
+  }
+  if(searchRoll>=6){
+    // Nothing useful
+    msg("🔎 You find nothing of interest.");
+    return;
+  }
+  if(searchRoll>=2){
+    // Trap!
+    msg("⚠️ A hidden trap strikes!");
+    damage(Math.max(1,Math.round(Math.pow(S.floor,1.2)*0.2)));
+    if(Math.random()<0.12)loseFinger();
+    return;
+  }
+  // searchRoll === 1: Critical fail (already handled above for quests, this is fallback)
+  msg("⚠️ A hidden trap strikes!");
+  damage(Math.max(2,Math.round(Math.pow(S.floor,1.2)*0.3)));
+  if(Math.random()<0.15)loseFinger();
+  }
 
 // --- RECIPROCAL BLOCKING ---
 const OPP={N:"S",S:"N",E:"W",W:"E"};
@@ -795,6 +893,10 @@ function move(d){
   let r=room();
   if(r.blocked[d])return;
   if(r.enemy&&r.enemy.hp>0)return msg("⚔️ A foe blocks the way.");
+
+  // Remember where we came from (for flee)
+  S.prevX=S.x;
+  S.prevY=S.y;
 
   let nx=S.x+DIR_DX[d], ny=S.y+DIR_DY[d];
   let nk=`${S.floor}:${nx}:${ny}`;
@@ -860,7 +962,8 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
   if(r.enemy.hp===0){
     let defeated=r.enemy.name;
     // XP reward based on enemy tier
-    let xpGain=r.enemy.tier==="common"?5+S.floor:r.enemy.tier==="mid"?15+S.floor*2:r.enemy.tier==="hard"?40+S.floor*3:r.enemy.tier==="elite"?100+S.floor*5:250+S.floor*10;
+    let dangerXP=Math.pow(S.floor,1.4); // XP scales between loot (1.2) and danger (1.6)
+    let xpGain=Math.round(r.enemy.tier==="common"?dangerXP*1.5:r.enemy.tier==="mid"?dangerXP*3:r.enemy.tier==="hard"?dangerXP*6:r.enemy.tier==="elite"?dangerXP*12:dangerXP*25);
     S.xp+=xpGain;
     checkLevelUp();
     r.enemy=null;
@@ -879,7 +982,60 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
     if(leftMangled) incomingDmg=Math.ceil(incomingDmg*1.5);
     damage(incomingDmg);
   }}
-function flee(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let n=d20();if(n===20)return msg("🏃 Critical escape! No consequence.");if(n<=4){msg("🏃 Failed escape! The foe counterattacks.");damage(Math.max(1,d20()%5+1));return}if(n<=9){msg("🏃 You escape but take damage.");damage(Math.max(1,d20()%4+1));return}if(n<=13){msg("🏃 You escape but suffer a lingering consequence.");damage(1);return}msg("🏃 You escape successfully.")}
+function flee(){
+  let r=room();
+  if(!r.enemy||r.enemy.hp<=0)return;
+  let n=d20();
+
+  // Flee damage scales with danger (floor^1.6) — fleeing deep is risky
+  let dangerScale=Math.pow(S.floor,1.6);
+  let fleeDmgBase=Math.max(1,Math.round(dangerScale*0.15));
+  let fleeDmgHeavy=Math.max(2,Math.round(dangerScale*0.3));
+  let d4=1+Math.floor(Math.random()*4); // 1-4 extra randomness
+
+  if(n===20){
+    // Critical escape — no damage, return to previous room
+    msg("🏃 Critical escape! You slip away untouched.");
+    retreatToPrevRoom();
+    return;
+  }
+  if(n<=4){
+    // Failed flee — can't escape, enemy counterattacks hard
+    let counterDmg=Math.max(1,(r.enemy.atk||fleeDmgHeavy)+d4);
+    msg(`🏃 Failed escape! ${r.enemy.name} blocks your retreat and strikes for ${counterDmg}!`);
+    damage(counterDmg);
+    return;
+  }
+  if(n<=9){
+    // Escape with heavy damage
+    let dmg=fleeDmgHeavy+d4;
+    msg(`🏃 You escape but ${r.enemy.name} strikes you for ${dmg} as you flee!`);
+    damage(dmg);
+    if(S.hp>0) retreatToPrevRoom();
+    return;
+  }
+  if(n<=13){
+    // Escape with moderate damage
+    let dmg=fleeDmgBase+d4;
+    msg(`🏃 You escape with a wound. (${dmg} damage)`);
+    damage(dmg);
+    if(S.hp>0) retreatToPrevRoom();
+    return;
+  }
+  // Clean escape (14-19)
+  msg("🏃 You escape successfully!");
+  retreatToPrevRoom();
+}
+
+function retreatToPrevRoom(){
+  // Move back to the room we came from
+  if(S.prevX!==undefined&&S.prevY!==undefined){
+    S.x=S.prevX;
+    S.y=S.prevY;
+  }
+  // The enemy stays in its room — player is now safe in previous room
+  save();render();
+}
 function act(a){if(S.hp<=0)return;if(a==="search")search();else if(a==="fight")fight();else if(a==="flee")flee();else if(["N","S","E","W"].includes(a))move(a);else if(a==="down")useLadder("down");else if(a==="up")useLadder("up");save();render()}
 
 function useLadder(dir){
