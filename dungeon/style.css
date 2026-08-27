@@ -1,15 +1,1 @@
-body{font-family:system-ui,sans-serif;background:#17130f;color:#eee;margin:0}
-main{max-width:1100px;margin:auto;padding:16px}.version{font-size:.55em;opacity:.65}
-h1,h2{color:#e7c77a}.panel{background:#241d17;border:1px solid #5b4633;border-radius:10px;padding:14px;margin:12px 0}
-.log{max-height:300px;overflow:auto}.good{color:#9be39b}.bad{color:#ff9b8f}.gold{color:#e7c77a}.rare{color:#f2cf62}.small{opacity:.75;font-size:.9em}
-button{background:#3a2c20;color:#fff;border:1px solid #806347;border-radius:7px;padding:9px 12px;margin:4px;cursor:pointer}
-button:disabled{opacity:.35;cursor:not-allowed}.compass{display:grid;grid-template-columns:repeat(3,80px);gap:5px;justify-content:center}
-.compass button{min-height:52px}.tradegrid,.equipgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
-.item{border:1px solid #574331;border-radius:7px;padding:8px}
-.field{margin:8px 0}.field input{padding:8px;background:#18130f;color:#fff;border:1px solid #806347;border-radius:6px}
-.mapwrap{overflow:auto}.map{display:grid;gap:3px;justify-content:center;margin:8px auto}.tile{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid #46372a;border-radius:4px;font-size:16px;background:#17130f}
-.tile.known{background:#30271f}.tile.current{outline:2px solid #e7c77a;background:#4b3928}.tile.blocked{opacity:.45}.tile.ladder{color:#7cff7c}.tile.npc{color:#6cb7ff}.tile.trader{color:#7cff7c}.tile.rest{color:#8cff9b}
-.legend{font-size:.8em;opacity:.75;text-align:center}
-@media(max-width:600px){main{padding:8px}.compass{grid-template-columns:repeat(3,70px)}.tile{width:30px;height:30px}}
-
-.quest-panel{margin-top:14px;padding-top:8px;border-top:1px solid #5b4633}.quest-panel h2{margin-bottom:8px}
+body{margin:0;background:#151515;color:#eee;font:16px system-ui,sans-serif}main{max-width:1100px;margin:auto;padding:16px}section{background:#202020;border:1px solid #444;border-radius:12px;padding:14px;margin:12px 0}.stats,.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}.stats>div,.card,.item{background:#292929;border:1px solid #555;border-radius:9px;padding:9px}button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;padding:9px;margin:4px;cursor:pointer}#log{height:220px;overflow:auto;background:#0c0c0c;padding:10px}pre{background:#0c0c0c;padding:15px;text-align:center}.art{font-size:32px;float:right}.small{font-size:.85em;color:#aaa}.uncommon{border-color:#3498db}.rare{border-color:#f39c12}.mythical{border-color:#9b59b6}.bronze{box-shadow:inset 0 0 0 3px #a97142}.silver{box-shadow:inset 0 0 0 3px #c0c0c0}.gold{box-shadow:inset 0 0 0 3px #d4af37}.titan{box-shadow:inset 0 0 0 3px #667788}.glowing{box-shadow:inset 0 0 0 3px #fff,0 0 12px #9ff}
