@@ -848,6 +848,8 @@ function talkNPC(){
     npcY:S.y,
     xpReward:r.npc.xpReward,
     difficulty:r.npc.difficulty,
+    targetFloor:r.npc.targetFloor,
+    floorsDown:r.npc.floorsDown,
     itemReward:r.npc.itemReward
   };
   S.quests.push(quest);
@@ -1170,8 +1172,11 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
   let searchRoll=d20();
 
   if(searchRoll===20){
-    // CRITICAL LOOT SUCCESS — legendary find, forced high rarity + boosted stats
+    // CRITICAL LOOT SUCCESS — legendary find, biased toward rings!
+    let critType=Math.random()<0.4?"ring":types[Math.floor(Math.random()*types.length)];
     let i=makeLegendaryItem();
+    i.type=critType;
+    i.name=critType==="ring"?`${questPrefixes[Math.floor(Math.random()*questPrefixes.length)]} ${names.ring[Math.floor(Math.random()*names.ring.length)]}`:i.name;
     msg(`💥 CRITICAL FIND! Something extraordinary gleams in the darkness...\n🎁 ${i.name} found! ${obtain(i)}`);
     return;
   }
@@ -1296,10 +1301,13 @@ function move(d){
 }
 
 function checkFloorEscape(){
-  // Check if there's any ladder down on this floor
+  // Emergency portal ONLY spawns if:
+  // 1. No ladder down exists ANYWHERE on this floor
+  // 2. No unexplored exits remain (player is completely stuck)
+  // 3. ALL rooms on this floor have been searched (hidden ladder could still appear)
   let hasLadderDown=false;
-  // Check if there's any room with unexplored exits
   let hasUnexploredExit=false;
+  let hasUnsearchedRoom=false;
 
   for(let k of Object.keys(S.rooms)){
     let parts=k.split(":");
@@ -1307,6 +1315,7 @@ function checkFloorEscape(){
     let rm=S.rooms[k];
 
     if(rm.ladder&&rm.ladder.dir==="down") hasLadderDown=true;
+    if(!rm.searched) hasUnsearchedRoom=true;
 
     let rx=parseInt(parts[1]),ry=parseInt(parts[2]);
     for(let dir of["N","S","E","W"]){
@@ -1318,18 +1327,17 @@ function checkFloorEscape(){
         break;
       }
     }
-    if(hasLadderDown&&hasUnexploredExit)return;
+    if(hasLadderDown)return; // A normal ladder exists — no emergency needed
   }
 
-  if(hasLadderDown)return; // Ladder exists somewhere on this floor
+  if(hasUnexploredExit)return; // Still rooms to explore
+  if(hasUnsearchedRoom)return; // Still rooms to search — might find hidden ladder
 
-  if(!hasUnexploredExit){
-    // All exits blocked, no ladder — spawn a mysterious portal in current room
-    let r=room();
-    if(!r.ladder){
-      r.ladder={dir:"down",used:false,targetKey:null};
-      msg("🌀 The walls shimmer... A mysterious portal materializes! The dungeon demands you descend.");
-    }
+  // Truly stuck: no ladder, no exits, all searched — spawn emergency portal
+  let r=room();
+  if(!r.ladder){
+    r.ladder={dir:"down",used:false,targetKey:null};
+    msg("🌀 The walls shimmer... A mysterious portal materializes! The dungeon demands you descend.");
   }
 }
 
@@ -1441,41 +1449,44 @@ function useLadder(dir){
 
   // Mark this ladder as used (green)
   r.ladder.used=true;
-
-  // Save current position for this floor
-  if(!S.floorPositions) S.floorPositions={};
-  S.floorPositions[S.floor]={x:S.x,y:S.y};
+  let sourceKey=key();
 
   // Move to target floor
   let targetFloor=dir==="down"?S.floor+1:S.floor-1;
   if(targetFloor<1)return;
 
-  // Check if there's a paired ladder on the target floor
-  let targetKey=r.ladder.targetKey;
   S.floor=targetFloor;
 
-  if(targetKey&&S.rooms[targetKey]){
-    // Go to the paired ladder room
-    let parts=targetKey.split(":");
+  // Check if this ladder already has a paired destination
+  if(r.ladder.targetKey&&S.rooms[r.ladder.targetKey]){
+    // Go to the paired room
+    let parts=r.ladder.targetKey.split(":");
     S.x=parseInt(parts[1]);
     S.y=parseInt(parts[2]);
-    // Mark the paired ladder as used too
-    let targetRoom=S.rooms[targetKey];
+    let targetRoom=S.rooms[r.ladder.targetKey];
     if(targetRoom.ladder) targetRoom.ladder.used=true;
-  } else if(S.floorPositions[targetFloor]){
-    // Return to last known position on that floor
-    S.x=S.floorPositions[targetFloor].x;
-    S.y=S.floorPositions[targetFloor].y;
   } else {
-    // New floor — start at 0,0 and create entry with an up ladder
-    S.x=0;S.y=0;
-    let newRoom=room();
-    let currentRoomKey=key();
-    // Place an up-ladder back to where we came from
-    let prevKey=`${targetFloor-1}:${S.floorPositions[targetFloor-1]?S.floorPositions[targetFloor-1].x:0}:${S.floorPositions[targetFloor-1]?S.floorPositions[targetFloor-1].y:0}`;
-    newRoom.ladder={dir:"up",used:true,targetKey:prevKey};
-    // Link the source ladder to this room
-    r.ladder.targetKey=currentRoomKey;
+    // First time using this ladder — create a NEW unique destination
+    // Find a position not already used by another ladder on the target floor
+    let destX,destY,destKey;
+    let attempts=0;
+    do{
+      // Random position spread out from origin (farther = more isolated "islands")
+      destX=Math.floor(Math.random()*20)-10;
+      destY=Math.floor(Math.random()*20)-10;
+      destKey=`${targetFloor}:${destX}:${destY}`;
+      attempts++;
+    } while(S.rooms[destKey]&&attempts<50); // Don't land on existing room
+
+    S.x=destX;
+    S.y=destY;
+    let newRoom=room(); // Creates the room at this position
+
+    // Place a return ladder in the new room pointing back
+    newRoom.ladder={dir:dir==="down"?"up":"down",used:true,targetKey:sourceKey};
+
+    // Link source ladder to this new room
+    r.ladder.targetKey=destKey;
   }
 
   msg(dir==="down"?`🟨 You descend to floor ${S.floor}.`:`🟩 You ascend to floor ${S.floor}.`);
@@ -1585,7 +1596,7 @@ function drawMap(){
         } else if(rm.enemy&&rm.enemy.hp>0){
           symbol="⚔";
           cellClass+=" enemy";
-        } else if(rm.npc){
+        } else if(rm.npc&&!rm.npc.completed){
           symbol="🔵";
           cellClass+=" npc";
         } else if(rm.trader){
