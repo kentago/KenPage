@@ -156,6 +156,23 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
   border-color:#e74c3c;
 }
 .map-cell.enemy .map-symbol{ color:#e74c3c; }
+.map-cell.boss{
+  background:#3a0a2a;
+  border-color:#ffd700;
+  box-shadow:0 0 6px rgba(255,215,0,0.6);
+}
+.map-cell.boss .map-symbol{ color:#ffd700; }
+.boss-banner{
+  background:linear-gradient(90deg,#4a0a0a,#3a0a2a);
+  border:2px solid #ffd700;
+  color:#ffd700;
+  font-weight:bold;
+  text-align:center;
+  padding:8px;
+  border-radius:8px;
+  margin-bottom:8px;
+  animation:eternalShimmer 2s ease-in-out infinite;
+}
 
 .map-cell.npc{
   background:#1a1a3a;

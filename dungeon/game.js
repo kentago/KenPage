@@ -1,7 +1,7 @@
 // --- CORE GAME STATE ---
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 
-function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,bossSpawnedFloors:{},floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
 function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null})}
@@ -73,10 +73,12 @@ function move(d){
     // Spawn ladder down? (~10% chance, no enemy blocking it)
     if(!x.enemy&&!x.ladder&&Math.random()<0.10){
       x.ladder={dir:"down",used:false,targetKey:null};
-      // Boss floors (every 5th floor) — boss guards the first ladder
-      if(S.floor%5===0&&!floorHasBoss()){
+      // Boss floors (every 5th floor) — ONE boss guards the FIRST ladder discovered.
+      // Tracked per-floor so once handled (spawned), later ladders are free.
+      if(S.floor%5===0&&!S.bossSpawnedFloors[S.floor]){
+        S.bossSpawnedFloors[S.floor]=true;
         x.enemy=spawnBoss();
-        msg(`⚠️ A powerful guardian blocks the descent!`);
+        msg(`👑 BOSS FIGHT! ${x.enemy.name} guards the descent!\n⚡ Abilities: ${x.enemy.abilities.join(" · ")}\nDefeat it to descend — there is no way past.`);
       }
     }
     // Spawn rest source? (~7% chance)
@@ -447,7 +449,8 @@ function render(){
   roomText.textContent=r.enemy&&r.enemy.hp>0?`⚔️ ${r.enemy.name} (${r.enemy.hp} HP)${r.enemy.element?` [${r.enemy.element}]`:""}${r.enemy.isBoss?` 👑 BOSS — ${r.enemy.abilities.join(" | ")}`:""} blocks the chamber.`:r.npc&&!r.npc.completed?`🔵 ${r.npc.name}, ${r.npc.title}, is here.`:r.trader?`💲 ${r.trader.name}, ${r.trader.title}, awaits.`:r.doctor?`⚕️ ${r.doctor.name}, ${r.doctor.title}, tends the wounded here.`:r.rest&&!r.rest.depleted?`${r.rest.emoji} A ${r.rest.name} flows here. (${r.rest.sips} sips remain)`:"The chamber is quiet.";
   map.innerHTML=drawMap();
   if(r.enemy&&r.enemy.hp>0){
-    actions.innerHTML=`<div class="combat-actions"><button onclick="act('fight')">⚔️ Fight (F)</button><button onclick="act('flee')">🏃 Flee (R)</button></div>`;
+    let bossBanner=r.enemy.isBoss?`<div class="boss-banner">👑 BOSS FIGHT — must be defeated to descend</div>`:"";
+    actions.innerHTML=bossBanner+`<div class="combat-actions"><button onclick="act('fight')">⚔️ Fight (F)</button><button onclick="act('flee')">🏃 Flee (R)</button></div>`;
   } else {
     let extras="";
     if(!r.searched) extras+=`<button class="action-btn" onclick="act('search')">🔎 Search (E)</button>`;

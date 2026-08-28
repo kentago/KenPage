@@ -39,8 +39,8 @@ function drawMap(){
           symbol="◎";
           cellClass+=" player";
         } else if(rm.enemy&&rm.enemy.hp>0){
-          symbol="⚔";
-          cellClass+=" enemy";
+          symbol=rm.enemy.isBoss?"👑":"⚔";
+          cellClass+=rm.enemy.isBoss?" boss":" enemy";
         } else if(rm.npc&&!rm.npc.completed){
           symbol="🔵";
           cellClass+=" npc";
@@ -121,5 +121,11 @@ function checkFloorEscape(){
   if(!r.ladder){
     r.ladder={dir:"down",used:false,targetKey:null};
     msg("🌀 The walls shimmer... A mysterious portal materializes! The dungeon demands you descend.");
+    // On a boss floor, if the floor's boss hasn't appeared yet, it guards the portal.
+    if(S.floor%5===0&&!S.bossSpawnedFloors[S.floor]&&!(r.enemy&&r.enemy.hp>0)){
+      S.bossSpawnedFloors[S.floor]=true;
+      r.enemy=spawnBoss();
+      msg(`👑 BOSS FIGHT! ${r.enemy.name} manifests to guard the portal!\n⚡ Abilities: ${r.enemy.abilities.join(" · ")}`);
+    }
   }
 }
