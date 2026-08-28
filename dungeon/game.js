@@ -175,9 +175,7 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
   if(searchRoll===20||searchRoll>=20){
     // CRITICAL LOOT SUCCESS — legendary find, biased toward rings!
     let critType=Math.random()<0.4?"ring":types[Math.floor(Math.random()*types.length)];
-    let i=makeLegendaryItem();
-    i.type=critType;
-    i.name=critType==="ring"?`${questPrefixes[Math.floor(Math.random()*questPrefixes.length)]} ${names.ring[Math.floor(Math.random()*names.ring.length)]}`:i.name;
+    let i=makeLegendaryItem(critType);
     msg(`💥 CRITICAL FIND! Something extraordinary gleams in the darkness...\n🎁 ${i.name} found! ${obtain(i)}`);
     return;
   }
@@ -436,7 +434,15 @@ function render(){
   if(ni&&document.activeElement!==ni) ni.value=S.nickname||"";
   let sc=document.getElementById("showCountry");
   if(sc) sc.checked=!!(S.country);
-  stats.innerHTML=[`❤️ HP ${Math.max(0,S.hp)}/${S.maxHp}`,`⭐ Level ${S.level}`,`XP ${S.xp}`,`🍀 Luck ${eff().luck||0}`].map(x=>`<div>${x}</div>`).join("")+renderStatButtons()+`<div>💰 ${S.gold}</div>`;
+  // XP progress toward next level
+  let curThresh=(S.level-1)*50+(S.level-1)*(S.level-1)*10; // XP at start of current level
+  let nextThresh=S.level*50+S.level*S.level*10;            // XP needed for next level
+  let into=Math.max(0,S.xp-curThresh);
+  let span=Math.max(1,nextThresh-curThresh);
+  let pct=Math.min(100,Math.round(into/span*100));
+  let xpBar=`<div class="xp-wrap"><div class="xp-label">⭐ Level ${S.level} · XP ${into}/${span} to next</div><div class="xp-bar"><div class="xp-fill" style="width:${pct}%"></div></div></div>`;
+  stats.innerHTML=[`❤️ HP ${Math.max(0,S.hp)}/${S.maxHp}`,`🍀 Luck ${eff().luck||0}`,`💰 ${S.gold}`].map(x=>`<div>${x}</div>`).join("")+renderStatButtons();
+  xpbar.innerHTML=xpBar;
   roomTitle.textContent=`Floor ${S.floor} — Chamber`;
   roomText.textContent=r.enemy&&r.enemy.hp>0?`⚔️ ${r.enemy.name} (${r.enemy.hp} HP)${r.enemy.element?` [${r.enemy.element}]`:""}${r.enemy.isBoss?` 👑 BOSS — ${r.enemy.abilities.join(" | ")}`:""} blocks the chamber.`:r.npc&&!r.npc.completed?`🔵 ${r.npc.name}, ${r.npc.title}, is here.`:r.trader?`💲 ${r.trader.name}, ${r.trader.title}, awaits.`:r.doctor?`⚕️ ${r.doctor.name}, ${r.doctor.title}, tends the wounded here.`:r.rest&&!r.rest.depleted?`${r.rest.emoji} A ${r.rest.name} flows here. (${r.rest.sips} sips remain)`:"The chamber is quiet.";
   map.innerHTML=drawMap();

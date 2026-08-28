@@ -18,6 +18,12 @@ section{background:#202020;border:1px solid #444;border-radius:12px;padding:14px
 .stats,.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
 .stats>div,.card,.item{background:#292929;border:1px solid #555;border-radius:9px;padding:9px}
 
+/* XP progress bar */
+#xpbar{margin:8px 0}
+.xp-label{font-size:13px;color:#f1c40f;margin-bottom:4px}
+.xp-bar{height:14px;background:#1a1a1a;border:1px solid #555;border-radius:8px;overflow:hidden}
+.xp-fill{height:100%;background:linear-gradient(90deg,#f39c12,#f1c40f);transition:width 0.3s ease;border-radius:8px}
+
 /* Stat boost buttons */
 .stat-btn{background:#292929;border:1px solid #555;border-radius:9px;padding:9px;font-weight:bold;text-align:center}
 .stat-btn.stat-available{background:#1a3a1a;border-color:#2ecc71;color:#2ecc71;cursor:pointer;transition:all 0.15s}
@@ -35,6 +41,7 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .art{font-size:32px;float:right}
 .small{font-size:.85em;color:#aaa}
 .trait{font-size:.9em;color:#f1c40f;margin-top:4px}
+.item-type{font-size:.8em;color:#8ab4d8;margin:2px 0}
 /* ===== ITEM BORDERS =====
    Two independent axes, max 2 borders total.
    Common rarity + Bronze depth = NO special border (plain box — the majority).

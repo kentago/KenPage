@@ -179,8 +179,8 @@ function slot(i){return i.type==="ring"?"rings":i.type}
 // --- LEGENDARY ITEM GENERATION (critical success d20=20) ---
 // These are unique, powerful items that feel like "no one else has found this"
 
-function makeLegendaryItem(){
-  let type=types[Math.floor(Math.random()*types.length)];
+function makeLegendaryItem(forceType){
+  let type=forceType||types[Math.floor(Math.random()*types.length)];
   let lootScale=Math.pow(S.floor,1.2)+S.level*0.5;
 
   // High rarity — epic/mythical/legendary/divine, skewing higher with floor
@@ -352,7 +352,13 @@ function item(i,inv,equipped){
     }
     if(equipped) buttons+=`<button onclick="unequip('${i.id}','${equipped}')">⬇️ Unequip</button>`;
   }
-  return`<div class="item ${i.rarity} ${i.depth}${i.prestige?" prestige-"+i.prestige:""}"><span class="art">${i.art}</span><b>${i.name}</b><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${i.trait?`<div class="trait">⚡ ${i.trait}</div>`:""}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)}${i.prestige?` · ✦${i.prestige[0].toUpperCase()+i.prestige.slice(1)}✦`:""} · 💰 ${val}</div>${buttons}</div>`;
+  return`<div class="item ${i.rarity} ${i.depth}${i.prestige?" prestige-"+i.prestige:""}"><span class="art">${i.art}</span><b>${i.name}</b><div class="item-type">${typeLabel(i.type)}</div><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${i.trait?`<div class="trait">⚡ ${i.trait}</div>`:""}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)}${i.prestige?` · ✦${i.prestige[0].toUpperCase()+i.prestige.slice(1)}✦`:""} · 💰 ${val}</div>${buttons}</div>`;
+}
+
+// Friendly display label for an item type
+function typeLabel(t){
+  const labels={weapon:"⚔️ Weapon",helmet:"🪖 Helmet",armor:"🛡️ Body Armor",boots:"🥾 Boots",shoulders:"💪 Shoulders",trousers:"👖 Leggings",cape:"🧥 Cape",amulet:"📿 Amulet",ring:"💍 Ring"};
+  return labels[t]||t;
 }
 
 // Sell value of an item (CHA-boosted, same formula as trader modal)
