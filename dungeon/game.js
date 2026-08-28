@@ -1,7 +1,7 @@
 // --- CORE GAME STATE ---
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 
-function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,bossSpawnedFloors:{},phoenixUsed:false,deathWardFloor:null,secondChanceFloor:null,floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,bossSpawnedFloors:{},phoenixUsed:false,deathWardFloor:null,secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
 function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null})}
@@ -115,7 +115,18 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
 
   // --- QUEST ITEM DISCOVERY (d20 based) ---
   // Items can ONLY be found on the quest's target floor (or current floor for "same floor" quests)
-  let activeQuests=S.quests.filter(qq=>!qq.found&&(qq.targetFloor===S.floor||(!qq.targetFloor&&qq.npcFloor===S.floor)));
+  let activeQuests=S.quests.filter(qq=>{
+    if(qq.found) return false;
+    let onFloor=(qq.targetFloor===S.floor||(!qq.targetFloor&&qq.npcFloor===S.floor));
+    if(!onFloor) return false;
+    // Must be at least a few rooms away from the quest-giver — never the same or
+    // adjacent room. For same-floor quests, require Manhattan distance >= 3 from the NPC.
+    if((qq.targetFloor||qq.npcFloor)===qq.npcFloor){
+      let dist=Math.abs(S.x-qq.npcX)+Math.abs(S.y-qq.npcY);
+      if(dist<3) return false;
+    }
+    return true;
+  });
   if(activeQuests.length>0){
     let searchRoll=d20()+searchBonus();
     let quest=activeQuests[Math.floor(Math.random()*activeQuests.length)];
@@ -454,8 +465,8 @@ function render(){
   let sc=document.getElementById("showCountry");
   if(sc) sc.checked=!!(S.country);
   // XP progress toward next level
-  let curThresh=(S.level-1)*50+(S.level-1)*(S.level-1)*10; // XP at start of current level
-  let nextThresh=S.level*50+S.level*S.level*10;            // XP needed for next level
+  let curThresh=S.level>1?xpForLevel(S.level-1):0; // XP at start of current level
+  let nextThresh=xpForLevel(S.level);              // XP needed for next level
   let into=Math.max(0,S.xp-curThresh);
   let span=Math.max(1,nextThresh-curThresh);
   let pct=Math.min(100,Math.round(into/span*100));
@@ -475,7 +486,7 @@ function render(){
     if(r.trader) extras+=`<button class="action-btn trader-btn" onclick="talkTrader()">💲 Trade (T)</button>`;
     if(r.rest&&!r.rest.depleted){
       let restFull=(r.rest.type!=="luck"&&S.hp>=effMaxHp());
-      extras+=`<button class="action-btn ${r.rest.type==="luck"?"luck-btn":"rest-btn"}" onclick="useRest()"${restFull?" disabled":""}>${r.rest.type==="luck"?"🍀":"💚"} ${r.rest.name} (${r.rest.sips}/${r.rest.maxSips})${restFull?" — Full HP":""}</button>`;
+      extras+=`<button class="action-btn ${r.rest.type==="luck"?"luck-btn":"rest-btn"}" onclick="useRest()"${restFull?" disabled":""}>${r.rest.type==="luck"?"🍀":"💚"} ${r.rest.name} (${r.rest.sips}/${r.rest.maxSips})${restFull?" — Full HP":" (G)"}</button>`;
     }
     if(r.doctor) extras+=`<button class="action-btn doctor-btn" onclick="talkDoctor()">⚕️ Visit ${r.doctor.name}</button>`;
     if(r.ladder) extras+=`<button class="action-btn" onclick="act('${r.ladder.dir}')">🪜 ${r.ladder.dir==="down"?"↓ Descend":"↑ Ascend"} (Q)</button>`;
@@ -498,7 +509,8 @@ function render(){
     return x?item(x,false,"ring"+(i+5)):`<div class=item>${i+1}. Empty</div>`;
   }).join("")}</div>${S.lostFingers&&S.lostFingers.right&&S.lostFingers.right.length>=5?`<div class="small lost-finger">⚠️ Right hand mangled — no weapon grip</div>`:""}</div>`;
   inventory.innerHTML=S.inventory.length?S.inventory.map(x=>item(x,true,false)).join(""):"<div class=small>Empty</div>";
-  quests.innerHTML=S.quests.length?S.quests.map(q=>{
+  // --- QUEST DISPLAY: Active hunts + Completed trophies ---
+  let activeHtml=S.quests.length?S.quests.map(q=>{
     let floorHint=q.targetFloor?`Floor ${q.targetFloor}`:(q.difficulty||"?");
     let onCorrectFloor=q.targetFloor===S.floor;
     return`<div class="card quest-card ${q.found?"quest-found":""}${!q.found&&onCorrectFloor?" quest-active":""}">
@@ -506,6 +518,13 @@ function render(){
       <div class="small">${q.found?"Found — return to "+q.npcName+"!":`Search on: ${floorHint}${onCorrectFloor?" ← YOU ARE HERE":""}`} · Reward: ${q.xpReward} XP${q.itemReward?" + 🎁":""}
       </div></div>`;
   }).join(""):"<div class=small>No active quests.</div>";
+
+  let completed=S.completedQuests||[];
+  let completedHtml=completed.length?`<div class="quest-completed-header">🏆 Completed (${completed.length})</div>`+completed.map(q=>
+    `<div class="card quest-card quest-done">🏅 <b>${q.itemName}</b><div class="small">Delivered to ${q.npcName} · +${q.xpAwarded} XP${q.itemReward?" + 🎁":""} · Floor ${q.floor}</div></div>`
+  ).join(""):"";
+
+  quests.innerHTML=`<div class="quest-active-header">🔎 Active Quests</div>${activeHtml}${completedHtml}`;
   renderHall();
   // Show starter ring choice if not yet picked
   if(!S.starterRingPicked&&!document.getElementById("starterRingModal")) showStarterRingChoice();
@@ -576,6 +595,10 @@ document.addEventListener("keydown",(e)=>{
     // Use ladder / portal (ascend or descend)
     case"q":case"Q":
       if(!inCombat&&r.ladder) act(r.ladder.dir);
+      break;
+    // Drink / use a rest source (fountain, stream, luck fountain)
+    case"g":case"G":
+      if(!inCombat&&r.rest&&!r.rest.depleted) useRest();
       break;
   }
 });

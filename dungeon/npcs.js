@@ -158,8 +158,16 @@ function deliverQuest(npc,quest){
     }
   }
 
-  // Remove quest from active quests
+  // Remove quest from active quests and archive it as completed (for the trophy list)
   S.quests=S.quests.filter(q=>q!==quest);
+  if(!S.completedQuests) S.completedQuests=[];
+  S.completedQuests.unshift({
+    itemName:quest.itemName,
+    npcName:quest.npcName,
+    xpAwarded:finalQuestXP,
+    floor:S.floor,
+    itemReward:quest.itemReward
+  });
   // Mark NPC as completed
   npc.completed=true;
   // Check level up
@@ -169,7 +177,7 @@ function deliverQuest(npc,quest){
 }
 
 function checkLevelUp(){
-  let needed=S.level*50+S.level*S.level*10;
+  let needed=xpForLevel(S.level);
   while(S.xp>=needed){
     S.level++;
     // HP gain scales with level — deep players get tanky
@@ -181,6 +189,13 @@ function checkLevelUp(){
     let points=3+Math.floor(S.level/10); // 3 base, +1 extra every 10 levels
     S.statPoints=(S.statPoints||0)+points;
     msg(`📈 Level ${S.level}! +${hpGain} Max HP, healed ${heal}. You have ${S.statPoints} stat points to spend!`);
-    needed=S.level*50+S.level*S.level*10;
+    needed=xpForLevel(S.level);
   }
+}
+
+// Cumulative XP required to advance FROM the given level to the next.
+// Cubic growth so each level costs meaningfully more than the last —
+// prevents a single quest reward from granting multiple levels at high level.
+function xpForLevel(level){
+  return Math.round(level*60 + level*level*15 + level*level*level*1.5);
 }
