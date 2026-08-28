@@ -134,11 +134,12 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
   border:2px solid #444;
 }
 
-/* Blocked edges — bright thick red wall on that side */
-.map-cell.blocked-n{ border-top:4px solid #ff3b30; }
-.map-cell.blocked-s{ border-bottom:4px solid #ff3b30; }
-.map-cell.blocked-e{ border-right:4px solid #ff3b30; }
-.map-cell.blocked-w{ border-left:4px solid #ff3b30; }
+/* Blocked edges — same 2px thickness as open sides, just red instead of grey.
+   A square shows one red side (blocked) and grey on the rest — clean and even. */
+.map-cell.blocked-n{ border-top:2px solid #ff3b30; }
+.map-cell.blocked-s{ border-bottom:2px solid #ff3b30; }
+.map-cell.blocked-e{ border-right:2px solid #ff3b30; }
+.map-cell.blocked-w{ border-left:2px solid #ff3b30; }
 
 /* Symbol inside box */
 .map-symbol{

@@ -486,7 +486,7 @@ function render(){
     if(r.trader) extras+=`<button class="action-btn trader-btn" onclick="talkTrader()">💲 Trade (T)</button>`;
     if(r.rest&&!r.rest.depleted){
       let restFull=(r.rest.type!=="luck"&&S.hp>=effMaxHp());
-      extras+=`<button class="action-btn ${r.rest.type==="luck"?"luck-btn":"rest-btn"}" onclick="useRest()"${restFull?" disabled":""}>${r.rest.type==="luck"?"🍀":"💚"} ${r.rest.name} (${r.rest.sips}/${r.rest.maxSips})${restFull?" — Full HP":""}</button>`;
+      extras+=`<button class="action-btn ${r.rest.type==="luck"?"luck-btn":"rest-btn"}" onclick="useRest()"${restFull?" disabled":""}>${r.rest.type==="luck"?"🍀":"💚"} ${r.rest.name} (${r.rest.sips}/${r.rest.maxSips})${restFull?" — Full HP":" (G)"}</button>`;
     }
     if(r.doctor) extras+=`<button class="action-btn doctor-btn" onclick="talkDoctor()">⚕️ Visit ${r.doctor.name}</button>`;
     if(r.ladder) extras+=`<button class="action-btn" onclick="act('${r.ladder.dir}')">🪜 ${r.ladder.dir==="down"?"↓ Descend":"↑ Ascend"} (Q)</button>`;
@@ -595,6 +595,10 @@ document.addEventListener("keydown",(e)=>{
     // Use ladder / portal (ascend or descend)
     case"q":case"Q":
       if(!inCombat&&r.ladder) act(r.ladder.dir);
+      break;
+    // Drink / use a rest source (fountain, stream, luck fountain)
+    case"g":case"G":
+      if(!inCombat&&r.rest&&!r.rest.depleted) useRest();
       break;
   }
 });
