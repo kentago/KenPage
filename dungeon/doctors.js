@@ -199,11 +199,15 @@ function restoreFingers(count){
 function doRestore(count){
   let lost=getLostFingers();
   let restored=[];
+  if(!S.repairedFingers) S.repairedFingers=[]; // slot indices (0-9) of scarred fingers
   for(let c=0;c<count&&c<lost.length;c++){
     let f=lost[c];
     let arr=f.hand==="left"?S.lostFingers.left:S.lostFingers.right;
     let pos=arr.indexOf(f.idx);
     if(pos>=0) arr.splice(pos,1);
+    // Record the restored slot as scarred/fragile (left = idx, right = idx+5)
+    let slotIdx=f.hand==="left"?f.idx:f.idx+5;
+    if(!S.repairedFingers.includes(slotIdx)) S.repairedFingers.push(slotIdx);
     restored.push(`${f.hand==="left"?"Left":"Right"} finger ${f.idx+1}`);
   }
   S.fingersRestored=(S.fingersRestored||0)+restored.length;

@@ -79,7 +79,7 @@ function showTraderModal(trader){
       <div>${Object.entries(x.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>
       ${x.trait?`<div class="trait">⚡ ${x.trait}</div>`:""}
       <div class="small">${x.rarity} · ${x.depth}</div>
-      ${compareLine(x)}
+      ${compareLine(x,"shop")}
       <button onclick="buyItem(${i})" ${afford?"":"disabled"}>🛒 Buy for ${x.price}${afford?"":" (need gold)"}</button>
     </div>`;}).join(""):"<div class=small>Sold out.</div>";
 

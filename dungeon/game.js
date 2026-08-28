@@ -1,7 +1,7 @@
 // --- CORE GAME STATE ---
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 
-function fresh(){return{name:makeDwarfName(),nickname:"",level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,bossSpawnedFloors:{},phoenixUsed:false,deathWardFloor:null,secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:makeDwarfName(),nickname:"",level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,repairedFingers:[],bossSpawnedFloors:{},phoenixUsed:false,deathWardFloor:null,secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],questsDelivered:0,questAchievements:[],achievements:[],goldEarned:0,fingersLostTotal:0,deepestFloor:1,log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
 function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null})}
@@ -98,6 +98,13 @@ function move(d){
     // Spawn ladder down? (~10% chance, no enemy blocking it, spaced from other ladders)
     if(!x.enemy&&!x.ladder&&!nearbyHas("ladder",2)&&Math.random()<0.10){
       x.ladder={dir:"down",used:false,targetKey:null};
+      // ~30% of ladders are TOLL-gated — must pay gold to use (a gold sink).
+      // Toll scales with floor depth. Boss-floor ladders are never toll-gated
+      // (the boss is already the gate).
+      if(S.floor%5!==0&&Math.random()<0.30){
+        x.ladder.toll=Math.max(15,Math.round(Math.pow(S.floor,1.3)*4+20));
+        x.ladder.tollPaid=false;
+      }
       // Boss floors (every 5th floor) — ONE boss guards the FIRST ladder discovered.
       // Tracked per-floor so once handled (spawned), later ladders are free.
       if(S.floor%5===0&&!S.bossSpawnedFloors[S.floor]){
@@ -220,6 +227,9 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
 
   // --- NORMAL SEARCH RESULTS (d20 based) ---
   let searchRoll=d20()+Math.floor((eff().int||1)/10)+searchBonus(); // INT bonus: +1 per 10 INT, plus trait bonuses
+  // Anti double-dip: a room you already cleared by combat was "guarded loot" —
+  // searching it afterward yields much less (the enemy WAS the reward).
+  if(r.hadEnemy) searchRoll-=8;
 
   if(searchRoll===20||searchRoll>=20){
     // CRITICAL LOOT SUCCESS — legendary find, biased toward rings!
@@ -251,7 +261,9 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
     if(Math.random()<0.5){
       let goldFind=Math.max(1,Math.round(Math.pow(S.floor,1.2)*(0.8+Math.random()*1.5)));
       S.gold=(S.gold||0)+goldFind;
+      S.goldEarned=(S.goldEarned||0)+goldFind;
       msg(`💰 You find a stash of ${goldFind} gold!`);
+      if(typeof checkAchievements==="function") checkAchievements();
     } else {
       msg("🔎 You find nothing of interest.");
     }
@@ -281,6 +293,18 @@ function useLadder(dir){
   let r=room();
   if(!r.ladder||r.ladder.dir!==dir)return;
 
+  // Toll ladder: must pay gold once to unlock it. If you can't afford it,
+  // this ladder stays impossible to use — find another route or earn gold.
+  if(r.ladder.toll&&!r.ladder.tollPaid){
+    if((S.gold||0)<r.ladder.toll){
+      msg(`🚧 This ladder is toll-gated — it costs ${r.ladder.toll} 💰 to pass. You only have ${S.gold||0}. Earn more gold or find another way.`);
+      return;
+    }
+    S.gold-=r.ladder.toll;
+    r.ladder.tollPaid=true;
+    msg(`💰 You pay the ${r.ladder.toll} gold toll. The ladder mechanism unlocks.`);
+  }
+
   // Mark this ladder as used (green)
   r.ladder.used=true;
   let sourceKey=key();
@@ -290,6 +314,8 @@ function useLadder(dir){
   if(targetFloor<1)return;
 
   S.floor=targetFloor;
+  if(targetFloor>(S.deepestFloor||1)) S.deepestFloor=targetFloor;
+  if(typeof checkAchievements==="function") checkAchievements();
 
   // Check if this ladder already has a paired destination
   if(r.ladder.targetKey&&S.rooms[r.ladder.targetKey]){
@@ -521,7 +547,11 @@ function render(){
       extras+=`<button class="action-btn ${r.rest.type==="luck"?"luck-btn":"rest-btn"}" onclick="useRest()"${restFull?" disabled":""}>${r.rest.type==="luck"?"🍀":"💚"} ${r.rest.name} (${r.rest.sips}/${r.rest.maxSips})${restFull?" — Full HP":" (G)"}</button>`;
     }
     if(r.doctor) extras+=`<button class="action-btn doctor-btn" onclick="talkDoctor()">⚕️ Visit ${r.doctor.name}</button>`;
-    if(r.ladder) extras+=`<button class="action-btn" onclick="act('${r.ladder.dir}')">🪜 ${r.ladder.dir==="down"?"↓ Descend":"↑ Ascend"} (Q)</button>`;
+    if(r.ladder){
+      let tollLabel=(r.ladder.toll&&!r.ladder.tollPaid)?` 🚧 ${r.ladder.toll}💰`:"";
+      let cantAfford=(r.ladder.toll&&!r.ladder.tollPaid&&(S.gold||0)<r.ladder.toll);
+      extras+=`<button class="action-btn${cantAfford?" toll-locked":""}" onclick="act('${r.ladder.dir}')">🪜 ${r.ladder.dir==="down"?"↓ Descend":"↑ Ascend"}${tollLabel} (Q)</button>`;
+    }
     actions.innerHTML=`<div class="compass">
       <div class="compass-row"><button class="compass-btn north${r.blocked&&r.blocked.N?" blocked":""}" onclick="act('N')"${r.blocked&&r.blocked.N?" disabled":""}>▲<br><span>W / ↑</span></button></div>
       <div class="compass-row middle"><button class="compass-btn west${r.blocked&&r.blocked.W?" blocked":""}" onclick="act('W')"${r.blocked&&r.blocked.W?" disabled":""}>◀<br><span>A / ←</span></button><div class="compass-center">◎</div><button class="compass-btn east${r.blocked&&r.blocked.E?" blocked":""}" onclick="act('E')"${r.blocked&&r.blocked.E?" disabled":""}>▶<br><span>D / →</span></button></div>
@@ -535,10 +565,14 @@ function render(){
     return`<div class=card><b>${k.toUpperCase()}</b>${disabled?`<div class="small lost-finger">⚠️ Right hand mangled — cannot wield</div>`:S.equipment[k]?item(S.equipment[k],false,k):"<div class=small>Empty</div>"}</div>`;
   }).join("")+`<div class=card><b>RINGS — Left Hand 🫲</b><div class=grid>${S.equipment.rings.slice(0,5).map((x,i)=>{
     if(isFingerLost(i)) return`<div class="item lost-finger">❌ ${i+1}. Lost</div>`;
-    return x?item(x,false,"ring"+i):`<div class=item>${i+1}. Empty</div>`;
+    let scar=(S.repairedFingers||[]).includes(i);
+    if(x) return`<div class="ring-wrap${scar?" scarred":""}">${scar?`<span class="scar-tag" title="Scarred — fragile, may be lost again">🩹</span>`:""}${item(x,false,"ring"+i)}</div>`;
+    return`<div class="item${scar?" scarred-empty":""}">${scar?"🩹 ":""}${i+1}. ${scar?"Scarred":"Empty"}</div>`;
   }).join("")}</div>${S.lostFingers&&S.lostFingers.left&&S.lostFingers.left.length>=5?`<div class="small lost-finger">⚠️ Left hand mangled — no shield grip</div>`:""}</div><div class=card><b>RINGS — Right Hand 🫱</b><div class=grid>${S.equipment.rings.slice(5).map((x,i)=>{
     if(isFingerLost(i+5)) return`<div class="item lost-finger">❌ ${i+1}. Lost</div>`;
-    return x?item(x,false,"ring"+(i+5)):`<div class=item>${i+1}. Empty</div>`;
+    let scar=(S.repairedFingers||[]).includes(i+5);
+    if(x) return`<div class="ring-wrap${scar?" scarred":""}">${scar?`<span class="scar-tag" title="Scarred — fragile, may be lost again">🩹</span>`:""}${item(x,false,"ring"+(i+5))}</div>`;
+    return`<div class="item${scar?" scarred-empty":""}">${scar?"🩹 ":""}${i+1}. ${scar?"Scarred":"Empty"}</div>`;
   }).join("")}</div>${S.lostFingers&&S.lostFingers.right&&S.lostFingers.right.length>=5?`<div class="small lost-finger">⚠️ Right hand mangled — no weapon grip</div>`:""}</div>`;
   inventory.innerHTML=S.inventory.length?S.inventory.map(x=>item(x,true,false)).join(""):"<div class=small>Empty</div>";
   // --- QUEST DISPLAY: Active hunts + Completed trophies ---
@@ -558,10 +592,32 @@ function render(){
     `<div class="card quest-card quest-done">🏅 <b>${q.itemName}</b><div class="small">Delivered to ${q.npcName} · +${q.xpAwarded} XP${q.itemReward?" + 🎁":""} · Floor ${q.floor}</div></div>`
   ).join(""):"";
 
-  quests.innerHTML=`<div class="quest-active-header">🔎 Active Quests</div>${activeHtml}${completedHtml}`;
+  // Achievement progress banner
+  let delivered=S.questsDelivered||0;
+  let nextMs=[1,5,10,20,50,100].find(c=>c>delivered);
+  let achHtml=`<div class="quest-ach">🏆 Quests delivered: <b>${delivered}</b>${nextMs?` · next reward at ${nextMs}`:" · all milestones earned!"}</div>`;
+  quests.innerHTML=achHtml+`<div class="quest-active-header">🔎 Active Quests</div>${activeHtml}${completedHtml}`;
+  renderAchievements();
   renderHall();
   // Show starter ring choice if not yet picked
   if(!S.starterRingPicked&&!document.getElementById("starterRingModal")) showStarterRingChoice();
+}
+
+function renderAchievements(){
+  let el=document.getElementById("achievements");
+  if(!el) return;
+  let earned=S.achievements||[];
+  let total=ACHIEVEMENTS.length;
+  let rows=ACHIEVEMENTS.map(a=>{
+    let done=earned.includes(a.id);
+    let val=metricValue(a.metric);
+    let prog=done?"":` <span class="small">(${Math.min(val,a.need)}/${a.need})</span>`;
+    return`<div class="card ach-card ${done?"ach-done":"ach-locked"}">
+      ${done?"🏅":"🔒"} <b>${a.title}</b> — ${a.desc}${prog}
+      ${done?"":`<div class="small">Reward: +${a.xp} XP${a.gold?" · +"+a.gold+" 💰":""}</div>`}
+    </div>`;
+  }).join("");
+  el.innerHTML=`<div class="ach-summary">${earned.length}/${total} unlocked</div>${rows}`;
 }
 
 // --- INIT ---

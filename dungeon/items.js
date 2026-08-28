@@ -241,7 +241,12 @@ function makeItem(type){
   if(r>=3&&Math.random()<0.15+r*0.03){
     let pool=type==="ring"&&Math.random()<0.5?ringTraits:type==="amulet"&&Math.random()<0.5?amuletTraits:traits;
     let second=pool[Math.floor(Math.random()*pool.length)];
-    if(second!==i.trait) i.trait=i.trait+", "+second;
+    if(!i.trait){
+      // No first trait rolled — the "second" becomes the sole trait
+      i.trait=second;
+    } else if(second!==i.trait){
+      i.trait=i.trait+", "+second;
+    }
   }
 
   return i;
@@ -413,6 +418,11 @@ function discardChoice(type,idx){
 // --- ITEM DISPLAY ---
 function item(i,inv,equipped){
   let dead=S.hp<=0;
+  // Defensive: repair any legacy "null, X" trait from the old double-trait bug
+  if(i.trait&&/^null(,\s*|$)/.test(i.trait)){
+    i.trait=i.trait.replace(/^null,\s*/,"")||null;
+    if(i.trait==="null") i.trait=null;
+  }
   let buttons="";
   let val=itemValue(i);
   if(!dead){
@@ -430,18 +440,20 @@ function item(i,inv,equipped){
 }
 
 // Build a "vs equipped" comparison line for an inventory item
-function compareLine(i){
+function compareLine(i,context){
+  // context "shop" = buying (costs gold); default = equipping from inventory (free)
+  let emptyMsg=context==="shop"?"an upgrade over an empty slot":"a free upgrade";
   let s=slot(i);
   let current;
   if(s==="rings"){
     // Compare against the WEAKEST equipped ring (what you'd likely replace)
     let rings=S.equipment.rings.filter(x=>x);
-    if(rings.length===0) return `<div class="cmp cmp-new">✨ No ring equipped — free upgrade</div>`;
+    if(rings.length===0) return `<div class="cmp cmp-new">✨ Nothing equipped here yet — ${emptyMsg}</div>`;
     // weakest by stat sum
     current=rings.reduce((a,b)=>statSum(a)<=statSum(b)?a:b);
   } else {
     current=S.equipment[s];
-    if(!current) return `<div class="cmp cmp-new">✨ Slot empty — free upgrade</div>`;
+    if(!current) return `<div class="cmp cmp-new">✨ You have no ${typeLabel(i.type)} equipped — ${emptyMsg}</div>`;
   }
   // Compare stat totals and per-stat deltas
   let keys=["str","dex","int","cha"];
@@ -476,7 +488,8 @@ function goldMult(){
 // Sell value of an item (CHA-boosted, same formula as trader modal)
 function itemValue(x){
   let chaBonus=1+(eff().cha||1)*0.03;
-  return Math.max(1,Math.floor(((Object.values(x.stats).reduce((a,b)=>a+b,0))*2+(rar.indexOf(x.rarity)+1)*5)*chaBonus*goldMult()));
+  // Sell value is modest — flipping found loot should supplement gold, not flood it.
+  return Math.max(1,Math.floor(((Object.values(x.stats).reduce((a,b)=>a+b,0))*1.2+(rar.indexOf(x.rarity)+1)*4)*chaBonus*goldMult()));
 }
 
 // Sell an inventory item directly (only valid at a trader)

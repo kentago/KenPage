@@ -150,6 +150,17 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
   line-height:1;
   user-select:none;
 }
+/* Corner badges — secondary features present in the same room */
+.map-badges{
+  position:absolute;
+  bottom:0;
+  right:1px;
+  font-size:9px;
+  line-height:1;
+  letter-spacing:-1px;
+  text-shadow:0 0 2px #000;
+  pointer-events:none;
+}
 
 /* Color-coded cell types */
 .map-cell.player{
@@ -211,6 +222,12 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
   border-color:#2ecc71;
 }
 .map-cell.ladder-used .map-symbol{ color:#2ecc71; font-size:13px; }
+.map-cell.ladder-toll{
+  background:#2a2000;
+  border-color:#e67e22;
+}
+.map-cell.ladder-toll .map-symbol{ color:#e67e22; font-size:12px; }
+.action-btn.toll-locked{ opacity:0.6; border-color:#e67e22; color:#e67e22; }
 
 .map-cell.secret{
   background:#2a1a3a;
@@ -328,6 +345,11 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .quest-card.quest-found{ border-left:3px solid #2ecc71; background:#1a2a1a; }
 .quest-card.quest-active{ border-left:3px solid #f1c40f; background:#2a2a1a; }
 .quest-active-header{font-weight:bold;color:#f1c40f;margin:4px 0 8px}
+.quest-ach{background:#2a2410;border:1px solid #b8860b;border-radius:8px;padding:8px;margin-bottom:10px;color:#f1c40f;font-size:14px}
+.ach-summary{font-weight:bold;color:#f1c40f;margin-bottom:8px}
+.ach-card{margin:5px 0}
+.ach-done{border-left:3px solid #f1c40f;background:#2a2410}
+.ach-locked{border-left:3px solid #555;opacity:0.7}
 .quest-npc-loc{color:#5dade2}
 .quest-completed-header{font-weight:bold;color:#2ecc71;margin:14px 0 8px;border-top:1px solid #444;padding-top:10px}
 .quest-card.quest-done{ border-left:3px solid #2ecc71; background:#152a15; opacity:0.85; }
@@ -347,6 +369,12 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
   text-align:center;
   opacity:0.7;
 }
+
+/* Scarred (repaired) fingers — fragile, may be lost again */
+.ring-wrap{position:relative}
+.ring-wrap.scarred .item{border-color:#e67e22 !important;box-shadow:0 0 5px rgba(230,126,34,0.5)}
+.scar-tag{position:absolute;top:2px;right:2px;font-size:14px;z-index:2}
+.scarred-empty{background:#2a1a0a !important;border-color:#e67e22 !important;color:#e67e22;text-align:center}
 
 /* ===== DISCARD MODAL ===== */
 .discard-overlay{

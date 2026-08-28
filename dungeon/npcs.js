@@ -37,9 +37,14 @@ function spawnNPC(){
   let diff=floorsDown===0?"same floor":floorsDown===1?"1 floor down":floorsDown<=3?`${floorsDown} floors down`:"deep below";
   let targetFloor=S.floor+floorsDown;
 
-  // XP reward scales with distance and danger at target floor
+  // XP reward scales with distance and danger at target floor.
+  // Deep-travel quests get a strong effort multiplier so a long round-trip
+  // (descend N floors, find item, climb back) is always well rewarded.
   let targetDanger=Math.pow(targetFloor,1.6);
-  let baseXP=Math.round(targetDanger*(0.8+floorsDown*0.5)+20+floorsDown*30);
+  let effortMult=1+floorsDown*0.6;               // +60% per floor of required travel
+  let baseXP=Math.round((targetDanger*(0.8+floorsDown*0.5)+20+floorsDown*30)*effortMult);
+  // Also add gold reward on deeper quests to sweeten the trip
+  let goldReward=floorsDown>=2?Math.round(Math.pow(targetFloor,1.2)*floorsDown):0;
 
   // Item reward chance (further = better rewards)
   let itemReward=null;
@@ -53,7 +58,7 @@ function spawnNPC(){
            floorsDown<=3?`"It lies ${floorsDown} floors beneath us. You must descend and explore floor ${targetFloor}."`:
            `"It is buried deep — floor ${targetFloor} or beyond. A perilous journey awaits."`;
 
-  return{name,title,questItem,xpReward:baseXP,difficulty:diff,targetFloor,floorsDown,hint,itemReward,completed:false};
+  return{name,title,questItem,xpReward:baseXP,goldReward,difficulty:diff,targetFloor,floorsDown,hint,itemReward,completed:false};
 }
 
 function talkNPC(){
@@ -88,6 +93,7 @@ function talkNPC(){
     npcX:S.x,
     npcY:S.y,
     xpReward:r.npc.xpReward,
+    goldReward:r.npc.goldReward||0,
     difficulty:r.npc.difficulty,
     targetFloor:r.npc.targetFloor,
     floorsDown:r.npc.floorsDown,
@@ -110,6 +116,12 @@ function deliverQuest(npc,quest){
   if(hasTrait("XP Amplifier")) xpTraitMult*=1.15;
   finalQuestXP=Math.round(finalQuestXP*xpTraitMult);
   S.xp+=finalQuestXP;
+
+  // Gold reward for deeper quests
+  if(quest.goldReward>0){
+    S.gold=(S.gold||0)+quest.goldReward;
+    S.goldEarned=(S.goldEarned||0)+quest.goldReward;
+  }
 
   // --- REWARD ROLL (d20 + luck) ---
   // Even low-floor quests can give items with a lucky roll!
@@ -170,10 +182,44 @@ function deliverQuest(npc,quest){
   });
   // Mark NPC as completed
   npc.completed=true;
+  // Track total quests delivered (for achievements)
+  S.questsDelivered=(S.questsDelivered||0)+1;
   // Check level up
   checkLevelUp();
-  msg(`✅ ${npc.name} accepts the ${quest.itemName}!\n🎉 +${finalQuestXP} XP awarded!${chaXPBonus>1.1?` (CHA bonus: +${Math.round((chaXPBonus-1)*100)}%)`:""}`);
+  let goldMsg=quest.goldReward>0?` · +${quest.goldReward} 💰`:"";
+  msg(`✅ ${npc.name} accepts the ${quest.itemName}!\n🎉 +${finalQuestXP} XP${goldMsg} awarded!${chaXPBonus>1.1?` (CHA bonus: +${Math.round((chaXPBonus-1)*100)}%)`:""}`);
+  // Achievement milestones
+  checkQuestAchievements();
   save();render();
+}
+
+// --- QUEST ACHIEVEMENTS ---
+// Delivering milestone quest counts grants a lump XP + gold bonus.
+const questMilestones=[
+  {count:1,xp:100,gold:50,title:"First Delivery"},
+  {count:5,xp:500,gold:200,title:"Errand Runner"},
+  {count:10,xp:1500,gold:500,title:"Trusted Courier"},
+  {count:20,xp:4000,gold:1200,title:"Master Fetcher"},
+  {count:50,xp:15000,gold:4000,title:"Legendary Quest-Bearer"},
+  {count:100,xp:50000,gold:12000,title:"Grand Emissary"}
+];
+
+function checkQuestAchievements(){
+  if(!S.questAchievements) S.questAchievements=[];
+  let n=S.questsDelivered||0;
+  for(let m of questMilestones){
+    if(n>=m.count&&!S.questAchievements.includes(m.count)){
+      S.questAchievements.push(m.count);
+      // Scale the reward with the current floor so it stays relevant deep down
+      let floorScale=1+Math.pow(S.floor,1.2)*0.02;
+      let xpBonus=Math.round(m.xp*floorScale);
+      let goldBonus=Math.round(m.gold*floorScale);
+      S.xp+=xpBonus;
+      S.gold=(S.gold||0)+goldBonus;
+      msg(`🏆 ACHIEVEMENT: ${m.title}! ${m.count} quest${m.count>1?"s":""} delivered.\n🎁 Bonus: +${xpBonus} XP · +${goldBonus} 💰`);
+      checkLevelUp();
+    }
+  }
 }
 
 function checkLevelUp(){
@@ -191,6 +237,7 @@ function checkLevelUp(){
     msg(`📈 Level ${S.level}! +${hpGain} Max HP, healed ${heal}. You have ${S.statPoints} stat points to spend!`);
     needed=xpForLevel(S.level);
   }
+  if(typeof checkAchievements==="function") checkAchievements();
 }
 
 // Cumulative XP required to advance FROM the given level to the next.

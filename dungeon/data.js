@@ -43,13 +43,13 @@ const arts={
   ring:["💍","💎","🔴","🔵","🟡","⚪","🟢","🟣","🪨","✨","🖤","❤️","🧿","🪬","⭕","🔮","💠","♦️","🌟","💫","🌙","☀️","❄️","🔥","⚡","🌊","🍀","👁️"]
 };
 const traits=[
-  "Bone Rend (+25% damage)","Grave Fortune (+2 Luck)","Dragonblood (+25% damage)","Veilstep (15% dodge)","Deep Luck (+2 Luck)","Poison Edge (+elemental damage)",
-  "Lifesteal (heal 15% of damage dealt)","Flameburst (+elemental damage)","Frostbite (+elemental damage)","Thunderstrike (+elemental damage)","Shadow Meld (15% dodge)","Crystal Resonance (+10% kill XP)",
+  "Bone Rend (+25% damage)","Grave Fortune (+2 Luck)","Dragonblood (+25% damage)","Veilstep (15% dodge)","Deep Luck (+2 Luck)","Poison Edge (+poison damage, scales w/ floor)",
+  "Lifesteal (heal 15% of damage dealt)","Flameburst (+fire damage, scales w/ floor)","Frostbite (+frost damage, scales w/ floor)","Thunderstrike (+shock damage, scales w/ floor)","Shadow Meld (15% dodge)","Crystal Resonance (+10% kill XP)",
   "Titan Strength (+25% damage)","Void Touch (armor pierce)","Bloodlust (+60% damage when low HP)","Iron Will (-25% damage taken)","Windwalker (15% dodge)","Stoneguard (-25% damage taken)",
   "Soulbound (+2 all stats)","Mana Drain (heal 15% of damage dealt)","Berserker Rage (+60% damage when low HP)","Dwarven Fortitude (-25% damage taken)","Obsidian Shell (-25% damage taken)",
   "Phoenix Rebirth (revive once per run)","Death Mark (+35% vs wounded foes)","Spirit Link (heal 5% HP on kill)","Runic Surge (+2 INT)","Ancient Blessing (+1 all stats)",
   "Elemental Ward (halve element damage)","Deepforge Temper (+15% damage)","Moonlight Heal (regen in combat)","Thornmail (reflect 30% damage)","Echostrike (25% double strike)",
-  "Crit Amplifier (bigger crits)","Dread Aura (enemies may cower)","Regeneration (regen in combat)","Venomcoat (+elemental damage)","Battle Fury (+60% damage when low HP)","Shieldbreaker (+30% vs bosses)"
+  "Crit Amplifier (bigger crits)","Dread Aura (enemies may cower)","Regeneration (regen in combat)","Venomcoat (+poison damage, scales w/ floor)","Battle Fury (+60% damage when low HP)","Shieldbreaker (+30% vs bosses)"
 ];
 // Ring-specific traits — these give bonuses that synergize with other rings
 const ringTraits=[

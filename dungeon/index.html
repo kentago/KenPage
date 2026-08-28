@@ -47,6 +47,7 @@
 <h3>🪜 Ladders & Floors</h3>
 <p>Ladders are portals — each one leads to a <b>unique position</b> on the next floor. Two ladders on the same floor lead to different spots below (separate "islands" that may or may not connect). <span style="color:#f39c12">Yellow 🪜</span> = undiscovered, <span style="color:#2ecc71">Green 🪜</span> = used. Ladders always go exactly one floor down/up.</p>
 <p>If you're completely stuck (all rooms explored, all searched, no ladder found), a 🌀 emergency portal will appear.</p>
+<p>🚧 <b>Toll ladders:</b> some ladders are toll-gated and require a one-time gold payment to unlock (cost scales with depth). If you can't afford the toll, that ladder stays locked — earn gold or find another route. A great way to spend your hoarded gold!</p>
 
 <h3>🔎 Searching</h3>
 <p>Each room can be searched once (d20 roll + INT bonus). Results: legendary items (20+), great loot (16-19), normal loot (10-15), nothing (6-9), traps (2-5, DEX can dodge), critical fail (1). Hidden ladders and secret passages can also be discovered!</p>
@@ -124,8 +125,9 @@
 <section><h2 id="roomTitle"></h2><p id="roomText"></p><div id="map"></div><div id="actions"></div></section>
 <section><h2>📜 Activity Log</h2><div id="log"></div></section>
 <section><h2>⚔️ Equipment</h2><div id="equipment" class="grid"></div></section>
-<section><h2>🔎 Quest Search</h2><div id="quests"></div></section>
 <section><h2>🎒 Extra Inventory</h2><div id="inventory" class="grid"></div></section>
+<section><h2>🔎 Quest Search</h2><div id="quests"></div></section>
+<section><h2>🏅 Achievements</h2><div id="achievements"></div></section>
 <section><h2>🏆 Hall of Fame</h2><div id="hall"></div></section>
 </main><script src="data.js"></script>
 <script src="items.js"></script>
@@ -137,4 +139,5 @@
 <script src="trinkets.js"></script>
 <script src="map.js"></script>
 <script src="hall.js"></script>
+<script src="achievements.js"></script>
 <script src="game.js"></script></body></html>

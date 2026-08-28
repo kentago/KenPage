@@ -1,24 +1,11 @@
 // --- MAP RENDERING: Grid of rectangular boxes ---
 function drawMap(){
-  let minX=S.x, maxX=S.x, minY=S.y, maxY=S.y;
-  for(let k of Object.keys(S.rooms)){
-    let parts=k.split(":");
-    if(parseInt(parts[0])!==S.floor) continue;
-    let rx=parseInt(parts[1]), ry=parseInt(parts[2]);
-    minX=Math.min(minX,rx); maxX=Math.max(maxX,rx);
-    minY=Math.min(minY,ry); maxY=Math.max(maxY,ry);
-  }
-  minX-=1; maxX+=1; minY-=1; maxY+=1;
-
-  let viewSize=11;
-  if(maxX-minX+1>viewSize){
-    minX=S.x-Math.floor(viewSize/2);
-    maxX=S.x+Math.floor(viewSize/2);
-  }
-  if(maxY-minY+1>viewSize){
-    minY=S.y-Math.floor(viewSize/2);
-    maxY=S.y+Math.floor(viewSize/2);
-  }
+  // Always center the viewport on the player's current room for the best
+  // all-around vision. Fixed odd-sized window so the player sits dead center.
+  let viewSize=11;                 // 11×11 window (must be odd)
+  let half=Math.floor(viewSize/2); // 5 cells in every direction
+  let minX=S.x-half, maxX=S.x+half;
+  let minY=S.y-half, maxY=S.y+half;
 
   let cols=maxX-minX+1;
   let html=`<div class="dungeon-grid" style="grid-template-columns:repeat(${cols},1fr)">`;
@@ -34,6 +21,18 @@ function drawMap(){
       } else {
         let symbol="";
         let cellClass="map-cell explored";
+
+        // Collect ALL features present so secondary ones show as corner badges.
+        let feats=[];
+        if(rm.ladder){
+          let toll=(rm.ladder.toll&&!rm.ladder.tollPaid);
+          feats.push(rm.ladder.dir==="down"?(toll?"🚧↓":"🪜↓"):(toll?"🚧↑":"🪜↑"));
+        }
+        if(rm.npc&&!rm.npc.completed) feats.push("🔵");
+        if(rm.trader) feats.push("💲");
+        if(rm.doctor) feats.push("⚕️");
+        if(rm.rest&&!rm.rest.depleted) feats.push(rm.rest.type==="luck"?"🍀":"💚");
+        if(rm.secret) feats.push("✦");
 
         if(isPlayer){
           symbol="◎";
@@ -51,21 +50,28 @@ function drawMap(){
           symbol="⚕️";
           cellClass+=" doctor";
         } else if(rm.ladder&&rm.ladder.dir==="down"){
-          symbol=rm.ladder.used?"🪜↓":"🪜↓";
-          cellClass+=rm.ladder.used?" ladder-used":" ladder-down";
+          let toll=(rm.ladder.toll&&!rm.ladder.tollPaid);
+          symbol=toll?"🚧↓":"🪜↓";
+          cellClass+=rm.ladder.used?" ladder-used":toll?" ladder-toll":" ladder-down";
         } else if(rm.ladder&&rm.ladder.dir==="up"){
-          symbol=rm.ladder.used?"🪜↑":"🪜↑";
-          cellClass+=rm.ladder.used?" ladder-used":" ladder-up";
+          let toll=(rm.ladder.toll&&!rm.ladder.tollPaid);
+          symbol=toll?"🚧↑":"🪜↑";
+          cellClass+=rm.ladder.used?" ladder-used":toll?" ladder-toll":" ladder-up";
         } else if(rm.secret){
           symbol="✦";
           cellClass+=" secret";
         } else if(rm.rest&&!rm.rest.depleted){
-          symbol="💚";
+          symbol=rm.rest.type==="luck"?"🍀":"💚";
           cellClass+=" rest-source";
         } else {
           symbol="·";
           cellClass+=" visited";
         }
+
+        // Corner badges = features not already shown as the primary symbol.
+        // If standing on the cell (player ◎), every feature becomes a badge.
+        let extra=isPlayer?feats:feats.filter(f=>f!==symbol);
+        let badges=extra.length?`<span class="map-badges">${extra.slice(0,3).join("")}</span>`:"";
 
         let borders="";
         if(rm){
@@ -75,7 +81,7 @@ function drawMap(){
           if(rm.blocked.W) borders+=" blocked-w";
         }
 
-        html+=`<div class="${cellClass}${borders}"><span class="map-symbol">${symbol}</span></div>`;
+        html+=`<div class="${cellClass}${borders}"><span class="map-symbol">${symbol}</span>${badges}</div>`;
       }
     }
   }

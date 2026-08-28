@@ -21,10 +21,17 @@ function totalLostFingers(){
 }
 
 function fingerLossChance(){
-  // Base chance decreases exponentially with each lost finger
-  // 0 lost: 1.0x, 1 lost: 0.6x, 2: 0.35x, 3: 0.2x, ... 9: almost impossible
+  // Base chance decreases exponentially with each CURRENTLY-lost finger:
+  // fewer fingers remaining = harder to lose another.
+  // 0 lost: 1.0x, 1 lost: 0.6x, 2: 0.35x, ...
   let lost=totalLostFingers();
-  return Math.pow(0.55, lost);
+  let chance=Math.pow(0.55,lost);
+  // Scar tissue: each finger that has been surgically REPAIRED makes future
+  // losses more likely (+12% relative per repair, capped). Repaired fingers
+  // are fragile — the dungeon claims them again more readily.
+  let repaired=S.fingersRestored||0;
+  chance*=(1+Math.min(1.0,repaired*0.12));
+  return Math.min(1,chance);
 }
 
 function loseFinger(){
@@ -58,9 +65,20 @@ function loseFinger(){
   }
   if(available.length===0) return; // all 10 already lost
 
-  let pick=available[Math.floor(Math.random()*available.length)];
+  // Scarred (previously-repaired) fingers are fragile — 60% chance the loss
+  // targets one of them first, if any scarred finger is currently intact.
+  let pick;
+  let scarred=(S.repairedFingers||[]);
+  let scarredAvail=available.filter(f=>scarred.includes(f.slot));
+  if(scarredAvail.length>0&&Math.random()<0.60){
+    pick=scarredAvail[Math.floor(Math.random()*scarredAvail.length)];
+  } else {
+    pick=available[Math.floor(Math.random()*available.length)];
+  }
   if(pick.hand==="left") S.lostFingers.left.push(pick.idx);
   else S.lostFingers.right.push(pick.idx);
+  S.fingersLostTotal=(S.fingersLostTotal||0)+1;
+  if(typeof checkAchievements==="function") checkAchievements();
 
   let handName=pick.hand==="left"?"Left":"Right";
   let fingerNum=pick.idx+1;
@@ -271,9 +289,13 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
       msg(`🪙 Critical Fortune! You strike loose +${critGold} gold!`);
     }
   }
-  // Flameburst / Thunderstrike / Frostbite / Poison Edge / Venomcoat: bonus elemental/poison damage
-  if(hasTrait("Flameburst")||hasTrait("Thunderstrike")||hasTrait("Frostbite")||hasTrait("Poison Edge")||hasTrait("Venomcoat")){
-    let elem=Math.max(1,Math.round(Math.pow(S.floor,1.1)*0.3));
+  // Flameburst / Thunderstrike / Frostbite / Poison Edge / Venomcoat: bonus elemental/poison damage.
+  // Each elemental trait equipped adds its own roll (they STACK). Range: base to ~2× base.
+  let elemTraits=["Flameburst","Thunderstrike","Frostbite","Poison Edge","Venomcoat"].filter(t=>hasTrait(t)).length;
+  if(elemTraits>0){
+    let base=Math.max(1,Math.round(Math.pow(S.floor,1.1)*0.3));
+    let elem=0;
+    for(let e=0;e<elemTraits;e++) elem+=base+Math.floor(Math.random()*(base+1)); // base..2×base each
     n+=elem; msg(`🔥 Elemental strike adds +${elem} damage!`);
   }
   // Echostrike: chance to hit twice
@@ -326,10 +348,13 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
     let tierGoldMult=enemyTier==="common"?1:enemyTier==="mid"?2:enemyTier==="hard"?4:enemyTier==="elite"?8:enemyTier==="boss"?20:1;
     let goldDrop=Math.max(1,Math.round(goldBase*tierGoldMult*(0.5+Math.random())));
     S.gold=(S.gold||0)+goldDrop;
+    S.goldEarned=(S.goldEarned||0)+goldDrop;
     checkLevelUp();
     r.enemy=null;
+    r.hadEnemy=true; // room is now "looted" via combat — search here yields less
     let streakMsg=S.killStreak>=3?` 🔥 Kill streak: ${S.killStreak}× (${Math.round(comboMult*100)}% XP)`:"";
     msg(`☠️ ${defeated} is defeated! +${Math.round(xpGain*comboMult)} XP · +${goldDrop} 💰${streakMsg}`);
+    if(typeof checkAchievements==="function") checkAchievements();
     // Boss guaranteed legendary drop
     if(wasBoss){
       let bossLoot=makeLegendaryItem();
