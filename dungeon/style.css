@@ -35,14 +35,54 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .art{font-size:32px;float:right}
 .small{font-size:.85em;color:#aaa}
 .trait{font-size:.9em;color:#f1c40f;margin-top:4px}
-.uncommon{border-color:#3498db;border-width:2px}.rare{border-color:#f39c12;border-width:2px}.mythical{border-color:#9b59b6;border-width:2px}
-/* Depth borders — shown as outer glow/shadow, independent of rarity border */
-.bronze{box-shadow:0 0 0 3px #a97142,0 0 6px #a97142}
-.silver{box-shadow:0 0 0 3px #c0c0c0,0 0 6px #c0c0c0}
-.gold{box-shadow:0 0 0 3px #d4af37,0 0 8px rgba(212,175,55,0.5)}
-.titan{box-shadow:0 0 0 3px #5a7a8a,0 0 8px rgba(90,122,138,0.6)}
-.glowing{box-shadow:0 0 0 3px #b388ff,0 0 12px #b388ff,0 0 20px rgba(179,136,255,0.4);animation:glowPulse 2s ease-in-out infinite}
+/* ===== ITEM BORDERS =====
+   Two independent axes, max 2 borders total.
+   Common rarity + Bronze depth = NO special border (plain box — the majority).
+   Rarity = inner border color. Depth = outer glow ring.
+   A border only appears when that axis is above its baseline. */
+
+/* Rarity (inner border) — common shows nothing */
+.item.uncommon{border-color:#3498db;border-width:2px}
+.item.rare{border-color:#f39c12;border-width:2px}
+.item.epic{border-color:#e91e8c;border-width:2px}
+.item.mythical{border-color:#9b59b6;border-width:2px}
+.item.legendary{border-color:#e74c3c;border-width:2px}
+.item.divine{border-color:#00e5ff;border-width:2px}
+
+/* Depth (outer glow ring) — bronze shows nothing */
+.item.silver{box-shadow:0 0 0 3px #c0c0c0,0 0 6px rgba(192,192,192,0.5)}
+.item.gold{box-shadow:0 0 0 3px #d4af37,0 0 8px rgba(212,175,55,0.5)}
+.item.titan{box-shadow:0 0 0 3px #5a7a8a,0 0 8px rgba(90,122,138,0.6)}
+.item.platinum{box-shadow:0 0 0 3px #e5e4e2,0 0 10px rgba(229,228,226,0.7)}
+.item.glowing{box-shadow:0 0 0 3px #b388ff,0 0 12px #b388ff,0 0 20px rgba(179,136,255,0.4);animation:glowPulse 2s ease-in-out infinite}
+.item.prismatic{box-shadow:0 0 0 3px #ff5ec7,0 0 14px #5ec7ff,0 0 22px rgba(255,215,0,0.5);animation:prismShift 3s linear infinite}
+.item.astral{box-shadow:0 0 0 3px #6a00ff,0 0 16px #00e5ff,0 0 28px rgba(160,80,255,0.6);animation:astralPulse 2.5s ease-in-out infinite}
+/* bronze intentionally has NO box-shadow */
+
+/* ===== PRESTIGE TIERS (floor 250+ only) =====
+   Ultra-rare endgame. Full-card cosmic effect (gradient fill + glow),
+   NOT a third border — keeps the 2-border rule intact. */
+.item.prestige-eternal{
+  background:linear-gradient(135deg,#1a1a3a,#3a1a4a,#1a2a4a);
+  animation:eternalShimmer 4s ease-in-out infinite;
+}
+.item.prestige-cosmic{
+  background:linear-gradient(135deg,#2a0a3a,#0a2a4a,#3a0a2a,#0a3a3a);
+  background-size:300% 300%;
+  animation:cosmicFlow 6s ease infinite;
+}
+.item.prestige-genesis{
+  background:linear-gradient(135deg,#4a0a0a,#4a3a0a,#0a4a1a,#0a1a4a,#3a0a4a);
+  background-size:400% 400%;
+  animation:genesisFlow 8s ease infinite;
+  color:#fff;
+}
+@keyframes eternalShimmer{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
+@keyframes cosmicFlow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@keyframes genesisFlow{0%{background-position:0% 0%}25%{background-position:100% 0%}50%{background-position:100% 100%}75%{background-position:0% 100%}100%{background-position:0% 0%}}
 @keyframes glowPulse{0%,100%{box-shadow:0 0 0 3px #b388ff,0 0 12px #b388ff,0 0 20px rgba(179,136,255,0.4)}50%{box-shadow:0 0 0 3px #e0c0ff,0 0 18px #d0a0ff,0 0 30px rgba(200,160,255,0.6)}}
+@keyframes prismShift{0%{box-shadow:0 0 0 3px #ff5ec7,0 0 14px #5ec7ff,0 0 22px rgba(255,215,0,0.5)}33%{box-shadow:0 0 0 3px #5ec7ff,0 0 14px #ffd700,0 0 22px rgba(255,94,199,0.5)}66%{box-shadow:0 0 0 3px #ffd700,0 0 14px #ff5ec7,0 0 22px rgba(94,199,255,0.5)}100%{box-shadow:0 0 0 3px #ff5ec7,0 0 14px #5ec7ff,0 0 22px rgba(255,215,0,0.5)}}
+@keyframes astralPulse{0%,100%{box-shadow:0 0 0 3px #6a00ff,0 0 16px #00e5ff,0 0 28px rgba(160,80,255,0.6)}50%{box-shadow:0 0 0 3px #00e5ff,0 0 24px #a050ff,0 0 40px rgba(0,229,255,0.7)}}
 
 /* ===== DUNGEON MAP GRID ===== */
 #map{

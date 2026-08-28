@@ -1,6 +1,23 @@
 // --- ITEM SYSTEM ---
 let pendingItem=null; // item waiting for discard decision
 
+// --- PRESTIGE TIER (floor 250+ only) ---
+// The ultimate endgame rarity. Only items found at floor 250+ can roll it.
+// Applied as a full-card cosmic effect, NOT a third border (keeps UI to 2 borders max).
+// Tiers: "eternal" (250+), "cosmic" (350+), "genesis" (500+) — increasingly rare.
+function rollPrestige(){
+  if(S.floor<250) return null;
+  let z=Math.random();
+  // Base ~2% at floor 250, scaling up with depth
+  let chance=Math.min(0.15,0.02+(S.floor-250)*0.0004);
+  if(z>chance) return null;
+  // Which prestige tier
+  let t=Math.random();
+  if(S.floor>=500&&t<0.15) return "genesis";
+  if(S.floor>=350&&t<0.40) return "cosmic";
+  return "eternal";
+}
+
 // --- EFFECTIVE STATS ---
 // Sums base stats + all equipped item stats + parsed trait bonuses (incl. luck).
 // All game mechanics should read from eff() rather than S.stats directly.
@@ -59,13 +76,35 @@ function makeItem(type){
   // Loot power ≈ floor^1.2 (exploring current floor makes you stronger before descending)
   let lootScale=Math.pow(S.floor,1.2)+S.level*0.5;
 
-  // Rarity roll — higher floors slightly increase rare/mythical chance
-  let rarBoost=Math.min(0.1,S.floor*0.002);
-  let z=Math.random();
-  let r=z<(.65-rarBoost)?0:z<(.90-rarBoost*0.5)?1:z<(.985-rarBoost*0.2)?2:3;
+  // --- RARITY ROLL (7 tiers) ---
+  // Deeper floors shift odds toward higher rarities. Common still dominates early.
+  // depthShift grows slowly with floor (caps so it never fully removes commons).
+  let ds=Math.min(0.45,S.floor*0.004); // 0 at floor 1, ~0.45 by floor 110+
+  let z=Math.random()+ds; // shift the roll upward at depth
+  let r;
+  if(z<0.62) r=0;        // common
+  else if(z<0.85) r=1;   // uncommon
+  else if(z<0.95) r=2;   // rare
+  else if(z<0.985) r=3;  // epic
+  else if(z<0.997) r=4;  // mythical
+  else if(z<0.9995) r=5; // legendary
+  else r=6;              // divine
+  r=Math.min(r,rar.length-1);
 
-  // Depth tier based on floor range (every 10 floors)
-  let depIdx=Math.min(4,Math.floor((S.floor-1)/10));
+  // --- DEPTH TIER ROLL (8 tiers) ---
+  // Floor sets the max reachable tier; odds shift toward higher tiers at depth.
+  let maxDepth=Math.min(dep.length-1,Math.floor((S.floor-1)/8)+1);
+  let dz=Math.random()+Math.min(0.4,S.floor*0.0035);
+  let depIdx;
+  if(dz<0.62) depIdx=0;      // bronze (no border)
+  else if(dz<0.80) depIdx=1; // silver
+  else if(dz<0.90) depIdx=2; // gold
+  else if(dz<0.955) depIdx=3;// titan
+  else if(dz<0.982) depIdx=4;// platinum
+  else if(dz<0.995) depIdx=5;// glowing
+  else if(dz<0.9992) depIdx=6;// prismatic
+  else depIdx=7;             // astral
+  depIdx=Math.min(depIdx,maxDepth);
 
   let i={
     id:crypto.randomUUID(),
@@ -75,7 +114,8 @@ function makeItem(type){
     depth:dep[depIdx],
     art:arts[type][Math.floor(Math.random()*arts[type].length)],
     stats:{},
-    trait:null
+    trait:null,
+    prestige:rollPrestige()
   };
 
   // --- STAT GENERATION ---
@@ -87,9 +127,9 @@ function makeItem(type){
   let variance=0.4+Math.random()*1.2;
   let primaryVal=Math.max(1,Math.round(lootScale*variance));
 
-  // Rarity multiplier — NOT guaranteed to be stronger (per spec!)
-  // Mythical gets wider variance, not strictly higher
-  let rarMult=r===0?0.7+Math.random()*0.6:r===1?0.8+Math.random()*0.8:r===2?0.6+Math.random()*1.2:0.5+Math.random()*1.8;
+  // Rarity multiplier — higher tiers get WIDER variance (not strictly higher, per spec)
+  // Scales across all 7 tiers; top tiers can roll big but also modest.
+  let rarMult=0.6+r*0.15+Math.random()*(0.6+r*0.25);
   primaryVal=Math.max(1,Math.round(primaryVal*rarMult));
 
   i.stats[primary]=primaryVal;
@@ -110,7 +150,7 @@ function makeItem(type){
 
   // --- TRAITS ---
   // Chance increases with rarity and floor depth
-  let traitChance=0.10+r*0.12+Math.min(0.2,S.floor*0.003);
+  let traitChance=0.08+r*0.08+Math.min(0.2,S.floor*0.003);
   // Rings have higher trait chance — they're the key equipment as a Dwarf!
   if(type==="ring") traitChance+=0.20;
   // Amulets are luck/utility focused — also higher trait chance
@@ -125,8 +165,8 @@ function makeItem(type){
       i.trait=traits[Math.floor(Math.random()*traits.length)];
     }
   }
-  // Rare chance of DOUBLE trait on mythical
-  if(r===3&&Math.random()<0.15){
+  // Rare chance of DOUBLE trait on epic+ (r>=3)
+  if(r>=3&&Math.random()<0.15+r*0.03){
     let pool=type==="ring"&&Math.random()<0.5?ringTraits:type==="amulet"&&Math.random()<0.5?amuletTraits:traits;
     let second=pool[Math.floor(Math.random()*pool.length)];
     if(second!==i.trait) i.trait=i.trait+", "+second;
@@ -143,11 +183,27 @@ function makeLegendaryItem(){
   let type=types[Math.floor(Math.random()*types.length)];
   let lootScale=Math.pow(S.floor,1.2)+S.level*0.5;
 
-  // Always mythical or rare
-  let r=Math.random()<0.7?3:2; // 70% mythical, 30% rare
+  // High rarity — epic/mythical/legendary/divine, skewing higher with floor
+  let rz=Math.random()+Math.min(0.3,S.floor*0.003);
+  let r;
+  if(rz<0.35) r=3;       // epic
+  else if(rz<0.70) r=4;  // mythical
+  else if(rz<0.93) r=5;  // legendary
+  else r=6;              // divine
+  r=Math.min(r,rar.length-1);
 
-  // Depth is always at least current floor's tier, possibly one higher
-  let depIdx=Math.min(4,Math.floor((S.floor-1)/10)+Math.floor(Math.random()*2));
+  // Legendary items skew toward higher depth tiers (they're the flashy finds)
+  let maxDepth=Math.min(dep.length-1,Math.floor((S.floor-1)/8)+2);
+  let dz=Math.random();
+  let depIdx;
+  if(dz<0.12) depIdx=2;      // gold
+  else if(dz<0.35) depIdx=3; // titan
+  else if(dz<0.58) depIdx=4; // platinum
+  else if(dz<0.82) depIdx=5; // glowing
+  else if(dz<0.95) depIdx=6; // prismatic
+  else depIdx=7;             // astral
+  depIdx=Math.min(depIdx,maxDepth);
+  depIdx=Math.min(depIdx,maxDepth);
 
   // Generate a unique legendary name
   let prefix=legendaryPrefixes[Math.floor(Math.random()*legendaryPrefixes.length)];
@@ -163,7 +219,8 @@ function makeLegendaryItem(){
     depth:dep[depIdx],
     art:arts[type][Math.floor(Math.random()*arts[type].length)],
     stats:{},
-    trait:null
+    trait:null,
+    prestige:rollPrestige()
   };
 
   // Stats are MASSIVELY boosted — top end of variance + guaranteed multiple stats
@@ -295,7 +352,7 @@ function item(i,inv,equipped){
     }
     if(equipped) buttons+=`<button onclick="unequip('${i.id}','${equipped}')">⬇️ Unequip</button>`;
   }
-  return`<div class="item ${i.rarity} ${i.depth}"><span class="art">${i.art}</span><b>${i.name}</b><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${i.trait?`<div class="trait">⚡ ${i.trait}</div>`:""}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)} · 💰 ${val}</div>${buttons}</div>`;
+  return`<div class="item ${i.rarity} ${i.depth}${i.prestige?" prestige-"+i.prestige:""}"><span class="art">${i.art}</span><b>${i.name}</b><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${i.trait?`<div class="trait">⚡ ${i.trait}</div>`:""}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)}${i.prestige?` · ✦${i.prestige[0].toUpperCase()+i.prestige.slice(1)}✦`:""} · 💰 ${val}</div>${buttons}</div>`;
 }
 
 // Sell value of an item (CHA-boosted, same formula as trader modal)

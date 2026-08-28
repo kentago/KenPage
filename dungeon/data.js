@@ -61,7 +61,8 @@ const amuletTraits=[
   "Merchant's Eye (sell items for double gold)","Life Pulse (+1 HP per room explored)",
   "Dwarven Ancestry (+1 all stats)"
 ];
-const rar=["common","uncommon","rare","mythical"], dep=["bronze","silver","gold","titan","glowing"];
+const rar=["common","uncommon","rare","epic","mythical","legendary","divine"];
+const dep=["bronze","silver","gold","titan","platinum","glowing","prismatic","astral"];
 
 const legendaryPrefixes=["Ancient","Eternal","Primordial","Godforged","Abyssal","Celestial","Void-Touched","Titanborn","Doomforged","Soulbound","Starfall","Worldbreaker","Mythkeeper's","Deathless","Dragonlord's"];
 const legendarySuffixes=["of the Endless Deep","of Forgotten Kings","of the First Flame","of Eternal Night","of the World Below","of Shattered Realms","of the Last Dwarf","of Titan's Blood","of the Void","of Dragonfire","of the Undying","of Starlight"];
