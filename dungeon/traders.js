@@ -29,7 +29,7 @@ function showTraderModal(trader){
   // Ensure wares exist (older saves may not have them)
   if(!trader.wares) trader.wares=[];
 
-  let chaBonus=1+(S.stats.cha||1)*0.03; // CHA improves sell prices
+  let chaBonus=1+(eff().cha||1)*0.03; // CHA improves sell prices
 
   let sellSection=S.inventory.length?S.inventory.map((x,i)=>{
     let value=Math.max(1,Math.floor(((Object.values(x.stats).reduce((a,b)=>a+b,0))*2+(rar.indexOf(x.rarity)+1)*5)*chaBonus));

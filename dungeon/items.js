@@ -1,6 +1,59 @@
 // --- ITEM SYSTEM ---
 let pendingItem=null; // item waiting for discard decision
 
+// --- EFFECTIVE STATS ---
+// Sums base stats + all equipped item stats + parsed trait bonuses (incl. luck).
+// All game mechanics should read from eff() rather than S.stats directly.
+function eff(){
+  let e={str:S.stats.str||0,dex:S.stats.dex||0,int:S.stats.int||0,cha:S.stats.cha||0,luck:S.stats.luck||0};
+
+  // Count equipped rings (for "per ring worn" traits)
+  let ringCount=S.equipment.rings.filter(x=>x).length;
+
+  // Gather all equipped items
+  let equipped=[];
+  ["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet"].forEach(k=>{
+    if(S.equipment[k]) equipped.push(S.equipment[k]);
+  });
+  S.equipment.rings.forEach(x=>{if(x)equipped.push(x);});
+
+  for(let it of equipped){
+    // Add raw item stats
+    if(it.stats){
+      for(let k in it.stats){ if(e[k]!==undefined) e[k]+=it.stats[k]; }
+    }
+    // Parse trait bonuses (traits are strings that may contain stat effects)
+    if(it.trait){
+      let traits=it.trait.split(",").map(t=>t.trim());
+      for(let t of traits) applyTraitBonus(t,e,ringCount);
+    }
+  }
+  return e;
+}
+
+// Parse a single trait string and apply its numeric bonus to the effective stats
+function applyTraitBonus(trait,e,ringCount){
+  // Flat luck bonuses
+  if(/Fortune's Favor/.test(trait)) e.luck+=2;
+  if(/Dwarf's Blessing/.test(trait)) e.luck+=3;
+  if(/Fortune's Heart/.test(trait)) e.luck+=3;
+  if(/Luck of the Ancients/.test(trait)) e.luck+=5;
+  if(/Lucky Star/.test(trait)) e.luck+=2;
+  // Per-ring-worn bonuses
+  if(/Serendipity/.test(trait)) e.luck+=ringCount;
+  if(/Gemlink/.test(trait)) e.str+=ringCount;
+  if(/Jeweler's Pride/.test(trait)) e.dex+=ringCount;
+  if(/Ringmaster/.test(trait)) e.int+=ringCount;
+  if(/Crown of Fingers/.test(trait)) e.cha+=ringCount;
+  // Set bonuses
+  if(/Constellation/.test(trait)&&ringCount>=8){e.str++;e.dex++;e.int++;e.cha++;}
+  if(/Perfect Ten/.test(trait)&&ringCount>=10){e.str+=5;e.dex+=5;e.int+=5;e.cha+=5;}
+  if(/Dwarf King's Legacy/.test(trait)){let b=Math.floor(ringCount/5);e.str+=b;e.dex+=b;e.int+=b;e.cha+=b;}
+  // Amulet all-stat
+  if(/Dwarven Ancestry/.test(trait)){e.str++;e.dex++;e.int++;e.cha++;}
+  if(/Deep Sight/.test(trait)) e.int+=3;
+}
+
 function makeItem(type){
   // --- SCALING: Loot quality grows SLOWER than danger ---
   // Loot power ≈ floor^1.2 (exploring current floor makes you stronger before descending)

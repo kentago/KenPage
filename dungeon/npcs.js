@@ -102,13 +102,13 @@ function talkNPC(){
 function deliverQuest(npc,quest){
   // Award XP
   // CHA bonus: +5% quest XP per CHA point (being charming = better rewards)
-  let chaXPBonus=1+(S.stats.cha||1)*0.05;
+  let chaXPBonus=1+(eff().cha||1)*0.05;
   let finalQuestXP=Math.round(quest.xpReward*chaXPBonus);
   S.xp+=finalQuestXP;
 
   // --- REWARD ROLL (d20 + luck) ---
   // Even low-floor quests can give items with a lucky roll!
-  let luckBonus=S.stats.luck||0; // Luck stat from trinkets/potions/ring traits
+  let luckBonus=eff().luck||0; // Luck from stats + gear + traits
   let rewardRoll=d20()+luckBonus;
   let giveItem=false;
 

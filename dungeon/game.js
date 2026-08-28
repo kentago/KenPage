@@ -107,7 +107,7 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
     // Base threshold — easier to find on the correct floor (you're in the right place!)
     let findThreshold=12;
     // INT bonus helps searching
-    findThreshold-=Math.floor(S.stats.int/15);
+    findThreshold-=Math.floor(eff().int/15);
     // Clamp minimum
     findThreshold=Math.max(4,findThreshold);
 
@@ -149,7 +149,7 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
 
   // --- SECRET PASSAGE (separate chance, checked first) ---
   // INT increases secret passage discovery: base 10% + 0.5% per INT
-  let secretChance=0.10+Math.min(0.15,(S.stats.int||1)*0.005);
+  let secretChance=0.10+Math.min(0.15,(eff().int||1)*0.005);
   if(!r.secret&&Math.random()<secretChance){
     // A secret passage opens a NEW route — unblocks a direction (both sides)
     let blockedDirs=["N","E","S","W"].filter(d=>r.blocked&&r.blocked[d]);
@@ -170,7 +170,7 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
   }
 
   // --- NORMAL SEARCH RESULTS (d20 based) ---
-  let searchRoll=d20()+Math.floor((S.stats.int||1)/10); // INT bonus: +1 per 10 INT
+  let searchRoll=d20()+Math.floor((eff().int||1)/10); // INT bonus: +1 per 10 INT
 
   if(searchRoll===20||searchRoll>=20){
     // CRITICAL LOOT SUCCESS — legendary find, biased toward rings!
@@ -189,7 +189,10 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
     return;
   }
   if(searchRoll>=10){
-    // Normal loot
+    // Normal loot — but sometimes a trinket or mystery potion instead
+    let roll=Math.random();
+    if(roll<0.12){ findTrinket(); return; }
+    if(roll<0.24){ findMysteryPotion(); return; }
     let i=makeItem(types[Math.floor(Math.random()*types.length)]);
     msg(`🎁 ${i.name} found. ${obtain(i)}`);
     return;
@@ -207,7 +210,7 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
   }
   if(searchRoll>=2){
     // Trap! DEX gives a chance to dodge it
-    let trapDodge=Math.min(0.35,(S.stats.dex||1)*0.015); // +1.5% per DEX, max 35%
+    let trapDodge=Math.min(0.35,(eff().dex||1)*0.015); // +1.5% per DEX, max 35%
     if(Math.random()<trapDodge){
       msg("⚠️ A trap triggers but you leap aside unharmed! (DEX)");
       return;
@@ -329,11 +332,17 @@ function renderStatButtons(){
   let hasInitialBoost=S.statBoostAvailable;
   let available=(hasPoints||hasInitialBoost)&&S.hp>0;
   let label=hasPoints?`(${S.statPoints} pts)`:"(+1)";
+  let E=eff();
   return["str","dex","int","cha"].map(k=>{
+    let base=S.stats[k]||0;
+    let total=E[k]||0;
+    let bonus=total-base;
+    // Show "STR 12 (+8)" when gear adds to the base
+    let display=bonus>0?`${k.toUpperCase()} ${total} <span class="stat-bonus">(+${bonus})</span>`:`${k.toUpperCase()} ${total}`;
     if(available){
-      return`<div class="stat-btn stat-available" onclick="boostStat('${k}')">${k.toUpperCase()} ${S.stats[k]} <span class="boost-hint">${label}</span></div>`;
+      return`<div class="stat-btn stat-available" onclick="boostStat('${k}')">${display} <span class="boost-hint">${label}</span></div>`;
     }
-    return`<div class="stat-btn">${k.toUpperCase()} ${S.stats[k]}</div>`;
+    return`<div class="stat-btn">${display}</div>`;
   }).join("");
 }
 
@@ -427,7 +436,7 @@ function render(){
   if(ni&&document.activeElement!==ni) ni.value=S.nickname||"";
   let sc=document.getElementById("showCountry");
   if(sc) sc.checked=!!(S.country);
-  stats.innerHTML=[`❤️ HP ${Math.max(0,S.hp)}/${S.maxHp}`,`⭐ Level ${S.level}`,`XP ${S.xp}`,`🍀 Luck ${S.stats.luck||0}`].map(x=>`<div>${x}</div>`).join("")+renderStatButtons()+`<div>💰 ${S.gold}</div>`;
+  stats.innerHTML=[`❤️ HP ${Math.max(0,S.hp)}/${S.maxHp}`,`⭐ Level ${S.level}`,`XP ${S.xp}`,`🍀 Luck ${eff().luck||0}`].map(x=>`<div>${x}</div>`).join("")+renderStatButtons()+`<div>💰 ${S.gold}</div>`;
   roomTitle.textContent=`Floor ${S.floor} — Chamber`;
   roomText.textContent=r.enemy&&r.enemy.hp>0?`⚔️ ${r.enemy.name} (${r.enemy.hp} HP)${r.enemy.element?` [${r.enemy.element}]`:""}${r.enemy.isBoss?` 👑 BOSS — ${r.enemy.abilities.join(" | ")}`:""} blocks the chamber.`:r.npc&&!r.npc.completed?`🔵 ${r.npc.name}, ${r.npc.title}, is here.`:r.trader?`💲 ${r.trader.name}, ${r.trader.title}, awaits.`:r.doctor?`⚕️ ${r.doctor.name}, ${r.doctor.title}, tends the wounded here.`:r.rest&&!r.rest.depleted?`${r.rest.emoji} A ${r.rest.name} flows here. (${r.rest.sips} sips remain)`:"The chamber is quiet.";
   map.innerHTML=drawMap();
@@ -474,7 +483,7 @@ function render(){
 }
 
 // --- INIT ---
-window.act=act;window.equip=equip;window.unequip=unequip;window.discard=discard;window.discardChoice=discardChoice;window.swapRing=swapRing;window.newRun=newRun;window.talkNPC=talkNPC;window.talkTrader=talkTrader;window.sellItem=sellItem;window.buyItem=buyItem;window.talkDoctor=talkDoctor;window.restoreFingers=restoreFingers;
+window.act=act;window.equip=equip;window.unequip=unequip;window.discard=discard;window.discardChoice=discardChoice;window.swapRing=swapRing;window.newRun=newRun;window.talkNPC=talkNPC;window.talkTrader=talkTrader;window.sellItem=sellItem;window.buyItem=buyItem;window.talkDoctor=talkDoctor;window.restoreFingers=restoreFingers;window.drinkPotion=drinkPotion;window.leavePotion=leavePotion;
 
 // --- SHARE ---
 function shareGame(){
@@ -503,7 +512,7 @@ document.addEventListener("keydown",(e)=>{
   let tag=(e.target&&e.target.tagName)?e.target.tagName.toLowerCase():"";
   if(tag==="input"||tag==="textarea"||tag==="select")return;
   // Don't trigger if a modal is open
-  if(document.getElementById("discardModal")||document.getElementById("ringSwapModal")||document.getElementById("traderModal")||document.getElementById("doctorModal")||document.getElementById("starterRingModal"))return;
+  if(document.getElementById("discardModal")||document.getElementById("ringSwapModal")||document.getElementById("traderModal")||document.getElementById("doctorModal")||document.getElementById("starterRingModal")||document.getElementById("potionModal"))return;
   if(S.hp<=0)return;
 
   let r=room();

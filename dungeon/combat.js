@@ -193,10 +193,11 @@ function spawnBoss(){
 }
 
 function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if(hit===1){msg(`💥 Critical miss! ${r.enemy.name} counterattacks.`);let counterDmg=Math.max(1,(r.enemy.atk||3)+d20()%3);damage(counterDmg);if(Math.random()<0.08)loseFinger();return}
+  let E=eff(); // effective stats (base + gear + traits)
   // STR = attack damage
   let rightMangled=S.lostFingers&&S.lostFingers.right&&S.lostFingers.right.length>=5;
   let leftMangled=S.lostFingers&&S.lostFingers.left&&S.lostFingers.left.length>=5;
-  let strDmg=Math.floor((S.stats.str||1)*0.4); // +0.4 damage per STR
+  let strDmg=Math.floor((E.str||1)*0.4); // +0.4 damage per STR
   let n=Math.max(1,1+d20()%8+strDmg); // d8 (1-8) + STR scaling
   if(rightMangled) n=Math.max(1,Math.floor(n*0.4)); // 60% reduction without weapon hand
   // Critical hit on 20
@@ -236,14 +237,14 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
     // Enemy attacks back using its atk stat
     let enemyAtk=r.enemy.atk||Math.max(1,d20()%6);
     // DEX dodge chance — completely avoid the hit
-    let dodgeChance=Math.min(0.30,(S.stats.dex||1)*0.012); // +1.2% per DEX, max 30%
+    let dodgeChance=Math.min(0.30,(E.dex||1)*0.012); // +1.2% per DEX, max 30%
     if(Math.random()<dodgeChance){
       msg(`🌀 You dodge ${r.enemy.name}'s attack! (DEX)`);
       return;
     }
     let incomingDmg=Math.max(1,enemyAtk+d20()%3-1);
     // CHA reduces incoming damage slightly — monsters find you endearing
-    let chaReduction=1-Math.min(0.25,(S.stats.cha||1)*0.01); // -1% per CHA, max -25%
+    let chaReduction=1-Math.min(0.25,(E.cha||1)*0.01); // -1% per CHA, max -25%
     incomingDmg=Math.max(1,Math.round(incomingDmg*chaReduction));
     // Element bonus damage
     let elemDmg=r.enemy.elementDmg||0;
@@ -257,7 +258,7 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
 function flee(){
   let r=room();
   if(!r.enemy||r.enemy.hp<=0)return;
-  let n=d20()+Math.floor((S.stats.dex||1)/8); // DEX bonus to flee (+1 per 8 DEX)
+  let n=d20()+Math.floor((eff().dex||1)/8); // DEX bonus to flee (+1 per 8 DEX)
 
   // Flee damage scales with danger (floor^1.6) — fleeing deep is risky
   let dangerScale=Math.pow(S.floor,1.6);
