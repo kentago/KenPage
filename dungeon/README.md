@@ -1,27 +1,70 @@
-# Infinite Dungeon v6
+# Infinite Dungeon — Version 1-beta
 
-Static endless dungeon crawler with persistent discovered-room memory, procedural floors, permadeath, dwarf lore identities, rare monster-inspired loot, equipment slots, quests, traders, rest resources, ladders, secret passages, fleeing, and optional Cloudflare D1 global Hall of Fame.
+An endless, replayable roguelike dungeon crawler. Play a Dwarf expedition hero descending through infinite procedurally-generated floors. Permanent death. Global Hall of Fame competition across seasons.
 
-## Repository layout
-- `dungeon/` — static site deployed by AWS Amplify.
-- `cloudflare/` — Cloudflare Worker + D1 schema/API.
+## How to Play
 
-## v6 highlights
-- Fight rooms lock movement/search/rest until victory; defeating a foe unlocks search without spoiling it beforehand.
-- Every discovered room remembers foes, searched state, blocked edges, ladders, NPCs, traders, rest uses and revealed secrets.
-- Blocked compass edges are remembered symmetrically between adjacent rooms.
-- Fleeing uses creature-specific consequences; natural 20 is a clean escape.
-- Rare loot chance rises after monsters and resets after a rare find; rare items can have unique traits and monster-inspired names.
-- 30-item carry limit and persistent equipment; ten ring slots can be permanently lost during a bad flee.
-- NPC quests remember target floor and reward; secret-passage quests pay 3× reward.
-- Ladders reveal only after the room's foe is defeated; used ladders remain green in memory.
-- Traders are green `$` encounters.
-- Rest is only available at discovered resting resources and can have multiple uses.
-- W/A/S/D keyboard movement; compass UI is arranged as a compass.
-- New Run clears the current run log and state.
-- Global Hall API is optional until Cloudflare is configured; local Hall remains as a fallback.
+- **Move**: WASD or Arrow keys (compass navigation)
+- **E** Search · **T** Talk to NPC/Trader · **F** Fight · **R** Flee
+- Explore each floor, fight enemies, complete quests, collect gear, then descend via ladders.
+- Danger grows faster than loot — clear a floor to get stronger before going deeper.
+- Death is permanent. Your run is submitted to the global Hall of Fame.
 
+## Core Systems
 
-## v7 — Visible Ladders & F Shortcut
+- **Infinite dungeon** with persistent room/floor memory and reciprocal wall blocking
+- **Grid map** with symbols for player, enemies, NPCs, traders, ladders, fountains, secrets
+- **Combat** — d20 system, crits, kill streaks (up to 3× XP), boss fights every 5th floor
+- **Stats** — STR (damage), DEX (dodge/flee/traps), INT (search/secrets), CHA (prices/XP/defense), Luck (rewards)
+- **Level-up** — allocate 3-4 stat points freely each level
+- **Rings & fingers** — 10 ring slots across two hands; fingers can be permanently lost
+- **Loot** — rarity + depth borders, individual rolls, 118-element periodic prefixes for uniqueness
+- **Quests** — floor-targeted item hunts with scaling rewards
+- **Traders & fountains** — sell items, heal, or gain Luck (with corruption risk)
+- **Starter ring choice** — pick 1 of 3 heirloom rings at run start
+- **Global Hall of Fame** — Cloudflare D1-backed, seasonal, worldwide top 10
 
-Rooms without foes may immediately reveal discovered ladders. A room with a living foe still reveals no ladder or other navigational shortcut until victory. F is a contextual shortcut for a discovered ladder, NPC/trader interaction, or valid rest action. W/A/S/D remain movement controls.
+## Architecture
+
+```
+Static game (AWS Amplify ← GitHub)
+        │
+        └─ calls → Cloudflare Worker → D1 (Hall of Fame only)
+```
+
+The game is fully playable offline/locally — Cloudflare/D1 is only for the shared global Hall of Fame.
+
+## Files (this folder)
+
+```
+index.html        Entry point + game instructions
+style.css         All styling
+data.js           Constants: names, arts, traits, enemy pools, prefixes
+items.js          Item generation, equip/inventory logic
+combat.js         Combat, bosses, damage, fingers
+npcs.js           NPC quests, level-up
+traders.js        Trader system
+fountains.js      Rest/Luck fountains
+map.js            Grid map rendering
+hall.js           Hall of Fame + seasons + country flags
+game.js           Core: state, movement, search, render, input, share
+```
+
+Script load order (in `index.html`): data → items → combat → npcs → traders → fountains → map → hall → game.
+
+The Cloudflare Worker + D1 API and the full design spec (`DUNGEON_SKILL.MD`) live in the parent project folder.
+
+## Deployment
+
+Push this `dungeon/` folder via GitHub → AWS Amplify. The game is a pure static site (no build step).
+
+## Global Hall of Fame API
+
+Worker URL: `https://bitter-tree-d030.kesj04.workers.dev`
+
+- `GET /leaderboard` — top 10 current season (`?season=N` for past seasons)
+- `GET /seasons` — list all seasons
+- `POST /submit` — submit a run (auto-tagged to current season)
+- `POST /admin/new-season` — archive current + start new (requires `X-Admin-Secret`)
+
+The game submits on death or when giving up a qualifying run. Falls back to localStorage if the API is unreachable.

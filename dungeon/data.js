@@ -1,4 +1,4 @@
-const KEY="infinite-dungeon-v13";
+const KEY="infinite-dungeon-1beta";
 const API_BASE="https://bitter-tree-d030.kesj04.workers.dev";
 const dwarves=["Durin Ironbeard","Borin Deepaxe","Kargan Stonepick","Thorin Mountainbeard","Dwalin Blackforge","Farin Axebreaker","Balin Goldvein","Gorin Redhammer"];
 const intros=["The old miners spoke of a sealed kingdom beneath the mountains. You entered to discover what survived below.","A forgotten royal expedition vanished beneath the mountain. You descend to learn their fate.","A tremor opened an ancient shaft, and rumors of lost Dwarven treasures followed."];

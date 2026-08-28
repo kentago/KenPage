@@ -464,6 +464,25 @@ function render(){
 
 // --- INIT ---
 window.act=act;window.equip=equip;window.unequip=unequip;window.discard=discard;window.discardChoice=discardChoice;window.swapRing=swapRing;window.newRun=newRun;window.talkNPC=talkNPC;window.talkTrader=talkTrader;window.sellItem=sellItem;
+
+// --- SHARE ---
+function shareGame(){
+  const url=window.location.href.split("?")[0].split("#")[0];
+  const text=`⚔️ Play Infinite Dungeon — an endless roguelike dungeon crawler! Compete on the global Hall of Fame: ${url}`;
+  // Try native share (mobile), fall back to clipboard
+  if(navigator.share){
+    navigator.share({title:"Infinite Dungeon",text:"Play Infinite Dungeon and compete on the global Hall of Fame!",url}).catch(()=>{});
+  } else if(navigator.clipboard){
+    navigator.clipboard.writeText(url).then(()=>{
+      alert("🔗 Link copied to clipboard!\n\n"+url+"\n\nShare it with friends to compete on the global Hall of Fame!");
+    }).catch(()=>{
+      prompt("Copy this link to share:",url);
+    });
+  } else {
+    prompt("Copy this link to share:",url);
+  }
+}
+window.shareGame=shareGame;
 window.setNickname=setNickname;
 window.toggleCountry=toggleCountry;
 

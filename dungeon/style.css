@@ -1,6 +1,8 @@
 body{margin:0;background:#151515;color:#eee;font:16px system-ui,sans-serif}
 main{max-width:1100px;margin:auto;padding:16px}
 header{display:flex;justify-content:space-between;align-items:center}
+.beta-badge{font-size:0.5em;background:#9b59b6;color:#fff;padding:2px 8px;border-radius:6px;vertical-align:middle;letter-spacing:1px}
+.header-btns{display:flex;gap:6px}
 
 /* Game Instructions */
 #instructions{background:#1a1a1a;border:1px solid #444;border-radius:12px;padding:10px 14px;margin:8px 0}
