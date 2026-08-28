@@ -69,9 +69,68 @@ function applyTraitBonus(trait,e,ringCount){
   // Amulet all-stat
   if(/Dwarven Ancestry/.test(trait)){e.str++;e.dex++;e.int++;e.cha++;}
   if(/Deep Sight/.test(trait)) e.int+=3;
+  // Soul Keeper — defensive proxy: +3 all stats while equipped
+  if(/Soul Keeper/.test(trait)){e.str+=3;e.dex+=3;e.int+=3;e.cha+=3;}
+  // Former flavor traits — stat bonuses
+  if(/Grave Fortune/.test(trait)) e.luck+=2;
+  if(/Deep Luck/.test(trait)) e.luck+=2;
+  if(/Runic Surge/.test(trait)) e.int+=2;
+  if(/Ancient Blessing/.test(trait)){e.str++;e.dex++;e.int++;e.cha++;}
+  if(/Soulbound/.test(trait)){e.str+=2;e.dex+=2;e.int+=2;e.cha+=2;}
+}
+
+// Returns true if any equipped item has a trait matching the given name (substring match)
+function hasTrait(name){
+  let equipped=[];
+  ["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet"].forEach(k=>{
+    if(S.equipment[k]) equipped.push(S.equipment[k]);
+  });
+  S.equipment.rings.forEach(x=>{if(x)equipped.push(x);});
+  return equipped.some(it=>it.trait&&it.trait.includes(name));
+}
+
+// Like hasTrait, but for the ring "Finger Ward" specifically — excludes "Finger Ward Amulet".
+function hasTraitExact(name){
+  let equipped=[];
+  ["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet"].forEach(k=>{
+    if(S.equipment[k]) equipped.push(S.equipment[k]);
+  });
+  S.equipment.rings.forEach(x=>{if(x)equipped.push(x);});
+  return equipped.some(it=>{
+    if(!it.trait) return false;
+    // match "Finger Ward" but NOT "Finger Ward Amulet"
+    return it.trait.includes(name)&&!it.trait.includes(name+" Amulet");
+  });
+}
+
+// --- EFFECTIVE MAX HP ---
+// Base S.maxHp (grows from level-ups) plus trait-granted HP bonuses.
+// Use this everywhere healing is capped or HP is displayed so HP-granting
+// traits actually raise the ceiling.
+function effMaxHp(){
+  let hp=S.maxHp;
+  let ringCount=S.equipment.rings.filter(x=>x).length;
+  // Gem Fortitude: +2 HP per ring worn (per equipped item carrying the trait)
+  let equipped=[];
+  ["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet"].forEach(k=>{
+    if(S.equipment[k]) equipped.push(S.equipment[k]);
+  });
+  S.equipment.rings.forEach(x=>{if(x)equipped.push(x);});
+  for(let it of equipped){
+    if(!it.trait) continue;
+    let traits=it.trait.split(",").map(t=>t.trim());
+    for(let t of traits){
+      if(/Gem Fortitude/.test(t)) hp+=2*ringCount;
+    }
+  }
+  return hp;
 }
 
 function makeItem(type){
+  // Ring of Greed: 30% chance to force any generated item to be a ring
+  if(hasTrait("Ring of Greed")&&type!=="ring"&&Math.random()<0.30){
+    type="ring";
+  }
   // --- SCALING: Loot quality grows SLOWER than danger ---
   // Loot power ≈ floor^1.2 (exploring current floor makes you stronger before descending)
   let lootScale=Math.pow(S.floor,1.2)+S.level*0.5;
@@ -90,6 +149,17 @@ function makeItem(type){
   else if(z<0.9995) r=5; // legendary
   else r=6;              // divine
   r=Math.min(r,rar.length-1);
+
+  // --- LOOT-QUALITY TRAITS: bump rarity index ---
+  // Deep Radiance: loot quality +1 per ring worn (capped so it stays reasonable)
+  // Treasure Sense: small flat loot-quality boost
+  let rarBoost=0;
+  if(hasTrait("Deep Radiance")){
+    let rcnt=S.equipment.rings.filter(x=>x).length;
+    rarBoost+=Math.min(2,Math.floor(rcnt/3)); // +1 per 3 rings, max +2
+  }
+  if(hasTrait("Treasure Sense")&&Math.random()<0.5) rarBoost+=1;
+  if(rarBoost>0) r=Math.min(rar.length-1,r+rarBoost);
 
   // --- DEPTH TIER ROLL (8 tiers) ---
   // Floor sets the max reachable tier; odds shift toward higher tiers at depth.
@@ -155,6 +225,8 @@ function makeItem(type){
   if(type==="ring") traitChance+=0.20;
   // Amulets are luck/utility focused — also higher trait chance
   if(type==="amulet") traitChance+=0.25;
+  // Dual Spark: +10% trait chance globally while equipped
+  if(hasTrait("Dual Spark")) traitChance+=0.10;
   if(Math.random()<traitChance){
     // Rings get ring-specific synergy traits 60% of the time
     if(type==="ring"&&Math.random()<0.6){
@@ -352,8 +424,39 @@ function item(i,inv,equipped){
     }
     if(equipped) buttons+=`<button onclick="unequip('${i.id}','${equipped}')">⬇️ Unequip</button>`;
   }
-  return`<div class="item ${i.rarity} ${i.depth}${i.prestige?" prestige-"+i.prestige:""}"><span class="art">${i.art}</span><b>${i.name}</b><div class="item-type">${typeLabel(i.type)}</div><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${i.trait?`<div class="trait">⚡ ${i.trait}</div>`:""}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)}${i.prestige?` · ✦${i.prestige[0].toUpperCase()+i.prestige.slice(1)}✦`:""} · 💰 ${val}</div>${buttons}</div>`;
+  // Comparison vs currently-equipped item in the same slot (inventory items only)
+  let cmp=inv?compareLine(i):"";
+  return`<div class="item ${i.rarity} ${i.depth}${i.prestige?" prestige-"+i.prestige:""}"><span class="art">${i.art}</span><b>${i.name}</b><div class="item-type">${typeLabel(i.type)}</div><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${i.trait?`<div class="trait">⚡ ${i.trait}</div>`:""}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)}${i.prestige?` · ✦${i.prestige[0].toUpperCase()+i.prestige.slice(1)}✦`:""} · 💰 ${val}</div>${cmp}${buttons}</div>`;
 }
+
+// Build a "vs equipped" comparison line for an inventory item
+function compareLine(i){
+  let s=slot(i);
+  let current;
+  if(s==="rings"){
+    // Compare against the WEAKEST equipped ring (what you'd likely replace)
+    let rings=S.equipment.rings.filter(x=>x);
+    if(rings.length===0) return `<div class="cmp cmp-new">✨ No ring equipped — free upgrade</div>`;
+    // weakest by stat sum
+    current=rings.reduce((a,b)=>statSum(a)<=statSum(b)?a:b);
+  } else {
+    current=S.equipment[s];
+    if(!current) return `<div class="cmp cmp-new">✨ Slot empty — free upgrade</div>`;
+  }
+  // Compare stat totals and per-stat deltas
+  let keys=["str","dex","int","cha"];
+  let parts=[];
+  for(let k of keys){
+    let nv=(i.stats[k]||0), cv=(current.stats[k]||0), d=nv-cv;
+    if(d!==0) parts.push(`${k.toUpperCase()} ${d>0?"+"+d+" ↑":d+" ↓"}`);
+  }
+  let totalDelta=statSum(i)-statSum(current);
+  let totalStr=totalDelta>0?`<span class="cmp-up">+${totalDelta} total ↑</span>`:totalDelta<0?`<span class="cmp-down">${totalDelta} total ↓</span>`:`<span>even</span>`;
+  let traitNote=(i.trait&&i.trait!==current.trait)?` · trait: ${i.trait}`:"";
+  return `<div class="cmp">vs ${current.name.length>18?current.name.slice(0,18)+"…":current.name}: ${parts.join(" · ")||"same stats"} — ${totalStr}${traitNote}</div>`;
+}
+
+function statSum(x){ return Object.values(x.stats).reduce((a,b)=>a+b,0); }
 
 // Friendly display label for an item type
 function typeLabel(t){
@@ -361,10 +464,19 @@ function typeLabel(t){
   return labels[t]||t;
 }
 
+// Combined sell-value multiplier from gold traits (stack multiplicatively)
+function goldMult(){
+  let m=1;
+  if(hasTrait("Gold Attraction")) m*=1.1;
+  if(hasTrait("Gold Magnet")) m*=1.25;
+  if(hasTrait("Merchant's Eye")) m*=2;
+  return m;
+}
+
 // Sell value of an item (CHA-boosted, same formula as trader modal)
 function itemValue(x){
   let chaBonus=1+(eff().cha||1)*0.03;
-  return Math.max(1,Math.floor(((Object.values(x.stats).reduce((a,b)=>a+b,0))*2+(rar.indexOf(x.rarity)+1)*5)*chaBonus));
+  return Math.max(1,Math.floor(((Object.values(x.stats).reduce((a,b)=>a+b,0))*2+(rar.indexOf(x.rarity)+1)*5)*chaBonus*goldMult()));
 }
 
 // Sell an inventory item directly (only valid at a trader)

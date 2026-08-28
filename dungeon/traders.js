@@ -5,17 +5,48 @@ const traderTitles=["Master Trader","Wandering Merchant","Deep Market Keeper","D
 function spawnTrader(){
   let name=traderNames[Math.floor(Math.random()*traderNames.length)];
   let title=traderTitles[Math.floor(Math.random()*traderTitles.length)];
-  // Generate 3-5 wares for sale (persistent per trader)
+  // Generate 3-5 PREMIUM wares for sale (persistent per trader)
   let count=3+Math.floor(Math.random()*3);
   let wares=[];
   for(let i=0;i<count;i++){
-    let item=makeItem(types[Math.floor(Math.random()*types.length)]);
+    let item=makeShopItem();
     // Price = value of stats + rarity premium, marked up for buying
-    let baseValue=(Object.values(item.stats).reduce((a,b)=>a+b,0))*2+(rar.indexOf(item.rarity)+1)*8;
-    item.price=Math.max(5,Math.round(baseValue*(1.5+Math.random()*0.5))); // 1.5-2× markup
+    let baseValue=(Object.values(item.stats).reduce((a,b)=>a+b,0))*2.5+(rar.indexOf(item.rarity)+1)*12;
+    item.price=Math.max(10,Math.round(baseValue*(1.4+Math.random()*0.5))); // 1.4-1.9× markup
     wares.push(item);
   }
   return{name,title,wares};
+}
+
+// Shop wares are premium: guaranteed 3 stats, always a trait, and a quality roll
+// that can EXCEED normal loot — so buying stays worthwhile even late-game.
+function makeShopItem(){
+  let type=types[Math.floor(Math.random()*types.length)];
+  // Start from a normal item but upgrade it
+  let item=makeItem(type);
+  // Quality boost: shop items roll 1.1-1.7× on stats (can beat found loot)
+  let boost=1.1+Math.random()*0.6;
+  let p=["str","dex","int","cha"];
+  // Ensure at least 3 distinct stats
+  let present=Object.keys(item.stats);
+  for(let stat of p){
+    if(present.length>=3) break;
+    if(!item.stats[stat]){
+      let base=Math.max(...Object.values(item.stats),1);
+      item.stats[stat]=Math.max(1,Math.round(base*(0.2+Math.random()*0.4)));
+      present=Object.keys(item.stats);
+    }
+  }
+  // Apply the quality boost to all stats
+  for(let k in item.stats) item.stats[k]=Math.max(1,Math.round(item.stats[k]*boost));
+  // Guarantee a trait
+  if(!item.trait){
+    let pool=type==="ring"?ringTraits:type==="amulet"?amuletTraits:traits;
+    item.trait=pool[Math.floor(Math.random()*pool.length)];
+  }
+  // Slight rarity bump if common
+  if(item.rarity==="common"&&Math.random()<0.6) item.rarity="uncommon";
+  return item;
 }
 
 function talkTrader(){
@@ -32,8 +63,9 @@ function showTraderModal(trader){
   let chaBonus=1+(eff().cha||1)*0.03; // CHA improves sell prices
 
   let sellSection=S.inventory.length?S.inventory.map((x,i)=>{
-    let value=Math.max(1,Math.floor(((Object.values(x.stats).reduce((a,b)=>a+b,0))*2+(rar.indexOf(x.rarity)+1)*5)*chaBonus));
+    let value=itemValue(x);
     return`<div class="item ${x.rarity} ${x.depth}"><span class="art">${x.art}</span><b>${x.name}</b>
+      <div class="item-type">${typeLabel(x.type)}</div>
       <div>${Object.entries(x.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>
       ${x.trait?`<div class="trait">⚡ ${x.trait}</div>`:""}
       <div class="small">${x.rarity} · ${x.depth}</div>
@@ -43,9 +75,11 @@ function showTraderModal(trader){
   let buySection=trader.wares.length?trader.wares.map((x,i)=>{
     let afford=(S.gold||0)>=x.price;
     return`<div class="item ${x.rarity} ${x.depth}"><span class="art">${x.art}</span><b>${x.name}</b>
+      <div class="item-type">${typeLabel(x.type)}</div>
       <div>${Object.entries(x.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>
       ${x.trait?`<div class="trait">⚡ ${x.trait}</div>`:""}
       <div class="small">${x.rarity} · ${x.depth}</div>
+      ${compareLine(x)}
       <button onclick="buyItem(${i})" ${afford?"":"disabled"}>🛒 Buy for ${x.price}${afford?"":" (need gold)"}</button>
     </div>`;}).join(""):"<div class=small>Sold out.</div>";
 

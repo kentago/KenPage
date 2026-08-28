@@ -46,17 +46,18 @@ function drinkPotion(){
 
   // d20 roll decides the potion's true nature
   let roll=d20();
+  let pAmp=hasTrait("Potion Amplifier")?1.5:1;
   if(roll===20){
     // Elixir of legends — big heal + luck
-    let heal=Math.round(S.maxHp*0.5);
-    S.hp=Math.min(S.maxHp,S.hp+heal);
+    let heal=Math.round(effMaxHp()*0.5*pAmp);
+    S.hp=Math.min(effMaxHp(),S.hp+heal);
     S.stats.luck=(S.stats.luck||0)+3;
     msg(`✨ A legendary elixir! +${heal} HP and +3 Luck! The liquid was pure fortune.`);
   } else if(roll>=15){
     // Healing potion
-    let heal=Math.round(S.maxHp*(0.3+Math.random()*0.2));
-    S.hp=Math.min(S.maxHp,S.hp+heal);
-    msg(`💚 A healing draught! +${heal} HP. (${S.hp}/${S.maxHp})`);
+    let heal=Math.round(effMaxHp()*(0.3+Math.random()*0.2)*pAmp);
+    S.hp=Math.min(effMaxHp(),S.hp+heal);
+    msg(`💚 A healing draught! +${heal} HP. (${S.hp}/${effMaxHp()})`);
   } else if(roll>=11){
     // Luck potion
     let luck=1+Math.floor(Math.random()*2);

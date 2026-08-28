@@ -104,6 +104,11 @@ function deliverQuest(npc,quest){
   // CHA bonus: +5% quest XP per CHA point (being charming = better rewards)
   let chaXPBonus=1+(eff().cha||1)*0.05;
   let finalQuestXP=Math.round(quest.xpReward*chaXPBonus);
+  // Soul Chain: +5% XP per ring worn · XP Amplifier: +15% XP from all sources
+  let xpTraitMult=1;
+  if(hasTrait("Soul Chain")) xpTraitMult*=(1+0.05*S.equipment.rings.filter(x=>x).length);
+  if(hasTrait("XP Amplifier")) xpTraitMult*=1.15;
+  finalQuestXP=Math.round(finalQuestXP*xpTraitMult);
   S.xp+=finalQuestXP;
 
   // --- REWARD ROLL (d20 + luck) ---
@@ -147,8 +152,8 @@ function deliverQuest(npc,quest){
       S.stats.luck=(S.stats.luck||0)+1;
       msg(`🧪 ${npc.name} also slips you a Lucky Trinket. (+1 Luck permanently!)`);
     } else if(potionRoll<0.5){
-      let healAmt=Math.round(S.maxHp*0.3);
-      S.hp=Math.min(S.maxHp,S.hp+healAmt);
+      let healAmt=Math.round(effMaxHp()*0.3);
+      S.hp=Math.min(effMaxHp(),S.hp+healAmt);
       msg(`🧪 ${npc.name} gives you a Healing Potion. (+${healAmt} HP!)`);
     }
   }

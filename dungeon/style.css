@@ -42,6 +42,10 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .small{font-size:.85em;color:#aaa}
 .trait{font-size:.9em;color:#f1c40f;margin-top:4px}
 .item-type{font-size:.8em;color:#8ab4d8;margin:2px 0}
+.cmp{font-size:.8em;color:#bbb;margin:4px 0;padding:4px 6px;background:#1e1e1e;border-radius:6px;border-left:2px solid #555}
+.cmp-new{color:#2ecc71;border-left-color:#2ecc71}
+.cmp-up{color:#2ecc71;font-weight:bold}
+.cmp-down{color:#e74c3c;font-weight:bold}
 /* ===== ITEM BORDERS =====
    Two independent axes, max 2 borders total.
    Common rarity + Bronze depth = NO special border (plain box — the majority).
@@ -130,11 +134,11 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
   border:2px solid #444;
 }
 
-/* Blocked edges — remove border on that side to show wall */
-.map-cell.blocked-n{ border-top:2px solid #c0392b; }
-.map-cell.blocked-s{ border-bottom:2px solid #c0392b; }
-.map-cell.blocked-e{ border-right:2px solid #c0392b; }
-.map-cell.blocked-w{ border-left:2px solid #c0392b; }
+/* Blocked edges — bright thick red wall on that side */
+.map-cell.blocked-n{ border-top:4px solid #ff3b30; }
+.map-cell.blocked-s{ border-bottom:4px solid #ff3b30; }
+.map-cell.blocked-e{ border-right:4px solid #ff3b30; }
+.map-cell.blocked-w{ border-left:4px solid #ff3b30; }
 
 /* Symbol inside box */
 .map-symbol{
