@@ -507,6 +507,10 @@ async function submitToGlobalHall(){
   local=local.slice(0,10);
   localStorage.setItem("infiniteDungeonHall",JSON.stringify(local));
 
+  // Immediately show in Hall of Fame (before API responds)
+  globalHall=local;
+  renderHall();
+
   // Submit to global D1 API
   try{
     const res=await fetch(`${API_BASE}/submit`,{
@@ -594,8 +598,8 @@ function damage(n){
   if(S.hp===0){
     S.hp=0;
     msg("☠️ HP reached 0. The expedition has ended.");
-    // Submit to global Hall of Fame
-    submitToGlobalHall();
+    // Submit to global Hall of Fame and immediately re-render
+    submitToGlobalHall().then(()=>renderHall());
   } else {
     render();
   }
