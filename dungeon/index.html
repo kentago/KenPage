@@ -53,7 +53,13 @@
 <p>NPCs give quests to find specific items on a <b>specific floor</b>. The quest UI tells you exactly where to search. You must deliver the correct item to the correct NPC. Deeper quests = better rewards (XP + items). CHA boosts quest XP by +5% per point.</p>
 
 <h3>💲 Traders</h3>
-<p>Sell inventory items for gold at traders. CHA boosts sell prices by +3% per point.</p>
+<p>Traders both <b>buy and sell</b>. Sell your loot for gold (CHA boosts sell prices +3%/point), and buy their 3-5 wares if you can afford them.</p>
+
+<h3>💰 Gold</h3>
+<p>Earn gold by: <b>killing enemies</b> (more from bosses/elites), <b>searching rooms</b> (stashes), and <b>selling</b> to traders. Spend it buying gear from traders or paying doctors to restore lost fingers.</p>
+
+<h3>⚕️ Doctors</h3>
+<p>Doctors (⚕️) can <b>surgically restore lost fingers</b> — reopening ring slots permanently. The base price scales with floor depth, but there's a <b>bulk discount</b>: restore 2 fingers and the 2nd is 30% off, the 3rd is 50% off, and further ones 60% off. Fixing several at once saves serious gold.</p>
 
 <h3>💚 Fountains</h3>
 <p><b>Healing fountains</b> (💚) restore HP (15-35% of max per sip). <b>Luck fountains</b> (🍀) grant permanent Luck stat. Each has limited sips (d20 determined). Every sip is a d20 roll:</p>
@@ -83,6 +89,7 @@
 <tr><td style="color:#e74c3c">⚔</td><td>Enemy (alive, blocking)</td></tr>
 <tr><td style="color:#3498db">🔵</td><td>NPC (quest giver)</td></tr>
 <tr><td style="color:#f1c40f">💲</td><td>Trader</td></tr>
+<tr><td style="color:#ff6b6b">⚕️</td><td>Doctor (restore lost finger)</td></tr>
 <tr><td style="color:#f39c12">🪜↓</td><td>Ladder down (yellow = unused)</td></tr>
 <tr><td style="color:#2ecc71">🪜↑</td><td>Ladder up (green = used)</td></tr>
 <tr><td style="color:#2ecc71">💚</td><td>Healing fountain (active)</td></tr>
@@ -110,6 +117,7 @@
 <script src="npcs.js"></script>
 <script src="traders.js"></script>
 <script src="fountains.js"></script>
+<script src="doctors.js"></script>
 <script src="map.js"></script>
 <script src="hall.js"></script>
 <script src="game.js"></script></body></html>

@@ -209,6 +209,7 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
     let xpMult=r.enemy.isBoss?(r.enemy.xpMultiplier||5):1;
     let xpGain=Math.round((r.enemy.tier==="common"?dangerXP*1.5:r.enemy.tier==="mid"?dangerXP*3:r.enemy.tier==="hard"?dangerXP*6:r.enemy.tier==="elite"?dangerXP*12:dangerXP*25)*xpMult);
     let wasBoss=r.enemy.isBoss;
+    let enemyTier=r.enemy.tier;
     // Kill streak tracking
     S.killStreak=(S.killStreak||0)+1;
     S.totalKills=(S.totalKills||0)+1;
@@ -216,10 +217,15 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
     // Combo XP multiplier: +10% per streak kill (caps at 3×)
     let comboMult=Math.min(3,1+S.killStreak*0.1);
     S.xp+=Math.round(xpGain*comboMult);
+    // Gold drop — scales with floor and enemy tier
+    let goldBase=Math.pow(S.floor,1.2)*0.5;
+    let tierGoldMult=enemyTier==="common"?1:enemyTier==="mid"?2:enemyTier==="hard"?4:enemyTier==="elite"?8:enemyTier==="boss"?20:1;
+    let goldDrop=Math.max(1,Math.round(goldBase*tierGoldMult*(0.5+Math.random())));
+    S.gold=(S.gold||0)+goldDrop;
     checkLevelUp();
     r.enemy=null;
     let streakMsg=S.killStreak>=3?` 🔥 Kill streak: ${S.killStreak}× (${Math.round(comboMult*100)}% XP)`:"";
-    msg(`☠️ ${defeated} is defeated! +${Math.round(xpGain*comboMult)} XP${streakMsg}`);
+    msg(`☠️ ${defeated} is defeated! +${Math.round(xpGain*comboMult)} XP · +${goldDrop} 💰${streakMsg}`);
     // Boss guaranteed legendary drop
     if(wasBoss){
       let bossLoot=makeLegendaryItem();

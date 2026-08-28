@@ -1,10 +1,10 @@
 // --- CORE GAME STATE ---
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 
-function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
-function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null})}
+function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null})}
 function d20(){return 1+Math.floor(Math.random()*20)}
 function msg(t){S.log.unshift(t);S.log=S.log.slice(0,100);save();render()}
 
@@ -82,6 +82,10 @@ function move(d){
     // Spawn rest source? (~7% chance)
     if(!x.rest&&Math.random()<0.07){
       x.rest=spawnRestSource();
+    }
+    // Spawn doctor? (~5% chance, only if no enemy)
+    if(!x.enemy&&!x.doctor&&Math.random()<0.05){
+      x.doctor=spawnDoctor();
     }
   }
 
@@ -191,8 +195,14 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
     return;
   }
   if(searchRoll>=6){
-    // Nothing useful
-    msg("🔎 You find nothing of interest.");
+    // Chance of finding gold, otherwise nothing
+    if(Math.random()<0.5){
+      let goldFind=Math.max(1,Math.round(Math.pow(S.floor,1.2)*(0.8+Math.random()*1.5)));
+      S.gold=(S.gold||0)+goldFind;
+      msg(`💰 You find a stash of ${goldFind} gold!`);
+    } else {
+      msg("🔎 You find nothing of interest.");
+    }
     return;
   }
   if(searchRoll>=2){
@@ -419,7 +429,7 @@ function render(){
   if(sc) sc.checked=!!(S.country);
   stats.innerHTML=[`❤️ HP ${Math.max(0,S.hp)}/${S.maxHp}`,`⭐ Level ${S.level}`,`XP ${S.xp}`,`🍀 Luck ${S.stats.luck||0}`].map(x=>`<div>${x}</div>`).join("")+renderStatButtons()+`<div>💰 ${S.gold}</div>`;
   roomTitle.textContent=`Floor ${S.floor} — Chamber`;
-  roomText.textContent=r.enemy&&r.enemy.hp>0?`⚔️ ${r.enemy.name} (${r.enemy.hp} HP)${r.enemy.element?` [${r.enemy.element}]`:""}${r.enemy.isBoss?` 👑 BOSS — ${r.enemy.abilities.join(" | ")}`:""} blocks the chamber.`:r.npc&&!r.npc.completed?`🔵 ${r.npc.name}, ${r.npc.title}, is here.`:r.trader?`💲 ${r.trader.name}, ${r.trader.title}, awaits.`:r.rest&&!r.rest.depleted?`${r.rest.emoji} A ${r.rest.name} flows here. (${r.rest.sips} sips remain)`:"The chamber is quiet.";
+  roomText.textContent=r.enemy&&r.enemy.hp>0?`⚔️ ${r.enemy.name} (${r.enemy.hp} HP)${r.enemy.element?` [${r.enemy.element}]`:""}${r.enemy.isBoss?` 👑 BOSS — ${r.enemy.abilities.join(" | ")}`:""} blocks the chamber.`:r.npc&&!r.npc.completed?`🔵 ${r.npc.name}, ${r.npc.title}, is here.`:r.trader?`💲 ${r.trader.name}, ${r.trader.title}, awaits.`:r.doctor?`⚕️ ${r.doctor.name}, ${r.doctor.title}, tends the wounded here.`:r.rest&&!r.rest.depleted?`${r.rest.emoji} A ${r.rest.name} flows here. (${r.rest.sips} sips remain)`:"The chamber is quiet.";
   map.innerHTML=drawMap();
   if(r.enemy&&r.enemy.hp>0){
     actions.innerHTML=`<div class="combat-actions"><button onclick="act('fight')">⚔️ Fight (F)</button><button onclick="act('flee')">🏃 Flee (R)</button></div>`;
@@ -429,6 +439,7 @@ function render(){
     if(r.npc&&!r.npc.completed) extras+=`<button class="action-btn npc-btn" onclick="talkNPC()">🔵 Talk (T)</button>`;
     if(r.trader) extras+=`<button class="action-btn trader-btn" onclick="talkTrader()">💲 Trade (T)</button>`;
     if(r.rest&&!r.rest.depleted) extras+=`<button class="action-btn ${r.rest.type==="luck"?"luck-btn":"rest-btn"}" onclick="useRest()">${r.rest.type==="luck"?"🍀":"💚"} ${r.rest.name} (${r.rest.sips}/${r.rest.maxSips})</button>`;
+    if(r.doctor) extras+=`<button class="action-btn doctor-btn" onclick="talkDoctor()">⚕️ Visit ${r.doctor.name}</button>`;
     if(r.ladder) extras+=`<button class="action-btn" onclick="act('${r.ladder.dir}')">🪜 ${r.ladder.dir==="down"?"↓ Descend":"↑ Ascend"}</button>`;
     actions.innerHTML=`<div class="compass">
       <div class="compass-row"><button class="compass-btn north${r.blocked&&r.blocked.N?" blocked":""}" onclick="act('N')"${r.blocked&&r.blocked.N?" disabled":""}>▲<br><span>W / ↑</span></button></div>
@@ -463,7 +474,7 @@ function render(){
 }
 
 // --- INIT ---
-window.act=act;window.equip=equip;window.unequip=unequip;window.discard=discard;window.discardChoice=discardChoice;window.swapRing=swapRing;window.newRun=newRun;window.talkNPC=talkNPC;window.talkTrader=talkTrader;window.sellItem=sellItem;
+window.act=act;window.equip=equip;window.unequip=unequip;window.discard=discard;window.discardChoice=discardChoice;window.swapRing=swapRing;window.newRun=newRun;window.talkNPC=talkNPC;window.talkTrader=talkTrader;window.sellItem=sellItem;window.buyItem=buyItem;window.talkDoctor=talkDoctor;window.restoreFingers=restoreFingers;
 
 // --- SHARE ---
 function shareGame(){
@@ -489,7 +500,7 @@ window.toggleCountry=toggleCountry;
 // --- KEYBOARD CONTROLS ---
 document.addEventListener("keydown",(e)=>{
   // Don't trigger if a modal is open
-  if(document.getElementById("discardModal")||document.getElementById("ringSwapModal")||document.getElementById("traderModal"))return;
+  if(document.getElementById("discardModal")||document.getElementById("ringSwapModal")||document.getElementById("traderModal")||document.getElementById("doctorModal")||document.getElementById("starterRingModal"))return;
   if(S.hp<=0)return;
 
   let r=room();
@@ -518,6 +529,7 @@ document.addEventListener("keydown",(e)=>{
       if(!inCombat){
         if(r.npc&&!r.npc.completed) talkNPC();
         else if(r.trader) talkTrader();
+        else if(r.doctor) talkDoctor();
       }
       break;
   }
