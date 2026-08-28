@@ -146,9 +146,22 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
   // --- SECRET PASSAGE (separate chance, checked first) ---
   // INT increases secret passage discovery: base 10% + 0.5% per INT
   let secretChance=0.10+Math.min(0.15,(S.stats.int||1)*0.005);
-  if(Math.random()<secretChance){
-    r.secret={dir:["N","E","S","W"][Math.floor(Math.random()*4)]};
-    msg("✨ A secret passage is revealed!");
+  if(!r.secret&&Math.random()<secretChance){
+    // A secret passage opens a NEW route — unblocks a direction (both sides)
+    let blockedDirs=["N","E","S","W"].filter(d=>r.blocked&&r.blocked[d]);
+    let openDir=blockedDirs.length>0
+      ? blockedDirs[Math.floor(Math.random()*blockedDirs.length)]
+      : ["N","E","S","W"][Math.floor(Math.random()*4)];
+    // Remove the wall on this side
+    if(r.blocked) delete r.blocked[openDir];
+    // Remove reciprocal wall on the neighbor (if it exists)
+    let nx=S.x+DIR_DX[openDir], ny=S.y+DIR_DY[openDir];
+    let nk=`${S.floor}:${nx}:${ny}`;
+    if(S.rooms[nk]&&S.rooms[nk].blocked) delete S.rooms[nk].blocked[OPP[openDir]];
+    // Mark for map display + quest bonus
+    r.secret={dir:openDir,opened:true};
+    let dirName={N:"north",S:"south",E:"east",W:"west"}[openDir];
+    msg(`✨ A secret passage opens to the ${dirName}! A hidden route is revealed.`);
     save();render();return;
   }
 
@@ -186,18 +199,20 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
     // Trap! DEX gives a chance to dodge it
     let trapDodge=Math.min(0.35,(S.stats.dex||1)*0.015); // +1.5% per DEX, max 35%
     if(Math.random()<trapDodge){
-      msg("⚠️ A trap triggers but you leap aside! (DEX)");
+      msg("⚠️ A trap triggers but you leap aside unharmed! (DEX)");
       return;
     }
-    msg("⚠️ A hidden trap strikes!");
-    damage(Math.max(1,Math.round(Math.pow(S.floor,1.2)*0.2)));
-    if(Math.random()<0.12)loseFinger();
+    let trapDmg=Math.max(1,Math.round(Math.pow(S.floor,1.2)*0.2));
+    msg(`⚠️ A hidden trap strikes! You take ${trapDmg} damage. (HP ${Math.max(0,S.hp-trapDmg)}/${S.maxHp})`);
+    damage(trapDmg);
+    if(S.hp>0&&Math.random()<0.12)loseFinger();
     return;
   }
   // searchRoll === 1: Critical fail (already handled above for quests, this is fallback)
-  msg("⚠️ A hidden trap strikes!");
-  damage(Math.max(2,Math.round(Math.pow(S.floor,1.2)*0.3)));
-  if(Math.random()<0.15)loseFinger();
+  let critTrapDmg=Math.max(2,Math.round(Math.pow(S.floor,1.2)*0.3));
+  msg(`⚠️ A vicious hidden trap strikes! You take ${critTrapDmg} damage. (HP ${Math.max(0,S.hp-critTrapDmg)}/${S.maxHp})`);
+  damage(critTrapDmg);
+  if(S.hp>0&&Math.random()<0.15)loseFinger();
   }
 
 function useLadder(dir){
@@ -251,7 +266,26 @@ function useLadder(dir){
 
 function act(a){if(S.hp<=0)return;S.actions=(S.actions||0)+1;if(a==="search")search();else if(a==="fight")fight();else if(a==="flee")flee();else if(["N","S","E","W"].includes(a))move(a);else if(a==="down")useLadder("down");else if(a==="up")useLadder("up");save();render()}
 
-function newRun(){localStorage.removeItem(KEY);S=fresh();render()}
+function newRun(){
+  // If the current run has made any progress and the hero is still alive,
+  // submit it to the Hall of Fame before wiping (giving up still counts).
+  let hasProgress=S.xp>0||S.floor>1||(S.totalKills||0)>0;
+  let alreadyDead=S.hp<=0; // dead runs already submitted via damage()
+  if(hasProgress&&!alreadyDead){
+    if(!confirm("Give up this expedition?\n\nYour run will be submitted to the GLOBAL Hall of Fame — but only the top 10 runs WORLDWIDE are shown. You'll only appear if your score beats other players across the world.\n\nProceed and start a new run?")) return;
+    submitToGlobalHall().then(()=>{
+      localStorage.removeItem(KEY);
+      S=fresh();
+      render();
+      fetchGlobalHall();
+    });
+    return;
+  }
+  // No meaningful progress (or already dead & submitted) — just start fresh
+  localStorage.removeItem(KEY);
+  S=fresh();
+  render();
+}
 
 function setNickname(val){
   S.nickname=val.trim().slice(0,20);
