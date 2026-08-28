@@ -5,6 +5,27 @@ function fresh(){return{name:makeDwarfName(),nickname:"",level:1,xp:0,hp:20,maxH
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
 function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null})}
+
+// Returns true if any room within `minDist` Manhattan distance on the current
+// floor already has the given feature ("npc", "trader", "ladder", "rest", "doctor").
+// Used to space special rooms apart so they never cluster next to each other.
+function nearbyHas(feature,minDist){
+  for(let k of Object.keys(S.rooms)){
+    let parts=k.split(":");
+    if(parseInt(parts[0])!==S.floor) continue;
+    let rx=parseInt(parts[1]), ry=parseInt(parts[2]);
+    let dist=Math.abs(rx-S.x)+Math.abs(ry-S.y);
+    if(dist>minDist) continue;
+    let rm=S.rooms[k];
+    if(!rm) continue;
+    if(feature==="npc"&&rm.npc&&!rm.npc.completed) return true;
+    if(feature==="trader"&&rm.trader) return true;
+    if(feature==="ladder"&&rm.ladder) return true;
+    if(feature==="rest"&&rm.rest&&!rm.rest.depleted) return true;
+    if(feature==="doctor"&&rm.doctor) return true;
+  }
+  return false;
+}
 function d20(){return 1+Math.floor(Math.random()*20)}
 function msg(t){S.log.unshift(t);S.log=S.log.slice(0,100);save();render()}
 
@@ -66,16 +87,16 @@ function move(d){
     if(!(S.floor===1&&S.x===0&&S.y===0)&&Math.random()<0.28){
       x.enemy=spawn();
     }
-    // Spawn NPC? (~8% chance, no enemy in room)
-    if(!x.enemy&&Math.random()<0.08){
+    // Spawn NPC? (~8% chance, no enemy, and no other NPC within 2 rooms)
+    if(!x.enemy&&!nearbyHas("npc",2)&&Math.random()<0.08){
       x.npc=spawnNPC();
     }
-    // Spawn trader? (~6% chance, no enemy/npc)
-    if(!x.enemy&&!x.npc&&Math.random()<0.06){
+    // Spawn trader? (~6% chance, no enemy/npc, spaced from other traders)
+    if(!x.enemy&&!x.npc&&!nearbyHas("trader",2)&&Math.random()<0.06){
       x.trader=spawnTrader();
     }
-    // Spawn ladder down? (~10% chance, no enemy blocking it)
-    if(!x.enemy&&!x.ladder&&Math.random()<0.10){
+    // Spawn ladder down? (~10% chance, no enemy blocking it, spaced from other ladders)
+    if(!x.enemy&&!x.ladder&&!nearbyHas("ladder",2)&&Math.random()<0.10){
       x.ladder={dir:"down",used:false,targetKey:null};
       // Boss floors (every 5th floor) — ONE boss guards the FIRST ladder discovered.
       // Tracked per-floor so once handled (spawned), later ladders are free.
@@ -85,12 +106,12 @@ function move(d){
         msg(`👑 BOSS FIGHT! ${x.enemy.name} guards the descent!\n⚡ Abilities: ${x.enemy.abilities.join(" · ")}\nDefeat it to descend — there is no way past.`);
       }
     }
-    // Spawn rest source? (~7% chance)
-    if(!x.rest&&Math.random()<0.07){
+    // Spawn rest source? (~7% chance, spaced from other fountains)
+    if(!x.rest&&!nearbyHas("rest",2)&&Math.random()<0.07){
       x.rest=spawnRestSource();
     }
-    // Spawn doctor? (~5% chance, only if no enemy)
-    if(!x.enemy&&!x.doctor&&Math.random()<0.05){
+    // Spawn doctor? (~5% chance, no enemy, spaced from other doctors)
+    if(!x.enemy&&!x.doctor&&!nearbyHas("doctor",2)&&Math.random()<0.05){
       x.doctor=spawnDoctor();
     }
   }
@@ -369,22 +390,32 @@ function renderStatButtons(){
     // Show "STR 12 (+8)" when gear adds to the base
     let display=bonus>0?`${k.toUpperCase()} ${total} <span class="stat-bonus">(+${bonus})</span>`:`${k.toUpperCase()} ${total}`;
     if(available){
-      return`<div class="stat-btn stat-available" onclick="boostStat('${k}')">${display} <span class="boost-hint">${label}</span></div>`;
+      let pts=S.statPoints||0;
+      // Clicking the stat body = +1 (also the single initial free boost).
+      // +5 and +10 mini-buttons appear when enough points are banked.
+      let bulk="";
+      if(hasPoints){
+        if(pts>=5) bulk+=`<button class="mini-stat mini-stat-5" onclick="event.stopPropagation();boostStat('${k}',5)">+5</button>`;
+        if(pts>=10) bulk+=`<button class="mini-stat mini-stat-10" onclick="event.stopPropagation();boostStat('${k}',10)">+10</button>`;
+      }
+      return`<div class="stat-btn stat-available" onclick="boostStat('${k}',1)">${display} <span class="boost-hint">${label}</span>${bulk?`<div class="bulk-row">${bulk}</div>`:""}</div>`;
     }
     return`<div class="stat-btn">${display}</div>`;
   }).join("");
 }
 
-function boostStat(stat){
+function boostStat(stat,amount){
   if(S.hp<=0)return;
+  amount=amount||1;
   if(S.statBoostAvailable){
-    // Initial run boost (+1, one-time)
+    // Initial run boost is a single +1 (ignore larger amounts here)
     S.stats[stat]+=1;
     S.statBoostAvailable=false;
   } else if((S.statPoints||0)>0){
-    // Level-up stat points
-    S.stats[stat]+=1;
-    S.statPoints--;
+    // Spend up to `amount` level-up points (capped by what's available)
+    let spend=Math.min(amount,S.statPoints);
+    S.stats[stat]+=spend;
+    S.statPoints-=spend;
   } else {
     return;
   }
@@ -514,10 +545,12 @@ function render(){
   let activeHtml=S.quests.length?S.quests.map(q=>{
     let floorHint=q.targetFloor?`Floor ${q.targetFloor}`:(q.difficulty||"?");
     let onCorrectFloor=q.targetFloor===S.floor;
+    let npcLoc=q.npcFloor?` · 🔵 ${q.npcName||"NPC"} on Floor ${q.npcFloor}`:"";
     return`<div class="card quest-card ${q.found?"quest-found":""}${!q.found&&onCorrectFloor?" quest-active":""}">
       ${q.found?"✅":"🔎"} <b>${q.itemName}</b>
-      <div class="small">${q.found?"Found — return to "+q.npcName+"!":`Search on: ${floorHint}${onCorrectFloor?" ← YOU ARE HERE":""}`} · Reward: ${q.xpReward} XP${q.itemReward?" + 🎁":""}
-      </div></div>`;
+      <div class="small">${q.found?"Found — return to "+(q.npcName||"the NPC")+" on Floor "+q.npcFloor+"!":`Search on: ${floorHint}${onCorrectFloor?" ← YOU ARE HERE":""}`} · Reward: ${q.xpReward} XP${q.itemReward?" + 🎁":""}</div>
+      <div class="small quest-npc-loc">${npcLoc}</div>
+      </div>`;
   }).join(""):"<div class=small>No active quests.</div>";
 
   let completed=S.completedQuests||[];
