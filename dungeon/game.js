@@ -65,7 +65,7 @@ const rar=["common","uncommon","rare","mythical"], dep=["bronze","silver","gold"
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 let globalHall=[]; // Cached global leaderboard from D1
 
-function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
 function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null})}
@@ -935,17 +935,10 @@ function checkLevelUp(){
     S.maxHp+=hpGain;
     let heal=Math.floor(hpGain*0.8);
     S.hp=Math.min(S.maxHp,S.hp+heal);
-    // Stat gains scale with level — keeps pace with floor^1.6 danger
-    // Every level: +1 to ALL stats, plus bonus to a random stat
-    let bonusStat=["str","dex","int","cha"][Math.floor(Math.random()*4)];
-    let baseGain=1+Math.floor(S.level/8); // +1 base, growing every 8 levels
-    let bonusGain=baseGain+Math.floor(Math.random()*(1+Math.floor(S.level/10)));
-    S.stats.str+=baseGain;
-    S.stats.dex+=baseGain;
-    S.stats.int+=baseGain;
-    S.stats.cha+=baseGain;
-    S.stats[bonusStat]+=bonusGain;
-    msg(`📈 Level ${S.level}! +${hpGain} Max HP, healed ${heal}. All stats +${baseGain}, ${bonusStat.toUpperCase()} +${bonusGain} extra!`);
+    // Give stat points to allocate (3-4 points depending on level)
+    let points=3+Math.floor(S.level/10); // 3 base, +1 extra every 10 levels
+    S.statPoints=(S.statPoints||0)+points;
+    msg(`📈 Level ${S.level}! +${hpGain} Max HP, healed ${heal}. You have ${S.statPoints} stat points to spend!`);
     needed=S.level*50+S.level*S.level*10;
   }
 }
@@ -1537,19 +1530,32 @@ function setNickname(val){
 // S.statBoostAvailable = true means player hasn't picked yet this turn
 
 function renderStatButtons(){
-  let available=S.statBoostAvailable&&S.hp>0;
+  // Stats are green/clickable when: stat points available OR initial boost available
+  let hasPoints=(S.statPoints||0)>0;
+  let hasInitialBoost=S.statBoostAvailable;
+  let available=(hasPoints||hasInitialBoost)&&S.hp>0;
+  let label=hasPoints?`(${S.statPoints} pts)`:"(+1)";
   return["str","dex","int","cha"].map(k=>{
     if(available){
-      return`<div class="stat-btn stat-available" onclick="boostStat('${k}')">${k.toUpperCase()} ${S.stats[k]} <span class="boost-hint">+1</span></div>`;
+      return`<div class="stat-btn stat-available" onclick="boostStat('${k}')">${k.toUpperCase()} ${S.stats[k]} <span class="boost-hint">${label}</span></div>`;
     }
     return`<div class="stat-btn">${k.toUpperCase()} ${S.stats[k]}</div>`;
   }).join("");
 }
 
 function boostStat(stat){
-  if(!S.statBoostAvailable||S.hp<=0)return;
-  S.stats[stat]+=1;
-  S.statBoostAvailable=false;
+  if(S.hp<=0)return;
+  if(S.statBoostAvailable){
+    // Initial run boost (+1, one-time)
+    S.stats[stat]+=1;
+    S.statBoostAvailable=false;
+  } else if((S.statPoints||0)>0){
+    // Level-up stat points
+    S.stats[stat]+=1;
+    S.statPoints--;
+  } else {
+    return;
+  }
   save();render();
 }
 window.boostStat=boostStat;
