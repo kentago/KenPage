@@ -47,6 +47,9 @@ function drawMap(){
         } else if(rm.trader){
           symbol="💲";
           cellClass+=" trader";
+        } else if(rm.doctor){
+          symbol="⚕️";
+          cellClass+=" doctor";
         } else if(rm.ladder&&rm.ladder.dir==="down"){
           symbol=rm.ladder.used?"🪜↓":"🪜↓";
           cellClass+=rm.ladder.used?" ladder-used":" ladder-down";

@@ -499,6 +499,9 @@ window.toggleCountry=toggleCountry;
 
 // --- KEYBOARD CONTROLS ---
 document.addEventListener("keydown",(e)=>{
+  // Ignore if typing in an input/textarea (e.g. the nickname tag field)
+  let tag=(e.target&&e.target.tagName)?e.target.tagName.toLowerCase():"";
+  if(tag==="input"||tag==="textarea"||tag==="select")return;
   // Don't trigger if a modal is open
   if(document.getElementById("discardModal")||document.getElementById("ringSwapModal")||document.getElementById("traderModal")||document.getElementById("doctorModal")||document.getElementById("starterRingModal"))return;
   if(S.hp<=0)return;
@@ -509,13 +512,13 @@ document.addEventListener("keydown",(e)=>{
   switch(e.key){
     // WASD + Arrow keys for movement
     case"w":case"W":case"ArrowUp":
-      if(!inCombat)act("N");e.preventDefault();break;
+      if(!inCombat){act("N");e.preventDefault();}break;
     case"a":case"A":case"ArrowLeft":
-      if(!inCombat)act("W");e.preventDefault();break;
+      if(!inCombat){act("W");e.preventDefault();}break;
     case"s":case"S":case"ArrowDown":
-      if(!inCombat)act("S");e.preventDefault();break;
+      if(!inCombat){act("S");e.preventDefault();}break;
     case"d":case"D":case"ArrowRight":
-      if(!inCombat)act("E");e.preventDefault();break;
+      if(!inCombat){act("E");e.preventDefault();}break;
     // Combat keys
     case"f":case"F":
       if(inCombat)act("fight");break;
@@ -524,7 +527,7 @@ document.addEventListener("keydown",(e)=>{
     // Search
     case"e":case"E":
       if(!inCombat)act("search");break;
-    // Talk to NPC / Trader
+    // Talk to NPC / Trader / Doctor
     case"t":case"T":
       if(!inCombat){
         if(r.npc&&!r.npc.completed) talkNPC();
