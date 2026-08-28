@@ -219,11 +219,25 @@ function spawnBoss(){
   let prefix=questPrefixes[Math.floor(Math.random()*questPrefixes.length)];
   let name=`${prefix} ${element} ${template.name} ${title}`;
 
-  // Stats scale with danger curve but 5-8× stronger than normal enemies
+  // Stats scale with danger curve — but a boss must ALWAYS peak on the hero,
+  // so we also scale to the hero's actual power (stats, HP, level, gear).
   let dangerScale=Math.pow(S.floor,1.6);
   let bossMultiplier=5+Math.random()*3; // 5-8×
   let hp=Math.round(dangerScale*bossMultiplier*1.2);
   let atk=Math.round(dangerScale*bossMultiplier*0.25);
+
+  // --- HERO POWER SCALING ---
+  // Estimate the hero's offensive power (roughly their per-hit damage) and HP pool.
+  let E=(typeof eff==="function")?eff():{str:S.stats.str||1};
+  let heroDmg=8+(E.str||1)*0.4;                 // approx damage per swing
+  let heroHp=(typeof effMaxHp==="function")?effMaxHp():S.maxHp;
+  // Boss HP should take MANY hits to whittle down — at least ~18-25 solid hits.
+  let hpFloor=Math.round(heroDmg*(18+Math.random()*7));
+  // Boss ATK should threaten the hero's HP pool — a boss hit ≈ 12-20% of hero maxHP.
+  let atkFloor=Math.round(heroHp*(0.12+Math.random()*0.08));
+  // Take the greater of floor-based and hero-based so it's never trivial.
+  hp=Math.max(hp,hpFloor);
+  atk=Math.max(atk,atkFloor);
 
   // Random abilities (1-2)
   let ability1=bossAbilities[Math.floor(Math.random()*bossAbilities.length)];

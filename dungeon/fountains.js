@@ -1,5 +1,33 @@
 // --- REST/FOUNTAIN SYSTEM ---
 
+// Bad luck consequence: fumble and drop a random equipped item (permanently lost).
+// Prefers headgear/shield-style slots first (helmet/cape/shoulders/armor), then
+// weapon/amulet, then a random ring — flavour: "you drop your shield/headgear".
+function dropRandomEquipment(){
+  let slotsPriority=["helmet","cape","shoulders","armor","boots","trousers","weapon","amulet"];
+  let candidates=slotsPriority.filter(k=>S.equipment[k]);
+  // Add equipped rings as candidates too
+  let ringIdxs=[];
+  S.equipment.rings.forEach((x,i)=>{if(x)ringIdxs.push(i);});
+  if(candidates.length===0&&ringIdxs.length===0){
+    msg("🍀 ...but you have nothing equipped to lose. Lucky, in a way.");
+    return;
+  }
+  // 70% chance to drop an armor/weapon slot if available, else a ring
+  if(candidates.length&&(ringIdxs.length===0||Math.random()<0.7)){
+    let k=candidates[Math.floor(Math.random()*candidates.length)];
+    let lost=S.equipment[k];
+    S.equipment[k]=null;
+    let what=k==="helmet"?"headgear":k==="cape"?"cape":k==="shoulders"?"pauldrons":k==="armor"?"body armor":k;
+    msg(`😱 In your eagerness you fumble and drop your ${what} — ${lost.name} is lost forever!`);
+  } else {
+    let ri=ringIdxs[Math.floor(Math.random()*ringIdxs.length)];
+    let lost=S.equipment.rings[ri];
+    S.equipment.rings[ri]=null;
+    msg(`😱 A ring slips from your finger into the depths — ${lost.name} is lost forever!`);
+  }
+}
+
 // Combined fountain heal multiplier from amulet traits (Potion Amplifier + Potion Brewer stack)
 function restHealMult(){
   let m=1;
@@ -38,15 +66,28 @@ function useRest(){
   let roll=d20();
 
   if(roll===1){
-    // CRITICAL FAIL — poisoned/cursed!
+    // CRITICAL FAIL — cursed (luck) / polluted (heal)!
     r.rest.sips--;
     if(r.rest.type==="luck"){
-      // Cursed luck fountain — LOSE luck
+      // Cursed luck fountain — misfortune stacks: lose Luck, maybe drop gear,
+      // and maybe drain a random base stat. High-stat heroes have the most to lose.
       let luckLoss=1+Math.floor(Math.random()*2);
       S.stats.luck=Math.max(0,(S.stats.luck||0)-luckLoss);
-      msg(`🔮 The ${r.rest.name} is CURSED! Misfortune washes over you. -${luckLoss} Luck!`);
+      msg(`🔮 The ${r.rest.name} turns on you — MISFORTUNE! -${luckLoss} Luck!`);
+      // 55% chance the bad luck makes you fumble and lose an equipped item
+      if(Math.random()<0.55) dropRandomEquipment();
+      // 45% chance a random base stat withers — drains ~5-12% (min 1), so it
+      // stings proportionally more for crazy-high stats.
+      if(Math.random()<0.45){
+        let statKeys=["str","dex","int","cha"];
+        let sk=statKeys[Math.floor(Math.random()*statKeys.length)];
+        let cur=S.stats[sk]||1;
+        let drain=Math.max(1,Math.round(cur*(0.05+Math.random()*0.07)));
+        S.stats[sk]=Math.max(1,cur-drain);
+        msg(`🌀 A wave of misfortune saps your ${sk.toUpperCase()} by ${drain}!`);
+      }
     } else {
-      let poisonDmg=Math.max(2,Math.round(S.maxHp*r.rest.healPct*0.8));
+      let poisonDmg=Math.max(2,Math.round(effMaxHp()*r.rest.healPct*0.8));
       msg(`☠️ The ${r.rest.name} is POLLUTED! You drink tainted water and take ${poisonDmg} poison damage!`);
       damage(poisonDmg);
     }
