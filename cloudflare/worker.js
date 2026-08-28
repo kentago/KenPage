@@ -64,7 +64,7 @@ export default {
         }
 
         const { results } = await env.DB.prepare(
-          `SELECT id, name, nickname, xp, level, floor, items, country, created_at
+          `SELECT id, name, nickname, xp, level, floor, items, country, kills, best_streak as bestStreak, gold, created_at
            FROM hall_of_fame
            WHERE season_id = ?
            ORDER BY xp DESC, level DESC, floor DESC, items DESC
@@ -83,27 +83,60 @@ export default {
       if (path === "/submit" && request.method === "POST") {
         const body = await request.json();
 
-        const { name, nickname, xp, level, floor, items, country } = body;
+        const { name, nickname, xp, level, floor, items, country, kills, bestStreak, gold, actions } = body;
         if (!name || xp === undefined || level === undefined || floor === undefined) {
           return json({ ok: false, error: "Missing required fields: name, xp, level, floor" }, 400);
         }
+
+        // --- ANTI-CHEAT SANITY CHECKS ---
+        // Very generous bounds — only reject physically impossible garbage.
+        // A legit deep endless-dungeon run must NEVER be rejected.
+        const nXp = Math.max(0, parseInt(xp) || 0);
+        const nLevel = Math.max(1, parseInt(level) || 1);
+        const nFloor = Math.max(1, parseInt(floor) || 1);
+        const nItems = Math.max(0, parseInt(items) || 0);
+        const nKills = Math.max(0, parseInt(kills) || 0);
+        const nStreak = Math.max(0, parseInt(bestStreak) || 0);
+        const nGold = Math.max(0, parseInt(gold) || 0);
+        const nActions = Math.max(0, parseInt(actions) || 0);
+
+        // Hard absolute ceilings (absurdly high — no human reaches these)
+        if (nXp > 1e12) return json({ ok: false, error: "Rejected: implausible XP" }, 400);
+        if (nLevel > 100000) return json({ ok: false, error: "Rejected: implausible level" }, 400);
+        if (nFloor > 1000000) return json({ ok: false, error: "Rejected: implausible floor" }, 400);
+        if (nItems > 100) return json({ ok: false, error: "Rejected: too many items (max ~48 possible)" }, 400);
+        if (nKills > 1e9) return json({ ok: false, error: "Rejected: implausible kills" }, 400);
+        if (nStreak > nKills) return json({ ok: false, error: "Rejected: streak cannot exceed total kills" }, 400);
+        if (nGold > 1e12) return json({ ok: false, error: "Rejected: implausible gold" }, 400);
+        // Name/nickname length guards
+        if (String(name).length > 60) return json({ ok: false, error: "Rejected: name too long" }, 400);
+        if (nickname && String(nickname).length > 30) return json({ ok: false, error: "Rejected: nickname too long" }, 400);
+
+        // Note: We deliberately do NOT enforce floor/level/XP ratios.
+        // The endless dungeon's randomness (lucky crits, boss XP, quest chains,
+        // kill-streak multipliers, legendary finds) can produce wildly varied
+        // but legitimate numbers. Only impossible garbage is blocked.
 
         const season = await getCurrentSeason(env);
         const id = crypto.randomUUID();
 
         await env.DB.prepare(
-          `INSERT INTO hall_of_fame (id, season_id, name, nickname, xp, level, floor, items, country)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO hall_of_fame (id, season_id, name, nickname, xp, level, floor, items, country, kills, best_streak, gold, actions)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           id,
           season.id,
-          name,
-          nickname || "Secret Hero",
-          Math.max(0, parseInt(xp) || 0),
-          Math.max(1, parseInt(level) || 1),
-          Math.max(1, parseInt(floor) || 1),
-          Math.max(0, parseInt(items) || 0),
-          country || null
+          String(name).slice(0, 60),
+          (nickname ? String(nickname).slice(0, 30) : "Secret Hero"),
+          nXp,
+          nLevel,
+          nFloor,
+          nItems,
+          country ? String(country).slice(0, 2).toUpperCase() : null,
+          nKills,
+          nStreak,
+          nGold,
+          nActions
         ).run();
 
         return json({ ok: true, id, season_id: season.id });
