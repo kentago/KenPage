@@ -285,11 +285,37 @@ function discardChoice(type,idx){
 function item(i,inv,equipped){
   let dead=S.hp<=0;
   let buttons="";
+  let val=itemValue(i);
   if(!dead){
-    if(inv) buttons+=`<button onclick="equip('${i.id}')">⬆️ Equip</button><button onclick="discard('${i.id}')">🗑️ Drop</button>`;
+    if(inv){
+      buttons+=`<button onclick="equip('${i.id}')">⬆️ Equip</button><button onclick="discard('${i.id}')">🗑️ Drop</button>`;
+      // Sell direct from inventory ONLY when standing at a trader
+      let r=room();
+      if(r&&r.trader) buttons+=`<button onclick="sellFromInventory('${i.id}')">💰 Sell ${val}</button>`;
+    }
     if(equipped) buttons+=`<button onclick="unequip('${i.id}','${equipped}')">⬇️ Unequip</button>`;
   }
-  return`<div class="item ${i.rarity} ${i.depth}"><span class="art">${i.art}</span><b>${i.name}</b><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${i.trait?`<div class="trait">⚡ ${i.trait}</div>`:""}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)}</div>${buttons}</div>`;
+  return`<div class="item ${i.rarity} ${i.depth}"><span class="art">${i.art}</span><b>${i.name}</b><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${i.trait?`<div class="trait">⚡ ${i.trait}</div>`:""}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)} · 💰 ${val}</div>${buttons}</div>`;
+}
+
+// Sell value of an item (CHA-boosted, same formula as trader modal)
+function itemValue(x){
+  let chaBonus=1+(eff().cha||1)*0.03;
+  return Math.max(1,Math.floor(((Object.values(x.stats).reduce((a,b)=>a+b,0))*2+(rar.indexOf(x.rarity)+1)*5)*chaBonus));
+}
+
+// Sell an inventory item directly (only valid at a trader)
+function sellFromInventory(id){
+  let r=room();
+  if(!r||!r.trader){ msg("💲 You can only sell at a trader."); return; }
+  let n=S.inventory.findIndex(x=>x.id===id);
+  if(n<0)return;
+  let it=S.inventory[n];
+  let val=itemValue(it);
+  S.inventory.splice(n,1);
+  S.gold=(S.gold||0)+val;
+  msg(`💰 Sold ${it.name} for ${val} gold.`);
+  save();render();
 }
 
 // --- EQUIP: always swaps (old goes to inventory) ---

@@ -483,7 +483,7 @@ function render(){
 }
 
 // --- INIT ---
-window.act=act;window.equip=equip;window.unequip=unequip;window.discard=discard;window.discardChoice=discardChoice;window.swapRing=swapRing;window.newRun=newRun;window.talkNPC=talkNPC;window.talkTrader=talkTrader;window.sellItem=sellItem;window.buyItem=buyItem;window.talkDoctor=talkDoctor;window.restoreFingers=restoreFingers;window.drinkPotion=drinkPotion;window.leavePotion=leavePotion;
+window.act=act;window.equip=equip;window.unequip=unequip;window.discard=discard;window.discardChoice=discardChoice;window.swapRing=swapRing;window.newRun=newRun;window.talkNPC=talkNPC;window.talkTrader=talkTrader;window.sellItem=sellItem;window.buyItem=buyItem;window.talkDoctor=talkDoctor;window.restoreFingers=restoreFingers;window.drinkPotion=drinkPotion;window.leavePotion=leavePotion;window.sellFromInventory=sellFromInventory;
 
 // --- SHARE ---
 function shareGame(){
