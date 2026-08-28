@@ -1,5 +1,13 @@
 // --- REST/FOUNTAIN SYSTEM ---
 
+// Combined fountain heal multiplier from amulet traits (Potion Amplifier + Potion Brewer stack)
+function restHealMult(){
+  let m=1;
+  if(hasTrait("Potion Amplifier")) m*=1.5;
+  if(hasTrait("Potion Brewer")) m*=1.5;
+  return m;
+}
+
 function spawnRestSource(){
   let source=restSources[Math.floor(Math.random()*restSources.length)];
   // d20 determines how many sips (3-12 range, higher = luckier)
@@ -17,6 +25,12 @@ function useRest(){
     r.rest.depleted=true;
     msg(`${r.rest.emoji} ${r.rest.name} is depleted. Nothing remains.`);
     save();render();
+    return;
+  }
+  // Prevent wasting a HEAL fountain sip while at full HP (heal would do nothing
+  // and a bad roll could poison you for no benefit). Luck fountains are always useful.
+  if(r.rest.type!=="luck"&&S.hp>=effMaxHp()){
+    msg(`${r.rest.emoji} You are already at full health — no need to drink from the ${r.rest.name} yet.`);
     return;
   }
 
@@ -55,11 +69,11 @@ function useRest(){
     if(r.rest.type==="luck"){
       msg(`${r.rest.emoji} The ${r.rest.name} flickers dimly... No effect this time. ${r.rest.sips}/${r.rest.maxSips} sips left.`);
     } else {
-      let weakHeal=Math.max(1,Math.round(S.maxHp*r.rest.healPct*0.3));
-      let poisonDmg=Math.max(1,Math.round(S.maxHp*0.05));
+      let weakHeal=Math.max(1,Math.round(effMaxHp()*r.rest.healPct*0.3*restHealMult()));
+      let poisonDmg=Math.max(1,Math.round(effMaxHp()*0.05));
       let net=weakHeal-poisonDmg;
-      S.hp=Math.min(S.maxHp,Math.max(0,S.hp+net));
-      msg(`${r.rest.emoji} The ${r.rest.name} tastes bitter... +${weakHeal} HP but -${poisonDmg} poison. (${S.hp}/${S.maxHp}) ${r.rest.sips}/${r.rest.maxSips} sips left.`);
+      S.hp=Math.min(effMaxHp(),Math.max(0,S.hp+net));
+      msg(`${r.rest.emoji} The ${r.rest.name} tastes bitter... +${weakHeal} HP but -${poisonDmg} poison. (${S.hp}/${effMaxHp()}) ${r.rest.sips}/${r.rest.maxSips} sips left.`);
     }
     save();render();
     return;
@@ -86,17 +100,17 @@ function useRest(){
   } else {
     // Heal fountain
     let healMult=roll>=20?1.5:roll>=17?1.2:1.0;
-    let healAmt=Math.max(1,Math.round(S.maxHp*r.rest.healPct*healMult));
+    let healAmt=Math.max(1,Math.round(effMaxHp()*r.rest.healPct*healMult*restHealMult()));
     let oldHp=S.hp;
-    S.hp=Math.min(S.maxHp,S.hp+healAmt);
+    S.hp=Math.min(effMaxHp(),S.hp+healAmt);
     let actualHeal=S.hp-oldHp;
     let bonusMsg=roll>=20?" 💥 The waters glow with divine power!":roll>=17?" ✨ An exceptionally refreshing sip!":"";
 
     if(r.rest.sips<=0){
       r.rest.depleted=true;
-      msg(`${r.rest.emoji} You drink from the ${r.rest.name}.${bonusMsg} +${actualHeal} HP (${S.hp}/${S.maxHp}). 💚 Depleted — no sips remain.`);
+      msg(`${r.rest.emoji} You drink from the ${r.rest.name}.${bonusMsg} +${actualHeal} HP (${S.hp}/${effMaxHp()}). 💚 Depleted — no sips remain.`);
     } else {
-      msg(`${r.rest.emoji} You drink from the ${r.rest.name}.${bonusMsg} +${actualHeal} HP (${S.hp}/${S.maxHp}). ${r.rest.sips}/${r.rest.maxSips} sips remaining.`);
+      msg(`${r.rest.emoji} You drink from the ${r.rest.name}.${bonusMsg} +${actualHeal} HP (${S.hp}/${effMaxHp()}). ${r.rest.sips}/${r.rest.maxSips} sips remaining.`);
     }
   }
   save();render();

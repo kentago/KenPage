@@ -1,7 +1,7 @@
 // --- CORE GAME STATE ---
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 
-function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:10,maxHp:10,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,floorPositions:{},quests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,bossSpawnedFloors:{},phoenixUsed:false,deathWardFloor:null,secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
 function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null})}
@@ -52,6 +52,10 @@ function move(d){
 
   // For new rooms: randomly block some OTHER directions to create maze structure
   if(!nr){
+    // Life Pulse: +1 HP for each newly explored room
+    if(hasTrait("Life Pulse")&&S.hp>0&&S.hp<effMaxHp()){
+      S.hp=Math.min(effMaxHp(),S.hp+1);
+    }
     let dirs=["N","S","E","W"].filter(dd=>dd!==OPP[d]);
     for(let dd of dirs){
       if(Math.random()<0.25){
@@ -73,10 +77,12 @@ function move(d){
     // Spawn ladder down? (~10% chance, no enemy blocking it)
     if(!x.enemy&&!x.ladder&&Math.random()<0.10){
       x.ladder={dir:"down",used:false,targetKey:null};
-      // Boss floors (every 5th floor) — boss guards the first ladder
-      if(S.floor%5===0&&!floorHasBoss()){
+      // Boss floors (every 5th floor) — ONE boss guards the FIRST ladder discovered.
+      // Tracked per-floor so once handled (spawned), later ladders are free.
+      if(S.floor%5===0&&!S.bossSpawnedFloors[S.floor]){
+        S.bossSpawnedFloors[S.floor]=true;
         x.enemy=spawnBoss();
-        msg(`⚠️ A powerful guardian blocks the descent!`);
+        msg(`👑 BOSS FIGHT! ${x.enemy.name} guards the descent!\n⚡ Abilities: ${x.enemy.abilities.join(" · ")}\nDefeat it to descend — there is no way past.`);
       }
     }
     // Spawn rest source? (~7% chance)
@@ -96,18 +102,40 @@ function move(d){
   save();render();
 }
 
+// Additional flat bonus to search d20 rolls from ring/amulet traits
+function searchBonus(){
+  let b=0;
+  if(hasTrait("Lucky Find")) b+=2;
+  if(hasTrait("Treasure Sense")) b+=2;
+  if(hasTrait("Arcane Loop")) b+=S.equipment.rings.filter(x=>x).length; // INT×rings proxy: +1 per ring
+  return b;
+}
+
 function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Search is unavailable during combat.");if(r.searched)return;r.searched=true;
 
   // --- QUEST ITEM DISCOVERY (d20 based) ---
   // Items can ONLY be found on the quest's target floor (or current floor for "same floor" quests)
-  let activeQuests=S.quests.filter(qq=>!qq.found&&(qq.targetFloor===S.floor||(!qq.targetFloor&&qq.npcFloor===S.floor)));
+  let activeQuests=S.quests.filter(qq=>{
+    if(qq.found) return false;
+    let onFloor=(qq.targetFloor===S.floor||(!qq.targetFloor&&qq.npcFloor===S.floor));
+    if(!onFloor) return false;
+    // Must be at least a few rooms away from the quest-giver — never the same or
+    // adjacent room. For same-floor quests, require Manhattan distance >= 3 from the NPC.
+    if((qq.targetFloor||qq.npcFloor)===qq.npcFloor){
+      let dist=Math.abs(S.x-qq.npcX)+Math.abs(S.y-qq.npcY);
+      if(dist<3) return false;
+    }
+    return true;
+  });
   if(activeQuests.length>0){
-    let searchRoll=d20();
+    let searchRoll=d20()+searchBonus();
     let quest=activeQuests[Math.floor(Math.random()*activeQuests.length)];
     // Base threshold — easier to find on the correct floor (you're in the right place!)
     let findThreshold=12;
     // INT bonus helps searching
-    findThreshold-=Math.floor(S.stats.int/15);
+    findThreshold-=Math.floor(eff().int/15);
+    // Quest Compass: makes quest items much easier to discover
+    if(hasTrait("Quest Compass")) findThreshold-=4;
     // Clamp minimum
     findThreshold=Math.max(4,findThreshold);
 
@@ -149,7 +177,7 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
 
   // --- SECRET PASSAGE (separate chance, checked first) ---
   // INT increases secret passage discovery: base 10% + 0.5% per INT
-  let secretChance=0.10+Math.min(0.15,(S.stats.int||1)*0.005);
+  let secretChance=0.10+Math.min(0.15,(eff().int||1)*0.005);
   if(!r.secret&&Math.random()<secretChance){
     // A secret passage opens a NEW route — unblocks a direction (both sides)
     let blockedDirs=["N","E","S","W"].filter(d=>r.blocked&&r.blocked[d]);
@@ -170,14 +198,12 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
   }
 
   // --- NORMAL SEARCH RESULTS (d20 based) ---
-  let searchRoll=d20()+Math.floor((S.stats.int||1)/10); // INT bonus: +1 per 10 INT
+  let searchRoll=d20()+Math.floor((eff().int||1)/10)+searchBonus(); // INT bonus: +1 per 10 INT, plus trait bonuses
 
   if(searchRoll===20||searchRoll>=20){
     // CRITICAL LOOT SUCCESS — legendary find, biased toward rings!
     let critType=Math.random()<0.4?"ring":types[Math.floor(Math.random()*types.length)];
-    let i=makeLegendaryItem();
-    i.type=critType;
-    i.name=critType==="ring"?`${questPrefixes[Math.floor(Math.random()*questPrefixes.length)]} ${names.ring[Math.floor(Math.random()*names.ring.length)]}`:i.name;
+    let i=makeLegendaryItem(critType);
     msg(`💥 CRITICAL FIND! Something extraordinary gleams in the darkness...\n🎁 ${i.name} found! ${obtain(i)}`);
     return;
   }
@@ -189,7 +215,12 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
     return;
   }
   if(searchRoll>=10){
-    // Normal loot
+    // Normal loot — but sometimes a trinket or mystery potion instead
+    let roll=Math.random();
+    // Trinket Collector: doubles the chance of finding a trinket/potion
+    let tc=hasTrait("Trinket Collector")?2:1;
+    if(roll<0.12*tc){ findTrinket(); return; }
+    if(roll<0.24*tc){ findMysteryPotion(); return; }
     let i=makeItem(types[Math.floor(Math.random()*types.length)]);
     msg(`🎁 ${i.name} found. ${obtain(i)}`);
     return;
@@ -207,22 +238,22 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
   }
   if(searchRoll>=2){
     // Trap! DEX gives a chance to dodge it
-    let trapDodge=Math.min(0.35,(S.stats.dex||1)*0.015); // +1.5% per DEX, max 35%
+    let trapDodge=Math.min(0.35,(eff().dex||1)*0.015); // +1.5% per DEX, max 35%
     if(Math.random()<trapDodge){
       msg("⚠️ A trap triggers but you leap aside unharmed! (DEX)");
       return;
     }
     let trapDmg=Math.max(1,Math.round(Math.pow(S.floor,1.2)*0.2));
-    msg(`⚠️ A hidden trap strikes! You take ${trapDmg} damage. (HP ${Math.max(0,S.hp-trapDmg)}/${S.maxHp})`);
+    msg(`⚠️ A hidden trap strikes! You take ${trapDmg} damage. (HP ${Math.max(0,S.hp-trapDmg)}/${effMaxHp()})`);
     damage(trapDmg);
-    if(S.hp>0&&Math.random()<0.12)loseFinger();
+    if(S.floor>2&&S.hp>0&&Math.random()<0.12)loseFinger();
     return;
   }
   // searchRoll === 1: Critical fail (already handled above for quests, this is fallback)
   let critTrapDmg=Math.max(2,Math.round(Math.pow(S.floor,1.2)*0.3));
-  msg(`⚠️ A vicious hidden trap strikes! You take ${critTrapDmg} damage. (HP ${Math.max(0,S.hp-critTrapDmg)}/${S.maxHp})`);
+  msg(`⚠️ A vicious hidden trap strikes! You take ${critTrapDmg} damage. (HP ${Math.max(0,S.hp-critTrapDmg)}/${effMaxHp()})`);
   damage(critTrapDmg);
-  if(S.hp>0&&Math.random()<0.15)loseFinger();
+  if(S.floor>2&&S.hp>0&&Math.random()<0.15)loseFinger();
   }
 
 function useLadder(dir){
@@ -329,11 +360,17 @@ function renderStatButtons(){
   let hasInitialBoost=S.statBoostAvailable;
   let available=(hasPoints||hasInitialBoost)&&S.hp>0;
   let label=hasPoints?`(${S.statPoints} pts)`:"(+1)";
+  let E=eff();
   return["str","dex","int","cha"].map(k=>{
+    let base=S.stats[k]||0;
+    let total=E[k]||0;
+    let bonus=total-base;
+    // Show "STR 12 (+8)" when gear adds to the base
+    let display=bonus>0?`${k.toUpperCase()} ${total} <span class="stat-bonus">(+${bonus})</span>`:`${k.toUpperCase()} ${total}`;
     if(available){
-      return`<div class="stat-btn stat-available" onclick="boostStat('${k}')">${k.toUpperCase()} ${S.stats[k]} <span class="boost-hint">${label}</span></div>`;
+      return`<div class="stat-btn stat-available" onclick="boostStat('${k}')">${display} <span class="boost-hint">${label}</span></div>`;
     }
-    return`<div class="stat-btn">${k.toUpperCase()} ${S.stats[k]}</div>`;
+    return`<div class="stat-btn">${display}</div>`;
   }).join("");
 }
 
@@ -427,20 +464,32 @@ function render(){
   if(ni&&document.activeElement!==ni) ni.value=S.nickname||"";
   let sc=document.getElementById("showCountry");
   if(sc) sc.checked=!!(S.country);
-  stats.innerHTML=[`❤️ HP ${Math.max(0,S.hp)}/${S.maxHp}`,`⭐ Level ${S.level}`,`XP ${S.xp}`,`🍀 Luck ${S.stats.luck||0}`].map(x=>`<div>${x}</div>`).join("")+renderStatButtons()+`<div>💰 ${S.gold}</div>`;
+  // XP progress toward next level
+  let curThresh=S.level>1?xpForLevel(S.level-1):0; // XP at start of current level
+  let nextThresh=xpForLevel(S.level);              // XP needed for next level
+  let into=Math.max(0,S.xp-curThresh);
+  let span=Math.max(1,nextThresh-curThresh);
+  let pct=Math.min(100,Math.round(into/span*100));
+  let xpBar=`<div class="xp-wrap"><div class="xp-label">⭐ Level ${S.level} · XP ${into}/${span} to next</div><div class="xp-bar"><div class="xp-fill" style="width:${pct}%"></div></div></div>`;
+  stats.innerHTML=[`❤️ HP ${Math.max(0,S.hp)}/${effMaxHp()}`,`🍀 Luck ${eff().luck||0}`,`💰 ${S.gold}`].map(x=>`<div>${x}</div>`).join("")+renderStatButtons();
+  xpbar.innerHTML=xpBar;
   roomTitle.textContent=`Floor ${S.floor} — Chamber`;
   roomText.textContent=r.enemy&&r.enemy.hp>0?`⚔️ ${r.enemy.name} (${r.enemy.hp} HP)${r.enemy.element?` [${r.enemy.element}]`:""}${r.enemy.isBoss?` 👑 BOSS — ${r.enemy.abilities.join(" | ")}`:""} blocks the chamber.`:r.npc&&!r.npc.completed?`🔵 ${r.npc.name}, ${r.npc.title}, is here.`:r.trader?`💲 ${r.trader.name}, ${r.trader.title}, awaits.`:r.doctor?`⚕️ ${r.doctor.name}, ${r.doctor.title}, tends the wounded here.`:r.rest&&!r.rest.depleted?`${r.rest.emoji} A ${r.rest.name} flows here. (${r.rest.sips} sips remain)`:"The chamber is quiet.";
   map.innerHTML=drawMap();
   if(r.enemy&&r.enemy.hp>0){
-    actions.innerHTML=`<div class="combat-actions"><button onclick="act('fight')">⚔️ Fight (F)</button><button onclick="act('flee')">🏃 Flee (R)</button></div>`;
+    let bossBanner=r.enemy.isBoss?`<div class="boss-banner">👑 BOSS FIGHT — must be defeated to descend</div>`:"";
+    actions.innerHTML=bossBanner+`<div class="combat-actions"><button onclick="act('fight')">⚔️ Fight (F)</button><button onclick="act('flee')">🏃 Flee (R)</button></div>`;
   } else {
     let extras="";
     if(!r.searched) extras+=`<button class="action-btn" onclick="act('search')">🔎 Search (E)</button>`;
     if(r.npc&&!r.npc.completed) extras+=`<button class="action-btn npc-btn" onclick="talkNPC()">🔵 Talk (T)</button>`;
     if(r.trader) extras+=`<button class="action-btn trader-btn" onclick="talkTrader()">💲 Trade (T)</button>`;
-    if(r.rest&&!r.rest.depleted) extras+=`<button class="action-btn ${r.rest.type==="luck"?"luck-btn":"rest-btn"}" onclick="useRest()">${r.rest.type==="luck"?"🍀":"💚"} ${r.rest.name} (${r.rest.sips}/${r.rest.maxSips})</button>`;
+    if(r.rest&&!r.rest.depleted){
+      let restFull=(r.rest.type!=="luck"&&S.hp>=effMaxHp());
+      extras+=`<button class="action-btn ${r.rest.type==="luck"?"luck-btn":"rest-btn"}" onclick="useRest()"${restFull?" disabled":""}>${r.rest.type==="luck"?"🍀":"💚"} ${r.rest.name} (${r.rest.sips}/${r.rest.maxSips})${restFull?" — Full HP":""}</button>`;
+    }
     if(r.doctor) extras+=`<button class="action-btn doctor-btn" onclick="talkDoctor()">⚕️ Visit ${r.doctor.name}</button>`;
-    if(r.ladder) extras+=`<button class="action-btn" onclick="act('${r.ladder.dir}')">🪜 ${r.ladder.dir==="down"?"↓ Descend":"↑ Ascend"}</button>`;
+    if(r.ladder) extras+=`<button class="action-btn" onclick="act('${r.ladder.dir}')">🪜 ${r.ladder.dir==="down"?"↓ Descend":"↑ Ascend"} (Q)</button>`;
     actions.innerHTML=`<div class="compass">
       <div class="compass-row"><button class="compass-btn north${r.blocked&&r.blocked.N?" blocked":""}" onclick="act('N')"${r.blocked&&r.blocked.N?" disabled":""}>▲<br><span>W / ↑</span></button></div>
       <div class="compass-row middle"><button class="compass-btn west${r.blocked&&r.blocked.W?" blocked":""}" onclick="act('W')"${r.blocked&&r.blocked.W?" disabled":""}>◀<br><span>A / ←</span></button><div class="compass-center">◎</div><button class="compass-btn east${r.blocked&&r.blocked.E?" blocked":""}" onclick="act('E')"${r.blocked&&r.blocked.E?" disabled":""}>▶<br><span>D / →</span></button></div>
@@ -460,7 +509,8 @@ function render(){
     return x?item(x,false,"ring"+(i+5)):`<div class=item>${i+1}. Empty</div>`;
   }).join("")}</div>${S.lostFingers&&S.lostFingers.right&&S.lostFingers.right.length>=5?`<div class="small lost-finger">⚠️ Right hand mangled — no weapon grip</div>`:""}</div>`;
   inventory.innerHTML=S.inventory.length?S.inventory.map(x=>item(x,true,false)).join(""):"<div class=small>Empty</div>";
-  quests.innerHTML=S.quests.length?S.quests.map(q=>{
+  // --- QUEST DISPLAY: Active hunts + Completed trophies ---
+  let activeHtml=S.quests.length?S.quests.map(q=>{
     let floorHint=q.targetFloor?`Floor ${q.targetFloor}`:(q.difficulty||"?");
     let onCorrectFloor=q.targetFloor===S.floor;
     return`<div class="card quest-card ${q.found?"quest-found":""}${!q.found&&onCorrectFloor?" quest-active":""}">
@@ -468,13 +518,20 @@ function render(){
       <div class="small">${q.found?"Found — return to "+q.npcName+"!":`Search on: ${floorHint}${onCorrectFloor?" ← YOU ARE HERE":""}`} · Reward: ${q.xpReward} XP${q.itemReward?" + 🎁":""}
       </div></div>`;
   }).join(""):"<div class=small>No active quests.</div>";
+
+  let completed=S.completedQuests||[];
+  let completedHtml=completed.length?`<div class="quest-completed-header">🏆 Completed (${completed.length})</div>`+completed.map(q=>
+    `<div class="card quest-card quest-done">🏅 <b>${q.itemName}</b><div class="small">Delivered to ${q.npcName} · +${q.xpAwarded} XP${q.itemReward?" + 🎁":""} · Floor ${q.floor}</div></div>`
+  ).join(""):"";
+
+  quests.innerHTML=`<div class="quest-active-header">🔎 Active Quests</div>${activeHtml}${completedHtml}`;
   renderHall();
   // Show starter ring choice if not yet picked
   if(!S.starterRingPicked&&!document.getElementById("starterRingModal")) showStarterRingChoice();
 }
 
 // --- INIT ---
-window.act=act;window.equip=equip;window.unequip=unequip;window.discard=discard;window.discardChoice=discardChoice;window.swapRing=swapRing;window.newRun=newRun;window.talkNPC=talkNPC;window.talkTrader=talkTrader;window.sellItem=sellItem;window.buyItem=buyItem;window.talkDoctor=talkDoctor;window.restoreFingers=restoreFingers;
+window.act=act;window.equip=equip;window.unequip=unequip;window.discard=discard;window.discardChoice=discardChoice;window.swapRing=swapRing;window.newRun=newRun;window.talkNPC=talkNPC;window.talkTrader=talkTrader;window.sellItem=sellItem;window.buyItem=buyItem;window.talkDoctor=talkDoctor;window.restoreFingers=restoreFingers;window.doctorHeal=doctorHeal;window.drinkPotion=drinkPotion;window.leavePotion=leavePotion;window.sellFromInventory=sellFromInventory;
 
 // --- SHARE ---
 function shareGame(){
@@ -499,8 +556,11 @@ window.toggleCountry=toggleCountry;
 
 // --- KEYBOARD CONTROLS ---
 document.addEventListener("keydown",(e)=>{
+  // Ignore if typing in an input/textarea (e.g. the nickname tag field)
+  let tag=(e.target&&e.target.tagName)?e.target.tagName.toLowerCase():"";
+  if(tag==="input"||tag==="textarea"||tag==="select")return;
   // Don't trigger if a modal is open
-  if(document.getElementById("discardModal")||document.getElementById("ringSwapModal")||document.getElementById("traderModal")||document.getElementById("doctorModal")||document.getElementById("starterRingModal"))return;
+  if(document.getElementById("discardModal")||document.getElementById("ringSwapModal")||document.getElementById("traderModal")||document.getElementById("doctorModal")||document.getElementById("starterRingModal")||document.getElementById("potionModal"))return;
   if(S.hp<=0)return;
 
   let r=room();
@@ -509,13 +569,13 @@ document.addEventListener("keydown",(e)=>{
   switch(e.key){
     // WASD + Arrow keys for movement
     case"w":case"W":case"ArrowUp":
-      if(!inCombat)act("N");e.preventDefault();break;
+      if(!inCombat){act("N");e.preventDefault();}break;
     case"a":case"A":case"ArrowLeft":
-      if(!inCombat)act("W");e.preventDefault();break;
+      if(!inCombat){act("W");e.preventDefault();}break;
     case"s":case"S":case"ArrowDown":
-      if(!inCombat)act("S");e.preventDefault();break;
+      if(!inCombat){act("S");e.preventDefault();}break;
     case"d":case"D":case"ArrowRight":
-      if(!inCombat)act("E");e.preventDefault();break;
+      if(!inCombat){act("E");e.preventDefault();}break;
     // Combat keys
     case"f":case"F":
       if(inCombat)act("fight");break;
@@ -524,13 +584,17 @@ document.addEventListener("keydown",(e)=>{
     // Search
     case"e":case"E":
       if(!inCombat)act("search");break;
-    // Talk to NPC / Trader
+    // Talk to NPC / Trader / Doctor
     case"t":case"T":
       if(!inCombat){
         if(r.npc&&!r.npc.completed) talkNPC();
         else if(r.trader) talkTrader();
         else if(r.doctor) talkDoctor();
       }
+      break;
+    // Use ladder / portal (ascend or descend)
+    case"q":case"Q":
+      if(!inCombat&&r.ladder) act(r.ladder.dir);
       break;
   }
 });

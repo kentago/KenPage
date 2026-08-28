@@ -73,14 +73,55 @@ function showDoctorModal(doctor){
       <div class="discard-list">${options}</div>`;
   }
 
+  // --- CHEAP HEAL (always offered) ---
+  let healCost=healSipCost();
+  let healAmt=Math.round(effMaxHp()*0.35*(hasTrait("Potion Amplifier")?1.5:1));
+  let needsHeal=S.hp<effMaxHp();
+  let canAfford=(S.gold||0)>=healCost;
+  let healSection=needsHeal
+    ? `<h4>💧 Healing Sip</h4><div class="item"><b>Restore ~${healAmt} HP</b> <span class="small">(current ${S.hp}/${effMaxHp()})</span>
+        <button class="rest-btn" onclick="doctorHeal()" ${canAfford?"":"disabled"}>💧 ${healCost} 💰${canAfford?"":" (need gold)"}</button>
+      </div>`
+    : `<h4>💧 Healing Sip</h4><div class="small">You're at full health — no sip needed.</div>`;
+
   let html=`<div class="discard-overlay" id="doctorModal">
     <div class="discard-box">
       <h3>⚕️ ${doctor.name}, ${doctor.title}</h3>
       ${body}
+      ${healSection}
       <button onclick="document.getElementById('doctorModal').remove()">Leave</button>
     </div>
   </div>`;
   document.body.insertAdjacentHTML("beforeend",html);
+}
+
+// Healing sip cost — scales with BOTH the HP restored and floor depth,
+// so it always costs a meaningful chunk of your gold (never trivial pocket change).
+// A 35% heal of a big HP pool is genuinely valuable, so it's priced accordingly.
+function healSipCost(){
+  let healAmt=Math.round(S.maxHp*0.35);
+  // ~1.2 gold per HP restored, plus a floor premium
+  return Math.max(8,Math.round(healAmt*1.2+Math.pow(S.floor,1.3)*2));
+}
+
+function doctorHeal(){
+  if(S.hp<=0)return;
+  let r=room();
+  if(!r.doctor)return;
+  if(S.hp>=effMaxHp()){ msg("💧 You are already at full health."); return; }
+  let cost=healSipCost();
+  if((S.gold||0)<cost){ msg(`💧 Not enough gold. The sip costs ${cost}, you have ${S.gold||0}.`); return; }
+  let modal=document.getElementById("doctorModal");
+  if(modal)modal.remove();
+  S.gold-=cost;
+  let healAmt=Math.round(effMaxHp()*0.35*(hasTrait("Potion Amplifier")?1.5:1));
+  let old=S.hp;
+  S.hp=Math.min(effMaxHp(),S.hp+healAmt);
+  msg(`💧 ${r.doctor.name} shares a healing sip. +${S.hp-old} HP (${S.hp}/${effMaxHp()}). -${cost} 💰`);
+  save();
+  // Reopen so player can heal again or restore fingers
+  if(r.doctor) showDoctorModal(r.doctor);
+  else render();
 }
 
 function restoreFingers(count){

@@ -102,13 +102,18 @@ function talkNPC(){
 function deliverQuest(npc,quest){
   // Award XP
   // CHA bonus: +5% quest XP per CHA point (being charming = better rewards)
-  let chaXPBonus=1+(S.stats.cha||1)*0.05;
+  let chaXPBonus=1+(eff().cha||1)*0.05;
   let finalQuestXP=Math.round(quest.xpReward*chaXPBonus);
+  // Soul Chain: +5% XP per ring worn · XP Amplifier: +15% XP from all sources
+  let xpTraitMult=1;
+  if(hasTrait("Soul Chain")) xpTraitMult*=(1+0.05*S.equipment.rings.filter(x=>x).length);
+  if(hasTrait("XP Amplifier")) xpTraitMult*=1.15;
+  finalQuestXP=Math.round(finalQuestXP*xpTraitMult);
   S.xp+=finalQuestXP;
 
   // --- REWARD ROLL (d20 + luck) ---
   // Even low-floor quests can give items with a lucky roll!
-  let luckBonus=S.stats.luck||0; // Luck stat from trinkets/potions/ring traits
+  let luckBonus=eff().luck||0; // Luck from stats + gear + traits
   let rewardRoll=d20()+luckBonus;
   let giveItem=false;
 
@@ -147,14 +152,22 @@ function deliverQuest(npc,quest){
       S.stats.luck=(S.stats.luck||0)+1;
       msg(`🧪 ${npc.name} also slips you a Lucky Trinket. (+1 Luck permanently!)`);
     } else if(potionRoll<0.5){
-      let healAmt=Math.round(S.maxHp*0.3);
-      S.hp=Math.min(S.maxHp,S.hp+healAmt);
+      let healAmt=Math.round(effMaxHp()*0.3);
+      S.hp=Math.min(effMaxHp(),S.hp+healAmt);
       msg(`🧪 ${npc.name} gives you a Healing Potion. (+${healAmt} HP!)`);
     }
   }
 
-  // Remove quest from active quests
+  // Remove quest from active quests and archive it as completed (for the trophy list)
   S.quests=S.quests.filter(q=>q!==quest);
+  if(!S.completedQuests) S.completedQuests=[];
+  S.completedQuests.unshift({
+    itemName:quest.itemName,
+    npcName:quest.npcName,
+    xpAwarded:finalQuestXP,
+    floor:S.floor,
+    itemReward:quest.itemReward
+  });
   // Mark NPC as completed
   npc.completed=true;
   // Check level up
@@ -164,7 +177,7 @@ function deliverQuest(npc,quest){
 }
 
 function checkLevelUp(){
-  let needed=S.level*50+S.level*S.level*10;
+  let needed=xpForLevel(S.level);
   while(S.xp>=needed){
     S.level++;
     // HP gain scales with level — deep players get tanky
@@ -176,6 +189,13 @@ function checkLevelUp(){
     let points=3+Math.floor(S.level/10); // 3 base, +1 extra every 10 levels
     S.statPoints=(S.statPoints||0)+points;
     msg(`📈 Level ${S.level}! +${hpGain} Max HP, healed ${heal}. You have ${S.statPoints} stat points to spend!`);
-    needed=S.level*50+S.level*S.level*10;
+    needed=xpForLevel(S.level);
   }
+}
+
+// Cumulative XP required to advance FROM the given level to the next.
+// Cubic growth so each level costs meaningfully more than the last —
+// prevents a single quest reward from granting multiple levels at high level.
+function xpForLevel(level){
+  return Math.round(level*60 + level*level*15 + level*level*level*1.5);
 }

@@ -18,11 +18,18 @@ section{background:#202020;border:1px solid #444;border-radius:12px;padding:14px
 .stats,.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
 .stats>div,.card,.item{background:#292929;border:1px solid #555;border-radius:9px;padding:9px}
 
+/* XP progress bar */
+#xpbar{margin:8px 0}
+.xp-label{font-size:13px;color:#f1c40f;margin-bottom:4px}
+.xp-bar{height:14px;background:#1a1a1a;border:1px solid #555;border-radius:8px;overflow:hidden}
+.xp-fill{height:100%;background:linear-gradient(90deg,#f39c12,#f1c40f);transition:width 0.3s ease;border-radius:8px}
+
 /* Stat boost buttons */
 .stat-btn{background:#292929;border:1px solid #555;border-radius:9px;padding:9px;font-weight:bold;text-align:center}
 .stat-btn.stat-available{background:#1a3a1a;border-color:#2ecc71;color:#2ecc71;cursor:pointer;transition:all 0.15s}
 .stat-btn.stat-available:hover{background:#2a4a2a;border-color:#4caf50;transform:scale(1.05)}
 .boost-hint{font-size:11px;color:#4caf50;margin-left:4px}
+.stat-bonus{font-size:12px;color:#3498db}
 button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;padding:9px;margin:4px;cursor:pointer}
 .nickname-row{display:flex;align-items:center;gap:8px;margin:8px 0}
 .nickname-row input{background:#1a1a1a;color:#f1c40f;border:1px solid #555;border-radius:6px;padding:6px 10px;font-size:15px;width:180px}
@@ -34,14 +41,59 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .art{font-size:32px;float:right}
 .small{font-size:.85em;color:#aaa}
 .trait{font-size:.9em;color:#f1c40f;margin-top:4px}
-.uncommon{border-color:#3498db;border-width:2px}.rare{border-color:#f39c12;border-width:2px}.mythical{border-color:#9b59b6;border-width:2px}
-/* Depth borders — shown as outer glow/shadow, independent of rarity border */
-.bronze{box-shadow:0 0 0 3px #a97142,0 0 6px #a97142}
-.silver{box-shadow:0 0 0 3px #c0c0c0,0 0 6px #c0c0c0}
-.gold{box-shadow:0 0 0 3px #d4af37,0 0 8px rgba(212,175,55,0.5)}
-.titan{box-shadow:0 0 0 3px #5a7a8a,0 0 8px rgba(90,122,138,0.6)}
-.glowing{box-shadow:0 0 0 3px #b388ff,0 0 12px #b388ff,0 0 20px rgba(179,136,255,0.4);animation:glowPulse 2s ease-in-out infinite}
+.item-type{font-size:.8em;color:#8ab4d8;margin:2px 0}
+.cmp{font-size:.8em;color:#bbb;margin:4px 0;padding:4px 6px;background:#1e1e1e;border-radius:6px;border-left:2px solid #555}
+.cmp-new{color:#2ecc71;border-left-color:#2ecc71}
+.cmp-up{color:#2ecc71;font-weight:bold}
+.cmp-down{color:#e74c3c;font-weight:bold}
+/* ===== ITEM BORDERS =====
+   Two independent axes, max 2 borders total.
+   Common rarity + Bronze depth = NO special border (plain box — the majority).
+   Rarity = inner border color. Depth = outer glow ring.
+   A border only appears when that axis is above its baseline. */
+
+/* Rarity (inner border) — common shows nothing */
+.item.uncommon{border-color:#3498db;border-width:2px}
+.item.rare{border-color:#f39c12;border-width:2px}
+.item.epic{border-color:#e91e8c;border-width:2px}
+.item.mythical{border-color:#9b59b6;border-width:2px}
+.item.legendary{border-color:#e74c3c;border-width:2px}
+.item.divine{border-color:#00e5ff;border-width:2px}
+
+/* Depth (outer glow ring) — bronze shows nothing */
+.item.silver{box-shadow:0 0 0 3px #c0c0c0,0 0 6px rgba(192,192,192,0.5)}
+.item.gold{box-shadow:0 0 0 3px #d4af37,0 0 8px rgba(212,175,55,0.5)}
+.item.titan{box-shadow:0 0 0 3px #5a7a8a,0 0 8px rgba(90,122,138,0.6)}
+.item.platinum{box-shadow:0 0 0 3px #e5e4e2,0 0 10px rgba(229,228,226,0.7)}
+.item.glowing{box-shadow:0 0 0 3px #b388ff,0 0 12px #b388ff,0 0 20px rgba(179,136,255,0.4);animation:glowPulse 2s ease-in-out infinite}
+.item.prismatic{box-shadow:0 0 0 3px #ff5ec7,0 0 14px #5ec7ff,0 0 22px rgba(255,215,0,0.5);animation:prismShift 3s linear infinite}
+.item.astral{box-shadow:0 0 0 3px #6a00ff,0 0 16px #00e5ff,0 0 28px rgba(160,80,255,0.6);animation:astralPulse 2.5s ease-in-out infinite}
+/* bronze intentionally has NO box-shadow */
+
+/* ===== PRESTIGE TIERS (floor 250+ only) =====
+   Ultra-rare endgame. Full-card cosmic effect (gradient fill + glow),
+   NOT a third border — keeps the 2-border rule intact. */
+.item.prestige-eternal{
+  background:linear-gradient(135deg,#1a1a3a,#3a1a4a,#1a2a4a);
+  animation:eternalShimmer 4s ease-in-out infinite;
+}
+.item.prestige-cosmic{
+  background:linear-gradient(135deg,#2a0a3a,#0a2a4a,#3a0a2a,#0a3a3a);
+  background-size:300% 300%;
+  animation:cosmicFlow 6s ease infinite;
+}
+.item.prestige-genesis{
+  background:linear-gradient(135deg,#4a0a0a,#4a3a0a,#0a4a1a,#0a1a4a,#3a0a4a);
+  background-size:400% 400%;
+  animation:genesisFlow 8s ease infinite;
+  color:#fff;
+}
+@keyframes eternalShimmer{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
+@keyframes cosmicFlow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@keyframes genesisFlow{0%{background-position:0% 0%}25%{background-position:100% 0%}50%{background-position:100% 100%}75%{background-position:0% 100%}100%{background-position:0% 0%}}
 @keyframes glowPulse{0%,100%{box-shadow:0 0 0 3px #b388ff,0 0 12px #b388ff,0 0 20px rgba(179,136,255,0.4)}50%{box-shadow:0 0 0 3px #e0c0ff,0 0 18px #d0a0ff,0 0 30px rgba(200,160,255,0.6)}}
+@keyframes prismShift{0%{box-shadow:0 0 0 3px #ff5ec7,0 0 14px #5ec7ff,0 0 22px rgba(255,215,0,0.5)}33%{box-shadow:0 0 0 3px #5ec7ff,0 0 14px #ffd700,0 0 22px rgba(255,94,199,0.5)}66%{box-shadow:0 0 0 3px #ffd700,0 0 14px #ff5ec7,0 0 22px rgba(94,199,255,0.5)}100%{box-shadow:0 0 0 3px #ff5ec7,0 0 14px #5ec7ff,0 0 22px rgba(255,215,0,0.5)}}
+@keyframes astralPulse{0%,100%{box-shadow:0 0 0 3px #6a00ff,0 0 16px #00e5ff,0 0 28px rgba(160,80,255,0.6)}50%{box-shadow:0 0 0 3px #00e5ff,0 0 24px #a050ff,0 0 40px rgba(0,229,255,0.7)}}
 
 /* ===== DUNGEON MAP GRID ===== */
 #map{
@@ -82,11 +134,11 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
   border:2px solid #444;
 }
 
-/* Blocked edges — remove border on that side to show wall */
-.map-cell.blocked-n{ border-top:2px solid #c0392b; }
-.map-cell.blocked-s{ border-bottom:2px solid #c0392b; }
-.map-cell.blocked-e{ border-right:2px solid #c0392b; }
-.map-cell.blocked-w{ border-left:2px solid #c0392b; }
+/* Blocked edges — bright thick red wall on that side */
+.map-cell.blocked-n{ border-top:4px solid #ff3b30; }
+.map-cell.blocked-s{ border-bottom:4px solid #ff3b30; }
+.map-cell.blocked-e{ border-right:4px solid #ff3b30; }
+.map-cell.blocked-w{ border-left:4px solid #ff3b30; }
 
 /* Symbol inside box */
 .map-symbol{
@@ -108,6 +160,23 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
   border-color:#e74c3c;
 }
 .map-cell.enemy .map-symbol{ color:#e74c3c; }
+.map-cell.boss{
+  background:#3a0a2a;
+  border-color:#ffd700;
+  box-shadow:0 0 6px rgba(255,215,0,0.6);
+}
+.map-cell.boss .map-symbol{ color:#ffd700; }
+.boss-banner{
+  background:linear-gradient(90deg,#4a0a0a,#3a0a2a);
+  border:2px solid #ffd700;
+  color:#ffd700;
+  font-weight:bold;
+  text-align:center;
+  padding:8px;
+  border-radius:8px;
+  margin-bottom:8px;
+  animation:eternalShimmer 2s ease-in-out infinite;
+}
 
 .map-cell.npc{
   background:#1a1a3a;
@@ -254,6 +323,9 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .quest-card{ border-left:3px solid #555; }
 .quest-card.quest-found{ border-left:3px solid #2ecc71; background:#1a2a1a; }
 .quest-card.quest-active{ border-left:3px solid #f1c40f; background:#2a2a1a; }
+.quest-active-header{font-weight:bold;color:#f1c40f;margin:4px 0 8px}
+.quest-completed-header{font-weight:bold;color:#2ecc71;margin:14px 0 8px;border-top:1px solid #444;padding-top:10px}
+.quest-card.quest-done{ border-left:3px solid #2ecc71; background:#152a15; opacity:0.85; }
 
 /* Season navigation */
 .season-header{font-size:1.1em;font-weight:bold;margin-bottom:8px;color:#f1c40f}

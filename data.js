@@ -26,13 +26,13 @@ const arts={
   ring:["💍","💎","🔴","🔵","🟡","⚪","🟢","🟣","🪨","✨","🖤","❤️","🧿","🪬","⭕","🔮","💠","♦️","🌟","💫","🌙","☀️","❄️","🔥","⚡","🌊","🍀","👁️"]
 };
 const traits=[
-  "Bone Rend","Grave Fortune","Dragonblood","Veilstep","Deep Luck","Poison Edge",
-  "Lifesteal","Flameburst","Frostbite","Thunderstrike","Shadow Meld","Crystal Resonance",
-  "Titan Strength","Void Touch","Bloodlust","Iron Will","Windwalker","Stoneguard",
-  "Soulbound","Mana Drain","Berserker Rage","Dwarven Fortitude","Obsidian Shell",
-  "Phoenix Rebirth","Death Mark","Spirit Link","Runic Surge","Ancient Blessing",
-  "Elemental Ward","Deepforge Temper","Moonlight Heal","Thornmail","Echostrike",
-  "Crit Amplifier","Dread Aura","Regeneration","Venomcoat","Battle Fury","Shieldbreaker"
+  "Bone Rend (+25% damage)","Grave Fortune (+2 Luck)","Dragonblood (+25% damage)","Veilstep (15% dodge)","Deep Luck (+2 Luck)","Poison Edge (+elemental damage)",
+  "Lifesteal (heal 15% of damage dealt)","Flameburst (+elemental damage)","Frostbite (+elemental damage)","Thunderstrike (+elemental damage)","Shadow Meld (15% dodge)","Crystal Resonance (+10% kill XP)",
+  "Titan Strength (+25% damage)","Void Touch (armor pierce)","Bloodlust (+60% damage when low HP)","Iron Will (-25% damage taken)","Windwalker (15% dodge)","Stoneguard (-25% damage taken)",
+  "Soulbound (+2 all stats)","Mana Drain (heal 15% of damage dealt)","Berserker Rage (+60% damage when low HP)","Dwarven Fortitude (-25% damage taken)","Obsidian Shell (-25% damage taken)",
+  "Phoenix Rebirth (revive once per run)","Death Mark (+35% vs wounded foes)","Spirit Link (heal 5% HP on kill)","Runic Surge (+2 INT)","Ancient Blessing (+1 all stats)",
+  "Elemental Ward (halve element damage)","Deepforge Temper (+15% damage)","Moonlight Heal (regen in combat)","Thornmail (reflect 30% damage)","Echostrike (25% double strike)",
+  "Crit Amplifier (bigger crits)","Dread Aura (enemies may cower)","Regeneration (regen in combat)","Venomcoat (+elemental damage)","Battle Fury (+60% damage when low HP)","Shieldbreaker (+30% vs bosses)"
 ];
 // Ring-specific traits — these give bonuses that synergize with other rings
 const ringTraits=[
@@ -61,7 +61,8 @@ const amuletTraits=[
   "Merchant's Eye (sell items for double gold)","Life Pulse (+1 HP per room explored)",
   "Dwarven Ancestry (+1 all stats)"
 ];
-const rar=["common","uncommon","rare","mythical"], dep=["bronze","silver","gold","titan","glowing"];
+const rar=["common","uncommon","rare","epic","mythical","legendary","divine"];
+const dep=["bronze","silver","gold","titan","platinum","glowing","prismatic","astral"];
 
 const legendaryPrefixes=["Ancient","Eternal","Primordial","Godforged","Abyssal","Celestial","Void-Touched","Titanborn","Doomforged","Soulbound","Starfall","Worldbreaker","Mythkeeper's","Deathless","Dragonlord's"];
 const legendarySuffixes=["of the Endless Deep","of Forgotten Kings","of the First Flame","of Eternal Night","of the World Below","of Shattered Realms","of the Last Dwarf","of Titan's Blood","of the Void","of Dragonfire","of the Undying","of Starlight"];
@@ -106,11 +107,11 @@ const npcNames=["Durin Ironbeard","Borin Deepaxe","Kargan Stonepick","Farin Axeb
 const npcTitles=["Keeper of the Blue Hall","Lorewarden","Quest-Bearer","Ancient Scholar","Deep Cartographer","Rune Scribe","Flame Keeper","Iron Sage","Stone Oracle","Tomb Historian","Vault Warden","Crystal Seer","Bone Reader","Shadow Archivist","Forge Priest","Ruin Walker"];
 
 const starterRings=[
-  {name:"Grandfather's Iron Band",art:"💍",stats:{str:2},trait:"Dwarven Fortitude",desc:"A simple band passed down for generations. Sturdy and reliable."},
+  {name:"Grandfather's Iron Band",art:"💍",stats:{str:2},trait:"Dwarven Fortitude (-25% damage taken)",desc:"A simple band passed down for generations. Sturdy and reliable."},
   {name:"Mother's Moonstone Loop",art:"🌙",stats:{cha:2},trait:"Lucky Star (+2 Luck, +5% crit)",desc:"A delicate ring that brings fortune to those who wear it."},
-  {name:"Scout's Shadow Ring",art:"🖤",stats:{dex:2},trait:"Windwalker",desc:"Worn by dungeon scouts. Helps you dodge and flee."},
+  {name:"Scout's Shadow Ring",art:"🖤",stats:{dex:2},trait:"Windwalker (15% dodge)",desc:"Worn by dungeon scouts. Helps you dodge and flee."},
   {name:"Scholar's Crystal Eye",art:"🔮",stats:{int:2},trait:"Deep Sight (+3 INT for searching)",desc:"The gem pulses when secrets are near."},
-  {name:"Warrior's Bloodstone",art:"🔴",stats:{str:1,dex:1},trait:"Berserker Rage",desc:"Thrums with violent energy. For those who choose aggression."},
+  {name:"Warrior's Bloodstone",art:"🔴",stats:{str:1,dex:1},trait:"Berserker Rage (+60% damage when low HP)",desc:"Thrums with violent energy. For those who choose aggression."},
   {name:"Merchant's Goldheart",art:"🟡",stats:{cha:1,luck:1},trait:"Gold Attraction (+10% gold from sells)",desc:"A trader's lucky charm. Gold seems to follow you."},
   {name:"Seer's Void Eye",art:"👁️",stats:{int:1,luck:1},trait:"Treasure Sense (better loot rolls)",desc:"Whispers of hidden treasure echo from within."},
   {name:"Survivor's Bonering",art:"🦴",stats:{str:1,cha:1},trait:"Finger Ward (reduces finger loss chance)",desc:"Carved from bone. Protects what you value most — your fingers."}
