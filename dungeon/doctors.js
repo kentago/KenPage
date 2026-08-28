@@ -99,9 +99,12 @@ function showDoctorModal(doctor){
 // so it always costs a meaningful chunk of your gold (never trivial pocket change).
 // A 35% heal of a big HP pool is genuinely valuable, so it's priced accordingly.
 function healSipCost(){
-  let healAmt=Math.round(S.maxHp*0.35);
-  // ~1.2 gold per HP restored, plus a floor premium
-  return Math.max(8,Math.round(healAmt*1.2+Math.pow(S.floor,1.3)*2));
+  let healAmt=Math.round(effMaxHp()*0.35);
+  // ~1.2 gold per HP restored, plus a LEVEL-based premium (not floor-based) so
+  // players can't farm shallow floors for cheap sips. Uses max(level, deepestFloor)
+  // so both a high level and deep progress keep the price meaningful.
+  let tier=Math.max(S.level||1,S.deepestFloor||1);
+  return Math.max(8,Math.round(healAmt*1.2+Math.pow(tier,1.3)*3));
 }
 
 function doctorHeal(){
