@@ -371,8 +371,10 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
     if(typeof checkAchievements==="function") checkAchievements();
     // Boss guaranteed legendary drop
     if(wasBoss){
+      S.bossKills=(S.bossKills||0)+1;
       let bossLoot=makeLegendaryItem();
       msg(`👑 The ${defeated} drops a legendary treasure!\n🎁 ${bossLoot.name}! ${obtain(bossLoot)}`);
+      if(typeof checkAchievements==="function") checkAchievements();
     }
   } else {
     msg(`⚔️ You hit ${r.enemy.name} for ${n}. (${r.enemy.hp} HP left)`);

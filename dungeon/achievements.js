@@ -27,7 +27,12 @@ const ACHIEVEMENTS=[
   {id:"lvl50",metric:"level",need:50,title:"Champion",desc:"Reach level 50",xp:20000,gold:6000},
   // Kill streak
   {id:"streak10",metric:"bestKillStreak",need:10,title:"Unstoppable",desc:"Reach a 10 kill streak",xp:800,gold:250},
-  {id:"streak25",metric:"bestKillStreak",need:25,title:"Rampage",desc:"Reach a 25 kill streak",xp:5000,gold:1500}
+  {id:"streak25",metric:"bestKillStreak",need:25,title:"Rampage",desc:"Reach a 25 kill streak",xp:5000,gold:1500},
+  // Boss kills
+  {id:"boss1",metric:"bossKills",need:1,title:"Giant Slayer",desc:"Defeat your first boss",xp:1000,gold:300},
+  {id:"boss3",metric:"bossKills",need:3,title:"Third Time's the Charm",desc:"Defeat 3 bosses",xp:4000,gold:1000},
+  {id:"boss5",metric:"bossKills",need:5,title:"Boss Breaker",desc:"Defeat 5 bosses",xp:9000,gold:2500},
+  {id:"boss10",metric:"bossKills",need:10,title:"Bane of Guardians",desc:"Defeat 10 bosses",xp:25000,gold:8000}
 ];
 
 function metricValue(metric){
@@ -38,6 +43,7 @@ function metricValue(metric){
     case"deepestFloor": return S.deepestFloor||S.floor||1;
     case"level": return S.level||1;
     case"bestKillStreak": return S.bestKillStreak||0;
+    case"bossKills": return S.bossKills||0;
     default: return 0;
   }
 }
