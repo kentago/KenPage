@@ -1,7 +1,7 @@
 // --- CORE GAME STATE ---
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 
-function fresh(){return{name:dwarves[Math.floor(Math.random()*dwarves.length)],nickname:"",level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,bossSpawnedFloors:{},phoenixUsed:false,deathWardFloor:null,secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:makeDwarfName(),nickname:"",level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,bossSpawnedFloors:{},phoenixUsed:false,deathWardFloor:null,secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
 function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null})}
@@ -318,7 +318,7 @@ function newRun(){
       localStorage.removeItem(KEY);
       S=fresh();
       render();
-      fetchGlobalHall();
+      fetchGlobalHall().then(()=>applyHeroNumeral());
     });
     return;
   }
@@ -326,6 +326,7 @@ function newRun(){
   localStorage.removeItem(KEY);
   S=fresh();
   render();
+  fetchGlobalHall().then(()=>applyHeroNumeral());
 }
 
 function setNickname(val){
@@ -604,4 +605,4 @@ document.addEventListener("keydown",(e)=>{
 });
 
 render();
-fetchSeasons().then(()=>fetchGlobalHall()); // Fetch seasons + leaderboard on page load
+fetchSeasons().then(()=>fetchGlobalHall()).then(()=>applyHeroNumeral()); // Fetch seasons + leaderboard, then number the fresh hero

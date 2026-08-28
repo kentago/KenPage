@@ -1,6 +1,23 @@
 const KEY="infinite-dungeon-1beta";
 const API_BASE="https://bitter-tree-d030.kesj04.workers.dev";
-const dwarves=["Durin Ironbeard","Borin Deepaxe","Kargan Stonepick","Thorin Mountainbeard","Dwalin Blackforge","Farin Axebreaker","Balin Goldvein","Gorin Redhammer"];
+// Dwarf names are composed: FirstName + Surname, occasionally with a profession epithet.
+const dwarfFirst=["Durin","Borin","Kargan","Thorin","Dwalin","Farin","Balin","Gorin","Thrain","Nain","Dain","Gloin","Oin","Bofur","Bombur","Bifur","Nori","Dori","Ori","Fili","Kili","Groin","Frerin","Telchar","Narvi","Gamil","Bruni","Frar","Lofar","Ovir"];
+const dwarfSurname=["Ironbeard","Deepaxe","Stonepick","Mountainbeard","Blackforge","Axebreaker","Goldvein","Redhammer","Firebeard","Silverhand","Deepdelver","Rocksplitter","Grimhammer","Stoutforge","Coalheart","Emberbeard","Gemcutter","Oreblood","Hollowpick","Anvilfist","Frostbeard","Deepstone","Bronzebraid","Steelbrow","Cavewarden","Runecarver","Boulderborn","Thunderaxe","Coppervein","Tunnelborn"];
+// Profession epithets — occasionally appended for extra flavor/uniqueness
+const dwarfProfessions=["the Miner","the Picker","the Smith","the Delver","the Prospector","the Forgemaster","the Gemwright","the Tunneler","the Stonemason","the Runesmith","the Orehunter","the Deepwarden","the Anvilkeeper","the Excavator","the Lodefinder"];
+
+// Build a fresh randomized hero name; profession epithet ~40% of the time.
+function makeDwarfName(){
+  let first=dwarfFirst[Math.floor(Math.random()*dwarfFirst.length)];
+  let surname=dwarfSurname[Math.floor(Math.random()*dwarfSurname.length)];
+  let name=`${first} ${surname}`;
+  if(Math.random()<0.4){
+    name+=`, ${dwarfProfessions[Math.floor(Math.random()*dwarfProfessions.length)]}`;
+  }
+  return name;
+}
+// Legacy array kept for any references
+const dwarves=dwarfFirst.map((f,i)=>`${f} ${dwarfSurname[i%dwarfSurname.length]}`);
 const intros=["The old miners spoke of a sealed kingdom beneath the mountains. You entered to discover what survived below.","A forgotten royal expedition vanished beneath the mountain. You descend to learn their fate.","A tremor opened an ancient shaft, and rumors of lost Dwarven treasures followed."];
 const types=["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet","ring"];
 const names={

@@ -11,9 +11,83 @@ function countItems(){
   return count;
 }
 
+// Convert an integer (1-3999) to a Roman numeral.
+function toRoman(num){
+  const map=[[1000,"M"],[900,"CM"],[500,"D"],[400,"CD"],[100,"C"],[90,"XC"],[50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]];
+  let r="";
+  for(let [v,s] of map){ while(num>=v){ r+=s; num-=v; } }
+  return r;
+}
+
+// Strip an existing trailing Roman numeral from a name (so we don't double-stack).
+function stripRoman(name){
+  return name.replace(/\s+[IVXLCDM]+$/,"");
+}
+
+// Given a base hero name, count how many entries in the current Hall of Fame
+// already share that base name, and append the next Roman numeral if needed.
+function disambiguateName(baseName){
+  let stripped=stripRoman(baseName);
+  let list=globalHall||[];
+  let count=0;
+  for(let e of list){
+    if(e.name&&stripRoman(e.name)===stripped) count++;
+  }
+  // First hero with this name keeps it plain; the next is II, then III, etc.
+  if(count===0) return stripped;
+  return `${stripped} ${toRoman(count+1)}`;
+}
+
+// Apply the Roman-numeral suffix to the CURRENT hero's name at run start,
+// based on how many heroes with the same base name are on the leaderboard.
+// Only does this for a fresh, untouched run (no progress yet) so we never
+// rename a hero mid-expedition.
+function applyHeroNumeral(){
+  if(!S) return;
+  let untouched=(S.xp||0)===0&&(S.floor||1)===1&&(S.totalKills||0)===0;
+  if(!untouched) return;
+  let newName=disambiguateName(S.name);
+  if(newName!==S.name){
+    S.name=newName;
+    save();
+    render();
+  }
+}
+window.applyHeroNumeral=applyHeroNumeral;
+
+// Find the hero's single best equipped item (highest total stat sum) — used as
+// a flavour tiebreaker so two heroes with the same name+numeral stay distinct.
+function bestItemName(){
+  let equipped=[];
+  ["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet"].forEach(k=>{
+    if(S.equipment[k]) equipped.push(S.equipment[k]);
+  });
+  S.equipment.rings.forEach(x=>{if(x)equipped.push(x);});
+  if(equipped.length===0) return null;
+  let best=equipped.reduce((a,b)=>{
+    let sa=Object.values(a.stats||{}).reduce((x,y)=>x+y,0);
+    let sb=Object.values(b.stats||{}).reduce((x,y)=>x+y,0);
+    return sb>sa?b:a;
+  });
+  return best.name;
+}
+
+// Build the final submission name. If another leaderboard entry already shares
+// this exact name (numeral collision / race), append "wielding <best item>".
+function finalSubmitName(){
+  let name=S.name;
+  let list=globalHall||[];
+  let clash=list.some(e=>e.name===name);
+  if(clash){
+    let item=bestItemName();
+    if(item) name=`${name} wielding ${item}`;
+  }
+  return name;
+}
+
 async function submitToGlobalHall(){
   const entry={
-    name:S.name,
+    name:finalSubmitName(),
     nickname:S.nickname||"Secret Hero",
     xp:S.xp,
     level:S.level,
