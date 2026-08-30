@@ -198,30 +198,39 @@ function spawn(){
   // power (gear + stats + HP via eff/effMaxHp), exactly like bosses do.
   // We take the GREATER of floor-based and hero-based so weak heroes on deep
   // floors still face floor danger, while over-geared heroes get bumped foes.
+  //
+  // EARLY-GAME EXEMPTION (floors 1-2): the "peek/bump" is DISABLED so the run
+  // starts gentle and rewarding — enemies use only their soft floor-based stats,
+  // so a new hero can quickly farm gold/XP/stats and build toward deep descents.
+  // (The protective single-hit CAP below still applies so nobody gets one-shot.)
   let E=(typeof eff==="function")?eff():{str:S.stats.str||1};
   let heroDmg=Math.max(1,4.5+(E.str||1)*0.4); // avg hero damage per swing (matches fight())
   let heroHp=(typeof effMaxHp==="function")?effMaxHp():(S.maxHp||20);
   let tierName=pool===common?"common":pool===mid?"mid":pool===hard?"hard":pool===elite?"elite":"boss";
-  // Target hits-to-kill per tier (harder tiers take more solid hits to drop).
-  let hitsCfg={common:[3,2],mid:[5,2],hard:[7,3],elite:[10,4]}[tierName]||[3,2];
-  let hpFloor=Math.round(heroDmg*(hitsCfg[0]+Math.random()*hitsCfg[1]));
-  // Target enemy hit as a fraction of hero max HP (never a one-shot).
-  // Floors so a hit always MATTERS; a hard cap so a single hit can never exceed
-  // ~22% of max HP — the hero always survives at least a few hits.
-  let pctCfg={common:[0.04,0.04],mid:[0.06,0.04],hard:[0.08,0.05],elite:[0.10,0.06]}[tierName]||[0.04,0.04];
-  let atkFloor=Math.round(heroHp*Math.min(0.22,pctCfg[0]+Math.random()*pctCfg[1]));
-  hp=Math.max(hp,hpFloor);
-  atk=Math.max(atk,atkFloor);
+  if(S.floor>=3){
+    // Target hits-to-kill per tier (harder tiers take more solid hits to drop).
+    let hitsCfg={common:[3,2],mid:[5,2],hard:[7,3],elite:[10,4]}[tierName]||[3,2];
+    let hpFloor=Math.round(heroDmg*(hitsCfg[0]+Math.random()*hitsCfg[1]));
+    // Target enemy hit as a fraction of hero max HP (never a one-shot).
+    // Floors so a hit always MATTERS; a hard cap so a single hit can never exceed
+    // ~22% of max HP — the hero always survives at least a few hits.
+    let pctCfg={common:[0.04,0.04],mid:[0.06,0.04],hard:[0.08,0.05],elite:[0.10,0.06]}[tierName]||[0.04,0.04];
+    let atkFloor=Math.round(heroHp*Math.min(0.22,pctCfg[0]+Math.random()*pctCfg[1]));
+    hp=Math.max(hp,hpFloor);
+    atk=Math.max(atk,atkFloor);
+    // Element damage should also stay relevant but never dominate — floor it so it
+    // contributes on deep floors (only when hero-scaling is active).
+    if(element){
+      elementDmg=Math.max(elementDmg,Math.round(heroHp*0.03));
+    }
+  }
   // HARD CAP on a single hit: no enemy hit may exceed 25% of the hero's max HP.
-  // This bounds BOTH the hero-scaled floor AND the raw floor^1.6 value, so an
-  // under-geared hero who reached a deep floor still can't be one-shot — the
-  // reverse "monster hits once and we die" case is prevented at every depth.
+  // This ALWAYS applies (every floor) so an under-geared hero — or a brand-new
+  // floor-1 hero — can never be one-shot. Bounds both hero-scaled and raw values.
   let atkCap=Math.max(1,Math.round(heroHp*0.25));
   atk=Math.min(atk,atkCap);
-  // Element damage should also stay relevant but never dominate — cap it so
-  // element + base together can't spike into one-shot territory.
+  // Element damage cap (always) so element + base can't spike into one-shot territory.
   if(element){
-    elementDmg=Math.max(elementDmg,Math.round(heroHp*0.03));
     elementDmg=Math.min(elementDmg,Math.round(heroHp*0.06));
   }
 
@@ -363,10 +372,28 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
   }
   if(r.enemy.hp===0){
     let defeated=r.enemy.name;
-    // XP reward based on enemy tier
-    let dangerXP=Math.pow(S.floor,1.4);
+    // XP reward based on enemy tier.
+    // dangerXP = floor^1.4 + a flat early-game base (+6). The flat term makes
+    // SHALLOW floors actually rewarding (a new hero reaches L2 in ~10 kills, not
+    // ~55) so the start ramp feels good; it's negligible vs floor^1.4 at depth,
+    // so deep-game pacing is unchanged.
+    let dangerXP=Math.pow(S.floor,1.4)+6;
     let xpMult=r.enemy.isBoss?(r.enemy.xpMultiplier||5):1;
     let xpGain=Math.round((r.enemy.tier==="common"?dangerXP*1.5:r.enemy.tier==="mid"?dangerXP*3:r.enemy.tier==="hard"?dangerXP*6:r.enemy.tier==="elite"?dangerXP*12:dangerXP*25)*xpMult);
+    // OVER-LEVEL XP DAMPENER (v1.1): a strong hero who returns to a shallow floor
+    // should NOT find it worthwhile to farm there. While the hero's level is within
+    // a grace band of the floor, XP is full (normal progression untouched). Beyond
+    // that, XP decays 15% per over-level, FLOORED at 15% of base — so a very
+    // over-leveled hero still earns a small, non-insulting amount (not a flat 1),
+    // but nowhere near enough to make shallow farming worthwhile.
+    // Bosses are exempt (they're a deliberate landmark fight, not farmable).
+    if(!r.enemy.isBoss){
+      let over=(S.level||1)-(S.floor+5); // grace of 5 levels above the floor
+      if(over>0){
+        let damp=Math.max(0.15,Math.pow(0.85,over));
+        xpGain=Math.max(1,Math.round(xpGain*damp));
+      }
+    }
     let wasBoss=r.enemy.isBoss;
     let enemyTier=r.enemy.tier;
     // Kill streak tracking

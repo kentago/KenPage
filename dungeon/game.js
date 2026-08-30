@@ -70,26 +70,34 @@ function move(d){
     return msg("🚫 That route is known to be closed.");
   }
 
-  // Generate blockage randomly for new rooms (~20% chance)
-  if(!nr && Math.random()<0.20){
-    enforceReciprocal(S.floor,S.x,S.y,d);
-    save();render();
-    return msg("🧱 A solid wall blocks this path.");
-  }
+  // NOTE (v1.1 change): walls are NO LONGER rolled on the move attempt (that made
+  // finding walls a trial-and-error chore). If the direction isn't already blocked,
+  // the move always succeeds. A new room's FULL wall layout is decided the instant
+  // you ENTER it (below), so the compass immediately disables blocked directions
+  // and the map shows every wall up front — no more bumping to discover them.
 
   // Move to new position
   S.x=nx; S.y=ny;
   let x=room();
 
-  // For new rooms: randomly block some OTHER directions to create maze structure
+  // For new rooms: decide ALL blocked walls NOW, on entry, so they're shown at once.
   if(!nr){
     // Life Pulse: +1 HP for each newly explored room
     if(hasTrait("Life Pulse")&&S.hp>0&&S.hp<effMaxHp()){
       S.hp=Math.min(effMaxHp(),S.hp+1);
     }
+    // Roll walls for the other three directions (never the way we came from — that
+    // edge is proven open). Skip any edge that leads to an ALREADY-EXPLORED room
+    // which is known to be open, so we never retroactively seal a usable path.
     let dirs=["N","S","E","W"].filter(dd=>dd!==OPP[d]);
     for(let dd of dirs){
-      if(Math.random()<0.25){
+      let ax=S.x+DIR_DX[dd], ay=S.y+DIR_DY[dd];
+      let ak=`${S.floor}:${ax}:${ay}`;
+      let neighbor=S.rooms[ak];
+      // If the neighbor exists and does NOT already block this shared edge, leave it
+      // open (it's a known-traversable connection). Otherwise it's fair game to wall.
+      if(neighbor && !neighbor.blocked[OPP[dd]]) continue;
+      if(Math.random()<0.22){
         enforceReciprocal(S.floor,S.x,S.y,dd);
       }
     }
@@ -802,6 +810,26 @@ function normalizeXp(){
   }
 }
 normalizeXp();
+
+// v1.1: walls are shown on room ENTRY, not discovered by trial-and-error. New rooms
+// get their walls when first entered (see move()). The STARTING room is created up
+// front by fresh(), so roll its walls once here too — but never seal more than 2 of
+// 4 directions, so the player is never trapped at spawn.
+(function initStartRoomWalls(){
+  let r=room();
+  if(r.wallsRolled) return;           // only once
+  let dirs=["N","S","E","W"];
+  let blockedCount=0;
+  for(let dd of dirs){
+    if(blockedCount>=2) break;        // keep at least 2 exits open at spawn
+    if(!r.blocked[dd] && Math.random()<0.22){
+      enforceReciprocal(S.floor,S.x,S.y,dd);
+      blockedCount++;
+    }
+  }
+  r.wallsRolled=true;
+  save();
+})();
 
 render();
 fetchSeasons().then(()=>fetchGlobalHall()).then(()=>applyHeroNumeral()); // Fetch seasons + leaderboard, then number the fresh hero
