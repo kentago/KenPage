@@ -380,6 +380,7 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 
 /* Season navigation */
 .season-header{font-size:1.1em;font-weight:bold;margin-bottom:8px;color:#f1c40f}
+.hall-date{color:#7fa;opacity:.7;font-style:italic}
 .season-nav{margin-bottom:10px}
 .season-nav select{background:#1a1a1a;color:#f1c40f;border:1px solid #555;border-radius:6px;padding:6px 12px;font-size:14px;cursor:pointer;width:200px}
 .season-nav select:hover{border-color:#f1c40f}

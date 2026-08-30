@@ -97,7 +97,8 @@ async function submitToGlobalHall(){
     kills:S.totalKills||0,
     bestStreak:S.bestKillStreak||0,
     gold:S.gold||0,
-    actions:S.actions||0
+    actions:S.actions||0,
+    date:new Date().toISOString() // client-side registration timestamp (fallback + offline)
   };
 
   // Always save to localStorage as fallback
@@ -170,6 +171,25 @@ function viewSeason(seasonId){
 }
 window.viewSeason=viewSeason;
 
+// Format a Hall-of-Fame entry's registration time. Prefers the server's
+// created_at (D1), falls back to the client-submitted `date`. Returns "" if none.
+// Shown in the viewer's local timezone as a readable date + time.
+function hallTimestamp(x){
+  let raw=x.created_at||x.date;
+  if(!raw) return "";
+  // SQLite CURRENT_TIMESTAMP is "YYYY-MM-DD HH:MM:SS" in UTC with no zone marker.
+  // Normalise to ISO ("T" + "Z") so it parses consistently across browsers.
+  if(typeof raw==="string" && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(raw)){
+    raw=raw.replace(" ","T")+"Z";
+  }
+  let d=new Date(raw);
+  if(isNaN(d.getTime())) return "";
+  // e.g. "Aug 30, 2026 · 21:34" — compact, locale-aware, in the viewer's timezone
+  let date=d.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"});
+  let time=d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+  return `${date} · ${time}`;
+}
+
 function renderHall(){
   const list=globalHall.length?globalHall:JSON.parse(localStorage.getItem("infiniteDungeonHall")||"[]");
   let seasonLabel=viewingSeason?`${viewingSeason.name}${viewingSeason.ended_at?" (ended)":""}`:(currentSeason?currentSeason.name:"Season");
@@ -185,6 +205,7 @@ function renderHall(){
     ${countryFlag(x.country)} <b>${x.nickname||"Secret Hero"}</b> — ${x.name}
     <div class="small">XP ${x.xp} · Level ${x.level} · Floor ${x.floor} · Items ${x.items}</div>
     <div class="small">⚔️ ${x.kills||0} kills · 🔥 ${x.bestStreak||0} streak · 💰 ${x.gold||0} gold</div>
+    ${hallTimestamp(x)?`<div class="small hall-date">🕐 ${hallTimestamp(x)}</div>`:""}
   </div>`).join("")||"<div class=small>No completed expeditions yet.</div>");
 }
 
