@@ -588,12 +588,12 @@ function render(){
   if(ni&&document.activeElement!==ni) ni.value=S.nickname||"";
   let sc=document.getElementById("showCountry");
   if(sc) sc.checked=!!(S.country);
-  // XP progress toward next level
+  // XP progress toward next level — always a clean per-level 0→100% (resets each level)
   let curThresh=S.level>1?xpForLevel(S.level-1):0; // XP at start of current level
   let nextThresh=xpForLevel(S.level);              // XP needed for next level
-  let into=Math.max(0,S.xp-curThresh);
   let span=Math.max(1,nextThresh-curThresh);
-  let pct=Math.min(100,Math.round(into/span*100));
+  let into=Math.max(0,Math.min(span,S.xp-curThresh)); // clamp within this level for display
+  let pct=Math.round(into/span*100);
   let xpBar=`<div class="xp-wrap"><div class="xp-label">⭐ Level ${S.level} · XP ${into}/${span} to next</div><div class="xp-bar"><div class="xp-fill" style="width:${pct}%"></div></div></div>`;
   stats.innerHTML=[`❤️ HP ${Math.max(0,S.hp)}/${effMaxHp()}`,`🍀 Luck ${eff().luck||0}`,`💰 ${S.gold}`].map(x=>`<div>${x}</div>`).join("")+renderStatButtons();
   xpbar.innerHTML=xpBar;
@@ -781,6 +781,27 @@ document.addEventListener("keydown",(e)=>{
       break;
   }
 });
+
+// --- XP / LEVEL SAVE NORMALIZATION ---
+// The XP curve (xpForLevel) can change between versions (it got ~2.2× steeper in
+// v1.1). A save made on an older curve can end up with S.xp BELOW the current
+// floor of its stored S.level, which stranded the XP bar at 0/…  (a level-19
+// player showing "XP 0/5113"). This one-time pass keeps the player's hard-earned
+// LEVEL and rebases S.xp to the floor of that level so the per-level bar (0→100%)
+// resumes filling normally. It also promotes if XP now exceeds the level ceiling.
+function normalizeXp(){
+  if(S.hp<=0) return; // don't touch finished runs
+  // 1) If XP sits above the current level's requirement, let the normal loop level up.
+  if(typeof checkLevelUp==="function") checkLevelUp();
+  // 2) If XP is below the floor of the current level (older, gentler curve),
+  //    grandfather the level and rebase XP to that floor so the bar isn't stuck at 0.
+  let floorXp=S.level>1?xpForLevel(S.level-1):0;
+  if(S.xp<floorXp){
+    S.xp=floorXp;
+    save();
+  }
+}
+normalizeXp();
 
 render();
 fetchSeasons().then(()=>fetchGlobalHall()).then(()=>applyHeroNumeral()); // Fetch seasons + leaderboard, then number the fresh hero
