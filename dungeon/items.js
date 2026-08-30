@@ -89,6 +89,27 @@ function hasTrait(name){
   return equipped.some(it=>it.trait&&it.trait.includes(name));
 }
 
+// Counts how many EQUIPPED items carry a "-25% damage taken" defensive trait.
+// Each one stacks multiplicatively (25% off whatever damage remains), so this
+// count drives 0.75^count in combat. Multiple copies of the same trait name on
+// different items all count — 4 defensive rings = 4 stacks (capped in combat).
+function countDefensiveWards(){
+  let defensiveTraits=["Iron Will","Stoneguard","Obsidian Shell","Dwarven Fortitude"];
+  let equipped=[];
+  ["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet"].forEach(k=>{
+    if(S.equipment[k]) equipped.push(S.equipment[k]);
+  });
+  S.equipment.rings.forEach(x=>{if(x)equipped.push(x);});
+  let count=0;
+  for(let it of equipped){
+    if(!it.trait) continue;
+    // A single item could theoretically carry two defensive traits (double-trait
+    // epics) — count each matching trait so it contributes its own stack.
+    for(let t of defensiveTraits){ if(it.trait.includes(t)) count++; }
+  }
+  return count;
+}
+
 // Like hasTrait, but for the ring "Finger Ward" specifically — excludes "Finger Ward Amulet".
 function hasTraitExact(name){
   let equipped=[];
@@ -131,9 +152,14 @@ function makeItem(type){
   if(hasTrait("Ring of Greed")&&type!=="ring"&&Math.random()<0.30){
     type="ring";
   }
-  // --- SCALING: Loot quality grows SLOWER than danger ---
-  // Loot power ≈ floor^1.2 (exploring current floor makes you stronger before descending)
-  let lootScale=Math.pow(S.floor,1.2)+S.level*0.5;
+  // --- SCALING: Loot quality is driven by FLOOR DEPTH, not hero level ---
+  // Loot power ≈ floor^1.2. Hero level must NOT inflate loot, otherwise a
+  // high-level hero could farm floor 1 for strong gear. A tiny level term
+  // (×0.1) is kept only so progression never feels punishing — it is
+  // negligible on shallow floors (level 5 on floor 1 adds just +0.5), so a
+  // powerful hero on floor 1 still finds mostly crappy loot. The real reward
+  // comes from paying the toll and descending to deeper floors.
+  let lootScale=Math.pow(S.floor,1.2)+S.level*0.1;
 
   // --- RARITY ROLL (7 tiers) ---
   // Deeper floors shift odds toward higher rarities. Common still dominates early.
@@ -258,7 +284,9 @@ function slot(i){return i.type==="ring"?"rings":i.type}
 
 function makeLegendaryItem(forceType){
   let type=forceType||types[Math.floor(Math.random()*types.length)];
-  let lootScale=Math.pow(S.floor,1.2)+S.level*0.5;
+  // Floor-driven scaling (see makeItem) — level barely factors in so deep
+  // descents, not grinding shallow floors, are what yields powerful loot.
+  let lootScale=Math.pow(S.floor,1.2)+S.level*0.1;
 
   // High rarity — epic/mythical/legendary/divine, skewing higher with floor
   let rz=Math.random()+Math.min(0.3,S.floor*0.003);
@@ -487,7 +515,9 @@ function goldMult(){
 
 // Sell value of an item (CHA-boosted, same formula as trader modal)
 function itemValue(x){
-  let chaBonus=1+(eff().cha||1)*0.03;
+  // CHA improves sell prices (+3%/pt) but is HARD-CAPPED at +100% — uncapped it
+  // let a huge deep-floor CHA stat turn selling into an infinite gold fountain.
+  let chaBonus=1+Math.min(1.0,(eff().cha||1)*0.03);
   // Sell value is modest — flipping found loot should supplement gold, not flood it.
   return Math.max(1,Math.floor(((Object.values(x.stats).reduce((a,b)=>a+b,0))*1.2+(rar.indexOf(x.rarity)+1)*4)*chaBonus*goldMult()));
 }

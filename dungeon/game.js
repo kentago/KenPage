@@ -1,7 +1,7 @@
 // --- CORE GAME STATE ---
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 
-function fresh(){return{name:makeDwarfName(),nickname:"",level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,repairedFingers:[],bossSpawnedFloors:{},phoenixUsed:false,deathWardFloor:null,secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],questsDelivered:0,questAchievements:[],achievements:[],goldEarned:0,fingersLostTotal:0,deepestFloor:1,bossKills:0,log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:makeDwarfName(),nickname:"",level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,roomsSinceKill:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,repairedFingers:[],bossSpawnedFloors:{},tollsPaid:0,phoenixUsed:false,deathWardFloor:null,secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],questsDelivered:0,questAchievements:[],achievements:[],goldEarned:0,fingersLostTotal:0,deepestFloor:1,bossKills:0,log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
 function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null})}
@@ -28,6 +28,16 @@ function nearbyHas(feature,minDist){
 }
 function d20(){return 1+Math.floor(Math.random()*20)}
 function msg(t){S.log.unshift(t);S.log=S.log.slice(0,100);save();render()}
+
+// Break the current kill streak (if any) and reset the enemy-free room counter.
+// reason is a short lore string shown in the log only when a streak is actually lost.
+function breakStreak(reason){
+  if((S.killStreak||0)>0){
+    msg(`💤 Your kill streak of ${S.killStreak}× fades — ${reason}.`);
+  }
+  S.killStreak=0;
+  S.roomsSinceKill=0;
+}
 
 function enforceReciprocal(floor,x,y,dir){
   let rk=`${floor}:${x}:${y}`;
@@ -98,10 +108,11 @@ function move(d){
     // Spawn ladder down? (~10% chance, no enemy blocking it, spaced from other ladders)
     if(!x.enemy&&!x.ladder&&!nearbyHas("ladder",2)&&Math.random()<0.10){
       x.ladder={dir:"down",used:false,targetKey:null};
-      // ~30% of ladders are TOLL-gated — must pay gold to use (a gold sink).
-      // Toll scales with floor depth. Boss-floor ladders are never toll-gated
-      // (the boss is already the gate).
-      if(S.floor%5!==0&&Math.random()<0.30){
+      // ALL non-boss ladders are TOLL-gated — must pay gold to use (a gold sink).
+      // Base toll scales with floor depth; the actual price also escalates with
+      // how many tolls you've already paid this run (see useLadder).
+      // Boss-floor ladders are never toll-gated (the boss is already the gate).
+      if(S.floor%5!==0){
         x.ladder.toll=Math.max(15,Math.round(Math.pow(S.floor,1.3)*4+20));
         x.ladder.tollPaid=false;
       }
@@ -120,6 +131,24 @@ function move(d){
     // Spawn doctor? (~5% chance, no enemy, spaced from other doctors)
     if(!x.enemy&&!x.doctor&&!nearbyHas("doctor",2)&&Math.random()<0.05){
       x.doctor=spawnDoctor();
+    }
+  }
+
+  // --- KILL STREAK DECAY (enemy-free wandering) ---
+  // A streak only stays hot while you keep finding things to fight. Enter too
+  // many rooms in a row without a live enemy and the streak goes cold.
+  // Base grace = 3 enemy-free rooms; a lucky roll (Luck-scaled) can grant a 4th.
+  if(x.enemy&&x.enemy.hp>0){
+    // A fight is on — streak is safe, reset the idle counter.
+    S.roomsSinceKill=0;
+  } else if((S.killStreak||0)>0){
+    S.roomsSinceKill=(S.roomsSinceKill||0)+1;
+    // Luck gives a chance to earn one extra grace room before the streak breaks.
+    let luck=(typeof eff==="function"?(eff().luck||0):0);
+    let luckyGrace=Math.random()<Math.min(0.5,0.10+luck*0.02); // 10% base, +2%/luck, cap 50%
+    let graceRooms=luckyGrace?4:3;
+    if(S.roomsSinceKill>graceRooms){
+      breakStreak("no prey found for too long");
     }
   }
 
@@ -293,16 +322,19 @@ function useLadder(dir){
   let r=room();
   if(!r.ladder||r.ladder.dir!==dir)return;
 
-  // Toll ladder: must pay gold once to unlock it. If you can't afford it,
-  // this ladder stays impossible to use — find another route or earn gold.
+  // Toll ladder: must pay gold once to unlock it. The price escalates every
+  // time you pay a toll this run — each toll paid raises the cost of the next
+  // by 50% (compounding). Once THIS ladder is paid it stays free forever.
   if(r.ladder.toll&&!r.ladder.tollPaid){
-    if((S.gold||0)<r.ladder.toll){
-      msg(`🚧 This ladder is toll-gated — it costs ${r.ladder.toll} 💰 to pass. You only have ${S.gold||0}. Earn more gold or find another way.`);
+    let cost=Math.round(r.ladder.toll*Math.pow(1.5,S.tollsPaid||0));
+    if((S.gold||0)<cost){
+      msg(`🚧 This ladder is toll-gated — it costs ${cost} 💰 to pass. You only have ${S.gold||0}. Earn more gold or find another way.`);
       return;
     }
-    S.gold-=r.ladder.toll;
+    S.gold-=cost;
+    S.tollsPaid=(S.tollsPaid||0)+1;
     r.ladder.tollPaid=true;
-    msg(`💰 You pay the ${r.ladder.toll} gold toll. The ladder mechanism unlocks.`);
+    msg(`💰 You pay the ${cost} gold toll. The ladder mechanism unlocks. (Toll #${S.tollsPaid} — the next toll will cost more.)`);
   }
 
   // Mark this ladder as used (green)
@@ -548,8 +580,9 @@ function render(){
     }
     if(r.doctor) extras+=`<button class="action-btn doctor-btn" onclick="talkDoctor()">⚕️ Visit ${r.doctor.name}</button>`;
     if(r.ladder){
-      let tollLabel=(r.ladder.toll&&!r.ladder.tollPaid)?` 🚧 ${r.ladder.toll}💰`:"";
-      let cantAfford=(r.ladder.toll&&!r.ladder.tollPaid&&(S.gold||0)<r.ladder.toll);
+      let tollDue=(r.ladder.toll&&!r.ladder.tollPaid)?Math.round(r.ladder.toll*Math.pow(1.5,S.tollsPaid||0)):0;
+      let tollLabel=tollDue?` 🚧 ${tollDue}💰`:"";
+      let cantAfford=(tollDue&&(S.gold||0)<tollDue);
       extras+=`<button class="action-btn${cantAfford?" toll-locked":""}" onclick="act('${r.ladder.dir}')">🪜 ${r.ladder.dir==="down"?"↓ Descend":"↑ Ascend"}${tollLabel} (Q)</button>`;
     }
     actions.innerHTML=`<div class="compass">

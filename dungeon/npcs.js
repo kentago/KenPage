@@ -107,8 +107,10 @@ function talkNPC(){
 
 function deliverQuest(npc,quest){
   // Award XP
-  // CHA bonus: +5% quest XP per CHA point (being charming = better rewards)
-  let chaXPBonus=1+(eff().cha||1)*0.05;
+  // CHA bonus: +5% quest XP per CHA point (being charming = better rewards).
+  // HARD CAP at +150% — CHA can reach the thousands at depth, and an uncapped
+  // multiplier produced absurd bonuses (e.g. +65490%) that broke progression.
+  let chaXPBonus=1+Math.min(1.5,(eff().cha||1)*0.05);
   let finalQuestXP=Math.round(quest.xpReward*chaXPBonus);
   // Soul Chain: +5% XP per ring worn · XP Amplifier: +15% XP from all sources
   let xpTraitMult=1;
@@ -231,8 +233,10 @@ function checkLevelUp(){
     S.maxHp+=hpGain;
     let heal=Math.floor(hpGain*0.8);
     S.hp=Math.min(S.maxHp,S.hp+heal);
-    // Give stat points to allocate (3-4 points depending on level)
-    let points=3+Math.floor(S.level/10); // 3 base, +1 extra every 10 levels
+    // Give stat points to allocate. Grows slowly and is HARD-CAPPED so deep
+    // heroes don't gain dozens of points per level (which made them absurdly
+    // strong). 3 base, +1 every 25 levels, capped at 6.
+    let points=Math.min(6,3+Math.floor(S.level/25));
     S.statPoints=(S.statPoints||0)+points;
     msg(`📈 Level ${S.level}! +${hpGain} Max HP, healed ${heal}. You have ${S.statPoints} stat points to spend!`);
     needed=xpForLevel(S.level);
@@ -241,8 +245,9 @@ function checkLevelUp(){
 }
 
 // Cumulative XP required to advance FROM the given level to the next.
-// Cubic growth so each level costs meaningfully more than the last —
-// prevents a single quest reward from granting multiple levels at high level.
+// Steep cubic growth so each level costs meaningfully more than the last, and
+// high levels demand many more kills — keeping the game challenging at depth.
+// Early levels are only mildly harder; deep levels cost ~2.6x the old curve.
 function xpForLevel(level){
-  return Math.round(level*60 + level*level*15 + level*level*level*1.5);
+  return Math.round(level*80 + level*level*25 + level*level*level*4);
 }

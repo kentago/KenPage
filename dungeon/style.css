@@ -53,6 +53,12 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .cmp-new{color:#2ecc71;border-left-color:#2ecc71}
 .cmp-up{color:#2ecc71;font-weight:bold}
 .cmp-down{color:#e74c3c;font-weight:bold}
+/* Trader's Pick — the lucky-roll ware guaranteed to beat something equipped */
+.item.traders-pick{box-shadow:0 0 10px 2px rgba(46,204,113,.6);border-color:#2ecc71}
+.pick-badge{font-size:.7em;background:#2ecc71;color:#04210f;padding:1px 6px;border-radius:6px;font-weight:bold;vertical-align:middle}
+/* Buy-out restock offer (clear gold-sink prompt when a trader is sold out) */
+.restock-offer{background:#1e1e1e;border:1px dashed #f1c40f;border-radius:9px;padding:12px;text-align:center}
+.restock-offer .restock-rules{font-size:.85em;color:#cbb26b;margin:6px 0 10px;line-height:1.4}
 /* ===== ITEM BORDERS =====
    Two independent axes, max 2 borders total.
    Common rarity + Bronze depth = NO special border (plain box — the majority).

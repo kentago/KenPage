@@ -124,7 +124,7 @@ function useRest(){
   r.rest.sips--;
   // Resting breaks kill streak
   if(r.rest.type==="heal"&&S.killStreak>0){
-    S.killStreak=0;
+    if(typeof breakStreak==="function") breakStreak("you stopped to heal"); else { S.killStreak=0; S.roomsSinceKill=0; }
   }
 
   if(r.rest.type==="luck"){

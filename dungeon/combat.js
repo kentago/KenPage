@@ -191,7 +191,41 @@ function spawn(){
     elementDmg=Math.max(0,Math.round(dangerScale*0.05));
   }
 
-  return{name,hp,maxHp:hp,atk,element,elementDmg,tier:pool===common?"common":pool===mid?"mid":pool===hard?"hard":pool===elite?"elite":"boss"};
+  // --- HERO POWER SCALING (the "endless" balance) ---
+  // The dungeon is infinite, so a hero with a +2000 weapon would one-shot any
+  // floor-scaled enemy — and a floor-scaled hit could one-shot the hero. To keep
+  // every fight tense at any depth, enemies also scale to the hero's ACTUAL
+  // power (gear + stats + HP via eff/effMaxHp), exactly like bosses do.
+  // We take the GREATER of floor-based and hero-based so weak heroes on deep
+  // floors still face floor danger, while over-geared heroes get bumped foes.
+  let E=(typeof eff==="function")?eff():{str:S.stats.str||1};
+  let heroDmg=Math.max(1,4.5+(E.str||1)*0.4); // avg hero damage per swing (matches fight())
+  let heroHp=(typeof effMaxHp==="function")?effMaxHp():(S.maxHp||20);
+  let tierName=pool===common?"common":pool===mid?"mid":pool===hard?"hard":pool===elite?"elite":"boss";
+  // Target hits-to-kill per tier (harder tiers take more solid hits to drop).
+  let hitsCfg={common:[3,2],mid:[5,2],hard:[7,3],elite:[10,4]}[tierName]||[3,2];
+  let hpFloor=Math.round(heroDmg*(hitsCfg[0]+Math.random()*hitsCfg[1]));
+  // Target enemy hit as a fraction of hero max HP (never a one-shot).
+  // Floors so a hit always MATTERS; a hard cap so a single hit can never exceed
+  // ~22% of max HP — the hero always survives at least a few hits.
+  let pctCfg={common:[0.04,0.04],mid:[0.06,0.04],hard:[0.08,0.05],elite:[0.10,0.06]}[tierName]||[0.04,0.04];
+  let atkFloor=Math.round(heroHp*Math.min(0.22,pctCfg[0]+Math.random()*pctCfg[1]));
+  hp=Math.max(hp,hpFloor);
+  atk=Math.max(atk,atkFloor);
+  // HARD CAP on a single hit: no enemy hit may exceed 25% of the hero's max HP.
+  // This bounds BOTH the hero-scaled floor AND the raw floor^1.6 value, so an
+  // under-geared hero who reached a deep floor still can't be one-shot — the
+  // reverse "monster hits once and we die" case is prevented at every depth.
+  let atkCap=Math.max(1,Math.round(heroHp*0.25));
+  atk=Math.min(atk,atkCap);
+  // Element damage should also stay relevant but never dominate — cap it so
+  // element + base together can't spike into one-shot territory.
+  if(element){
+    elementDmg=Math.max(elementDmg,Math.round(heroHp*0.03));
+    elementDmg=Math.min(elementDmg,Math.round(heroHp*0.06));
+  }
+
+  return{name,hp,maxHp:hp,atk,element,elementDmg,tier:tierName};
 }
 
 // --- BOSS SYSTEM ---
@@ -337,6 +371,7 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
     let enemyTier=r.enemy.tier;
     // Kill streak tracking
     S.killStreak=(S.killStreak||0)+1;
+    S.roomsSinceKill=0; // fresh grace window after each kill
     S.totalKills=(S.totalKills||0)+1;
     if(S.killStreak>(S.bestKillStreak||0)) S.bestKillStreak=S.killStreak;
     // Combo XP multiplier: +10% per streak kill (caps at 3×)
@@ -400,9 +435,16 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
     // CHA reduces incoming damage slightly — monsters find you endearing
     let chaReduction=1-Math.min(0.25,(E.cha||1)*0.01); // -1% per CHA, max -25%
     incomingDmg=Math.max(1,Math.round(incomingDmg*chaReduction));
-    // Defensive traits: Iron Will / Stoneguard / Obsidian Shell / Dwarven Fortitude — reduce damage
-    if(hasTrait("Iron Will")||hasTrait("Stoneguard")||hasTrait("Obsidian Shell")||hasTrait("Dwarven Fortitude")){
-      incomingDmg=Math.max(1,Math.round(incomingDmg*0.75));
+    // Defensive traits: Iron Will / Stoneguard / Obsidian Shell / Dwarven Fortitude.
+    // Each equipped copy removes 25% of WHATEVER DAMAGE REMAINS (multiplicative
+    // stacking), so more defensive gear helps with diminishing returns and can
+    // never reach 0 — a hard cap of 75% total reduction keeps combat lethal.
+    // 1 ward = -25%, 2 = -44%, 3 = -58%, 4 = -68% (capped 75%).
+    let wards=(typeof countDefensiveWards==="function")?countDefensiveWards():0;
+    if(wards>0){
+      let taken=Math.pow(0.75,wards);        // fraction of damage still taken
+      taken=Math.max(0.25,taken);            // hard cap: never reduce beyond 75%
+      incomingDmg=Math.max(1,Math.round(incomingDmg*taken));
     }
     // Element bonus damage (Elemental Ward halves it)
     let elemDmg=r.enemy.elementDmg||0;
@@ -439,6 +481,9 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
 function flee(){
   let r=room();
   if(!r.enemy||r.enemy.hp<=0)return;
+
+  // Fleeing breaks the kill streak — retreating is not rampaging.
+  if(typeof breakStreak==="function") breakStreak("you turned and fled"); else { S.killStreak=0; S.roomsSinceKill=0; }
 
   // Second Chance: flee always succeeds once per floor (no damage)
   if(hasTrait("Second Chance")&&S.secondChanceFloor!==S.floor){
