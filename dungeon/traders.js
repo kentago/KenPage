@@ -115,10 +115,12 @@ function restockTrader(){
   let modal=document.getElementById("traderModal");
   if(modal) modal.remove();
   S.gold-=fee;
+  S.goldSpent=(S.goldSpent||0)+fee;
   t.restocks=(t.restocks||0)+1;
   t.wares=null;            // force a fresh peek
   generateWares(t);
   msg(`🔄 You pay ${fee} gold. ${t.name} eagerly lays out a fresh batch of goods! (Restock #${t.restocks} — the next one will cost more.)`);
+  if(typeof checkAchievements==="function") checkAchievements();
   save();
   showTraderModal(t);
 }
@@ -242,10 +244,17 @@ function buyItem(idx){
   let modal=document.getElementById("traderModal");
   if(modal)modal.remove();
   S.gold-=item.price;
+  S.goldSpent=(S.goldSpent||0)+item.price;
   // Remove shop-only fields before adding to inventory/equipment
   let purchased={...item}; delete purchased.price; delete purchased.tradersPick;
   r.trader.wares.splice(idx,1); // sold out of this one
   msg(`🛒 Bought ${purchased.name} for ${item.price} gold. ${obtain(purchased)}`);
+  // "Clean House" — bought out a trader's ENTIRE stock in one visit.
+  if(r.trader.wares.length===0){
+    S.cleanHouse=(S.cleanHouse||0)+1;
+    msg(`🧹 You cleared out ${r.trader.name}'s entire stock!`);
+  }
+  if(typeof checkAchievements==="function") checkAchievements();
   save();
   // Reopen the modal either way: if wares remain, show them; if this was the
   // last ware, the modal now presents the clear "buy-out → restock" offer.

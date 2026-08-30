@@ -12,6 +12,13 @@ const ACHIEVEMENTS=[
   {id:"gold1k",metric:"goldEarned",need:1000,title:"Coin Collector",desc:"Earn 1,000 gold",xp:400,gold:0},
   {id:"gold10k",metric:"goldEarned",need:10000,title:"Deep Treasurer",desc:"Earn 10,000 gold",xp:4000,gold:0},
   {id:"gold100k",metric:"goldEarned",need:100000,title:"Dragon-Hoarder",desc:"Earn 100,000 gold",xp:30000,gold:0},
+  // Gold SPENT (tolls, traders, restocks, doctors) — rewards engaging with sinks (v1.1)
+  {id:"spend1k",metric:"goldSpent",need:1000,title:"Big Spender",desc:"Spend 1,000 gold",xp:400,gold:0},
+  {id:"spend10k",metric:"goldSpent",need:10000,title:"Free-Handed",desc:"Spend 10,000 gold",xp:4000,gold:0},
+  {id:"spend100k",metric:"goldSpent",need:100000,title:"Gold Burns a Hole",desc:"Spend 100,000 gold",xp:30000,gold:0},
+  {id:"cleanhouse",metric:"cleanHouse",need:1,title:"Clean House",desc:"Buy out a trader's entire stock",xp:800,gold:0},
+  {id:"allrings",metric:"allFingersRinged",need:1,title:"Bejeweled",desc:"Wear a ring on every intact finger at once",xp:1500,gold:400},
+  {id:"fullgear",metric:"fullyEquipped",need:1,title:"Fully Equipped",desc:"Fill EVERY slot: all 8 gear pieces + all 10 rings (restore lost fingers first!)",xp:2000,gold:500},
   // Fingers lost
   {id:"fingers1",metric:"fingersLostTotal",need:1,title:"Flesh Price",desc:"Lose your first finger",xp:150,gold:100},
   {id:"fingers5",metric:"fingersLostTotal",need:5,title:"Nine and Counting",desc:"Lose 5 fingers total",xp:1200,gold:600},
@@ -32,18 +39,54 @@ const ACHIEVEMENTS=[
   {id:"boss1",metric:"bossKills",need:1,title:"Giant Slayer",desc:"Defeat your first boss",xp:1000,gold:300},
   {id:"boss3",metric:"bossKills",need:3,title:"Third Time's the Charm",desc:"Defeat 3 bosses",xp:4000,gold:1000},
   {id:"boss5",metric:"bossKills",need:5,title:"Boss Breaker",desc:"Defeat 5 bosses",xp:9000,gold:2500},
-  {id:"boss10",metric:"bossKills",need:10,title:"Bane of Guardians",desc:"Defeat 10 bosses",xp:25000,gold:8000}
+  {id:"boss10",metric:"bossKills",need:10,title:"Bane of Guardians",desc:"Defeat 10 bosses",xp:25000,gold:8000},
+  // Discovery milestones (v1.1)
+  {id:"portal1",metric:"portalsFound",need:1,title:"Found the First Waypoint",desc:"Discover a secret passage — quick travel saves many steps!",xp:600,gold:200},
+  {id:"emergency1",metric:"emergencyEscapes",need:1,title:"Always a Way Down",desc:"Trigger an emergency escape — you've discovered there is always a way to descend further",xp:600,gold:200}
 ];
 
 function metricValue(metric){
   switch(metric){
     case"totalKills": return S.totalKills||0;
     case"goldEarned": return S.goldEarned||0;
+    case"goldSpent": return S.goldSpent||0;
+    case"cleanHouse": return S.cleanHouse||0;
+    case"allFingersRinged": {
+      // 1 when every INTACT finger slot holds a ring (lost fingers don't count).
+      // Requires at least one intact slot AND a ring on the hand (not all lost).
+      let lf=S.lostFingers||{left:[],right:[]};
+      let rings=S.equipment&&S.equipment.rings?S.equipment.rings:[];
+      let intact=0, ringed=0;
+      for(let i=0;i<10;i++){
+        let lost=(i<5)?lf.left.includes(i):lf.right.includes(i-5);
+        if(lost) continue;
+        intact++;
+        if(rings[i]) ringed++;
+      }
+      return (intact>0 && ringed===intact) ? 1 : 0;
+    }
+    case"fullyEquipped": {
+      // 1 when EVERY slot is filled: all 8 gear slots + all 10 ring fingers.
+      // This is a TRUE completionist goal — since doctors can restore lost fingers
+      // (and un-mangle hands), the player must restore any lost slots and fill them.
+      // No exemptions: all 18 slots must hold an item.
+      let eq=S.equipment; if(!eq) return 0;
+      let lf=S.lostFingers||{left:[],right:[]};
+      // Any lost finger means a slot is missing — must be restored first.
+      if((lf.left&&lf.left.length)||(lf.right&&lf.right.length)) return 0;
+      let gearSlots=["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet"];
+      for(let s of gearSlots){ if(!eq[s]) return 0; }
+      let rings=eq.rings||[];
+      for(let i=0;i<10;i++){ if(!rings[i]) return 0; }
+      return 1;
+    }
     case"fingersLostTotal": return S.fingersLostTotal||0;
     case"deepestFloor": return S.deepestFloor||S.floor||1;
     case"level": return S.level||1;
     case"bestKillStreak": return S.bestKillStreak||0;
     case"bossKills": return S.bossKills||0;
+    case"portalsFound": return (S.portals||[]).length;
+    case"emergencyEscapes": return S.emergencyEscapes||0;
     default: return 0;
   }
 }

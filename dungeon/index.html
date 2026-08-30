@@ -47,11 +47,13 @@
 
 <h3>🪜 Ladders & Floors</h3>
 <p>Ladders are portals — each one leads to a <b>unique position</b> on the next floor. Two ladders on the same floor lead to different spots below (separate "islands" that may or may not connect). <span style="color:#f39c12">Yellow 🪜</span> = undiscovered, <span style="color:#2ecc71">Green 🪜</span> = used. Ladders always go exactly one floor down/up.</p>
-<p>If you're completely stuck (all rooms explored, all searched, no ladder found), a 🌀 emergency portal will appear.</p>
+<p>If you're completely stuck (all rooms explored, all searched, no ladder found), a 🕳️ <b>emergency escape shaft</b> (red on the map) will open — a forced descent to the next floor. This is <b>not</b> the same as a 🌀 quick-travel portal: the escape shaft only drops you down one floor, while portals (gold 🌀) are saved teleport nodes you can travel to and from at will.</p>
 <p>🚧 <b>Toll ladders:</b> every ladder is toll-gated and requires a one-time gold payment to unlock (except boss ladders, which the boss already guards). The toll cost scales with depth, and the price rises with every toll you pay this run — each toll makes the next one 50% more expensive. Once you pay a specific ladder's toll it stays free forever. If you can't afford the toll, that ladder stays locked — earn gold or find another route. A great way to spend your hoarded gold!</p>
 
 <h3>🔎 Searching</h3>
-<p>Each room can be searched once (d20 roll + INT bonus). Results: legendary items (20+), great loot (16-19), normal loot (10-15), nothing (6-9), traps (2-5, DEX can dodge), critical fail (1). Hidden ladders and secret passages can also be discovered!</p>
+<p>Each room can be searched once (d20 roll + INT bonus). Results: legendary items (20+), great loot (16-19), normal loot (10-15), nothing (6-9), traps (2-5, DEX can dodge), critical fail (1). Hidden ladders can also be discovered!</p>
+<p>🌀 <b>Secret passages &amp; portals:</b> searching can uncover a rare <b>secret passage</b> — a shimmering <b>portal</b>. There is <b>at most ONE portal per floor</b>, and they're uncommon (Luck raises the odds slightly), so you might find one on floor 1, another on floor 3, another on floor 7. Each portal is named after a periodic element and its floor, e.g. <i>Helium Floor 1 Portal</i>, <i>Gold Floor 4 Portal</i>. Every portal you find is saved to the <b>🌀 Portals — Quick Travel</b> section.</p>
+<p>🌀 <b>Quick travel:</b> click a portal's <b>🌀 Travel</b> button to teleport to it instantly (across floors too). Your position is remembered — when you're standing on the portal, click <b>↩️ Return</b> to jump straight back to where you left from. Example: with a single portal, walk two rooms away, click Travel to return to it, then click Return to come back to those two-rooms-away spot. Great for stashing a bookmark before a risky detour. (You can't quick-travel while an enemy blocks the room.)</p>
 <p><b>💡 Search grows more powerful mid-game onward.</b> As you level (more INT) and descend (loot scales with floor, rarity odds shift toward Mythical/Legendary/Divine, higher depth borders unlock), searching becomes a primary source of build-defining gear. A natural 20 always yields a boosted named legendary. Early floors give modest finds — deep floors make thorough searching essential.</p>
 <p>Searches may also turn up <b>lucky trinkets</b> (🍀 horseshoe, four-leaf clover, star fragment... — instant permanent Luck) or a <b>mystery potion</b> (🧪 — drink it to gamble: could be healing, luck, a stat boost... or poison. Or leave it untouched).</p>
 
@@ -110,8 +112,10 @@
 <tr><td style="color:#ff6b6b">⚕️</td><td>Doctor (restore lost finger)</td></tr>
 <tr><td style="color:#f39c12">🪜↓</td><td>Ladder down (yellow = unused)</td></tr>
 <tr><td style="color:#2ecc71">🪜↑</td><td>Ladder up (green = used)</td></tr>
+<tr><td style="color:#e67e22">🚧</td><td>Toll ladder (pay gold to unlock)</td></tr>
+<tr><td style="color:#e74c3c">🕳️↓</td><td>Emergency escape shaft (forced descent, red)</td></tr>
 <tr><td style="color:#2ecc71">💚</td><td>Healing fountain (active)</td></tr>
-<tr><td style="color:#d4af37">✦</td><td>Secret passage</td></tr>
+<tr><td style="color:#d4af37">🌀</td><td>Portal (secret passage — quick travel; max 1/floor)</td></tr>
 <tr><td style="color:#666">·</td><td>Explored room (empty)</td></tr>
 <tr><td style="color:#c0392b">▬</td><td>Red border = blocked wall</td></tr>
 </table>
@@ -129,7 +133,8 @@
 <section><h2>⚔️ Equipment</h2><div id="equipment" class="grid"></div></section>
 <section><h2>🎒 Extra Inventory</h2><div id="inventory" class="grid"></div></section>
 <section><h2>🔎 Quest Search</h2><div id="quests"></div></section>
-<section><h2>🏅 Achievements</h2><div id="achievements"></div></section>
+<section><h2>🌀 Portals — Quick Travel</h2><div id="portals" class="grid"></div></section>
+<details class="section-collapse"><summary>🏅 Achievements <span id="achSummary" class="ach-summary-count"></span></summary><div id="achievements"></div></details>
 <section><h2>🏆 Hall of Fame</h2><div id="hall"></div></section>
 </main><script src="data.js"></script>
 <script src="items.js"></script>

@@ -564,6 +564,7 @@ function equip(id){
     if(old) S.inventory[n]=old;
     else S.inventory.splice(n,1);
   }
+  if(typeof checkAchievements==="function") checkAchievements();
   save();render();
 }
 

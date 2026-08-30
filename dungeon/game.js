@@ -1,10 +1,10 @@
 // --- CORE GAME STATE ---
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 
-function fresh(){return{name:makeDwarfName(),nickname:"",level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,roomsSinceKill:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,repairedFingers:[],bossSpawnedFloors:{},tollsPaid:0,phoenixUsed:false,deathWardFloor:null,secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],questsDelivered:0,questAchievements:[],achievements:[],goldEarned:0,fingersLostTotal:0,deepestFloor:1,bossKills:0,log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:makeDwarfName(),nickname:"",level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,roomsSinceKill:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,repairedFingers:[],bossSpawnedFloors:{},tollsPaid:0,portals:[],quickTravelReturn:null,emergencyEscapes:0,phoenixUsed:false,deathWardFloor:null,secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],questsDelivered:0,questAchievements:[],achievements:[],goldEarned:0,goldSpent:0,cleanHouse:0,fingersLostTotal:0,deepestFloor:1,bossKills:0,log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
-function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null})}
+function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,portal:null,npc:null,trader:null,rest:null,doctor:null})}
 
 // Returns true if any room within `minDist` Manhattan distance on the current
 // floor already has the given feature ("npc", "trader", "ladder", "rest", "doctor").
@@ -199,14 +199,12 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
     if(searchRoll===20){
       // CRITICAL SUCCESS — always find it
       quest.found=true;
-      if(r.secret) quest.xpReward=Math.floor(quest.xpReward*3);
-      msg(`💥 CRITICAL SEARCH! You discover the ${quest.itemName} in a hidden alcove! ✅ Ready to deliver.${r.secret?" (Secret passage bonus: 3× XP!)":""}`);
+      msg(`💥 CRITICAL SEARCH! You discover the ${quest.itemName} in a hidden alcove! ✅ Ready to deliver.`);
       save();render();return;
     } else if(searchRoll>=findThreshold){
       // Normal success — find the quest item
       quest.found=true;
-      if(r.secret) quest.xpReward=Math.floor(quest.xpReward*3);
-      msg(`🔎 You find the ${quest.itemName}! ✅ Ready to deliver.${r.secret?" (Secret passage bonus: 3× XP!)":""}`);
+      msg(`🔎 You find the ${quest.itemName}! ✅ Ready to deliver.`);
       save();render();return;
     } else if(searchRoll===1){
       // CRITICAL FAIL on search — bad consequence
@@ -232,26 +230,26 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
     // Didn't find quest item — continue to normal search
   }
 
-  // --- SECRET PASSAGE (separate chance, checked first) ---
-  // INT increases secret passage discovery: base 10% + 0.5% per INT
-  let secretChance=0.10+Math.min(0.15,(eff().int||1)*0.005);
-  if(!r.secret&&Math.random()<secretChance){
-    // A secret passage opens a NEW route — unblocks a direction (both sides)
-    let blockedDirs=["N","E","S","W"].filter(d=>r.blocked&&r.blocked[d]);
-    let openDir=blockedDirs.length>0
-      ? blockedDirs[Math.floor(Math.random()*blockedDirs.length)]
-      : ["N","E","S","W"][Math.floor(Math.random()*4)];
-    // Remove the wall on this side
-    if(r.blocked) delete r.blocked[openDir];
-    // Remove reciprocal wall on the neighbor (if it exists)
-    let nx=S.x+DIR_DX[openDir], ny=S.y+DIR_DY[openDir];
-    let nk=`${S.floor}:${nx}:${ny}`;
-    if(S.rooms[nk]&&S.rooms[nk].blocked) delete S.rooms[nk].blocked[OPP[openDir]];
-    // Mark for map display + quest bonus
-    r.secret={dir:openDir,opened:true};
-    let dirName={N:"north",S:"south",E:"east",W:"west"}[openDir];
-    msg(`✨ A secret passage opens to the ${dirName}! A hidden route is revealed.`);
-    save();render();return;
+  // --- QUICK-TRAVEL PORTAL DISCOVERY (max 1 per floor) ---
+  // Replaces the old "secret passage unblocks a wall" system. Finding a portal
+  // adds a NAMED quick-travel node to the Portals section. Only ONE portal can
+  // exist per floor, and discovery is rare (Luck raises it a little) so portals
+  // stay special — you might find one on floor 1, another on 3, another on 7.
+  let floorHasPortal=(S.portals||[]).some(p=>p.floor===S.floor);
+  if(!floorHasPortal && !r.portal){
+    // ~14% base chance, +1%/Luck (cap 30%). Rare enough to feel like a discovery.
+    let portalChance=Math.min(0.30,0.14+(eff().luck||0)*0.01);
+    if(Math.random()<portalChance){
+      let element=questPrefixes[Math.floor(Math.random()*questPrefixes.length)];
+      let name=`${element} Floor ${S.floor} Portal`;
+      let portal={name,floor:S.floor,x:S.x,y:S.y,art:"🌀"};
+      if(!S.portals) S.portals=[];
+      S.portals.push(portal);
+      r.portal=portal;               // mark room so the map shows it
+      msg(`🌀 SECRET PASSAGE! You uncover a shimmering gateway — the ${name}. It's now saved to your Portals for instant quick-travel.`);
+      if(typeof checkAchievements==="function") checkAchievements();
+      save();render();return;
+    }
   }
 
   // --- NORMAL SEARCH RESULTS (d20 based) ---
@@ -332,6 +330,7 @@ function useLadder(dir){
       return;
     }
     S.gold-=cost;
+    S.goldSpent=(S.goldSpent||0)+cost;
     S.tollsPaid=(S.tollsPaid||0)+1;
     r.ladder.tollPaid=true;
     msg(`💰 You pay the ${cost} gold toll. The ladder mechanism unlocks. (Toll #${S.tollsPaid} — the next toll will cost more.)`);
@@ -382,6 +381,41 @@ function useLadder(dir){
   }
 
   msg(dir==="down"?`🟨 You descend to floor ${S.floor}.`:`🟩 You ascend to floor ${S.floor}.`);
+}
+
+// --- QUICK-TRAVEL PORTALS ---
+// Click a portal to teleport to it instantly; click it again (while standing on
+// it) to return to wherever you were when you left. Works across floors.
+function quickTravel(idx){
+  if(S.hp<=0) return;
+  let r=room();
+  if(r.enemy&&r.enemy.hp>0) return msg("⚔️ You can't quick-travel while a foe blocks the chamber!");
+  let p=(S.portals||[])[idx];
+  if(!p) return;
+
+  // Standing ON this portal? Then this click is a RETURN trip.
+  let onThisPortal=(S.floor===p.floor&&S.x===p.x&&S.y===p.y);
+  if(onThisPortal){
+    if(S.quickTravelReturn){
+      let ret=S.quickTravelReturn;
+      S.quickTravelReturn=null;
+      S.floor=ret.floor; S.x=ret.x; S.y=ret.y;
+      room(); // ensure the room exists
+      if(S.floor>(S.deepestFloor||1)) S.deepestFloor=S.floor;
+      msg(`🌀 You step back through the ${p.name}, returning to where you were.`);
+      save();render();
+    } else {
+      msg(`🌀 You're already standing at the ${p.name}. Travel from elsewhere to use it.`);
+    }
+    return;
+  }
+
+  // Otherwise: save current position as the return point and teleport TO the portal.
+  S.quickTravelReturn={floor:S.floor,x:S.x,y:S.y};
+  S.floor=p.floor; S.x=p.x; S.y=p.y;
+  room(); // ensure the room exists
+  msg(`🌀 You slip through the ${p.name} to Floor ${p.floor}. Click it again to return.`);
+  save();render();
 }
 
 function act(a){if(S.hp<=0)return;S.actions=(S.actions||0)+1;if(a==="search")search();else if(a==="fight")fight();else if(a==="flee")flee();else if(["N","S","E","W"].includes(a))move(a);else if(a==="down")useLadder("down");else if(a==="up")useLadder("up");save();render()}
@@ -630,6 +664,25 @@ function render(){
   let nextMs=[1,5,10,20,50,100].find(c=>c>delivered);
   let achHtml=`<div class="quest-ach">🏆 Quests delivered: <b>${delivered}</b>${nextMs?` · next reward at ${nextMs}`:" · all milestones earned!"}</div>`;
   quests.innerHTML=achHtml+`<div class="quest-active-header">🔎 Active Quests</div>${activeHtml}${completedHtml}`;
+  // --- PORTALS: quick-travel network ---
+  let portalsEl=document.getElementById("portals");
+  if(portalsEl){
+    let ps=S.portals||[];
+    if(!ps.length){
+      portalsEl.innerHTML=`<div class=small>No portals discovered yet. Search rooms to uncover secret passages (max one portal per floor).</div>`;
+    } else {
+      portalsEl.innerHTML=ps.map((p,i)=>{
+        let here=(S.floor===p.floor&&S.x===p.x&&S.y===p.y);
+        let pending=S.quickTravelReturn&&here; // standing on it with a return saved
+        let label=here?(S.quickTravelReturn?"↩️ Return":"📍 You are here"):"🌀 Travel";
+        return`<div class="card portal-card${here?" portal-here":""}">
+          <b>🌀 ${p.name}</b>
+          <div class="small">Floor ${p.floor}${here?" · you are here":""}</div>
+          <button class="action-btn portal-btn" onclick="quickTravel(${i})">${label}</button>
+        </div>`;
+      }).join("");
+    }
+  }
   renderAchievements();
   renderHall();
   // Show starter ring choice if not yet picked
@@ -650,7 +703,10 @@ function renderAchievements(){
       ${done?"":`<div class="small">Reward: +${a.xp} XP${a.gold?" · +"+a.gold+" 💰":""}</div>`}
     </div>`;
   }).join("");
-  el.innerHTML=`<div class="ach-summary">${earned.length}/${total} unlocked</div>${rows}`;
+  el.innerHTML=rows;
+  // Show the unlock count in the collapsible summary so it's visible while collapsed.
+  let sum=document.getElementById("achSummary");
+  if(sum) sum.textContent=`(${earned.length}/${total} unlocked)`;
 }
 
 // --- INIT ---

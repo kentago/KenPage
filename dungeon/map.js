@@ -26,13 +26,14 @@ function drawMap(){
         let feats=[];
         if(rm.ladder){
           let toll=(rm.ladder.toll&&!rm.ladder.tollPaid);
-          feats.push(rm.ladder.dir==="down"?(toll?"🚧↓":"🪜↓"):(toll?"🚧↑":"🪜↑"));
+          if(rm.ladder.emergency) feats.push("🕳️↓");
+          else feats.push(rm.ladder.dir==="down"?(toll?"🚧↓":"🪜↓"):(toll?"🚧↑":"🪜↑"));
         }
         if(rm.npc&&!rm.npc.completed) feats.push("🔵");
         if(rm.trader) feats.push("💲");
         if(rm.doctor) feats.push("⚕️");
         if(rm.rest&&!rm.rest.depleted) feats.push(rm.rest.type==="luck"?"🍀":"💚");
-        if(rm.secret) feats.push("✦");
+        if(rm.portal) feats.push("🌀");
 
         if(isPlayer){
           symbol="◎";
@@ -51,14 +52,19 @@ function drawMap(){
           cellClass+=" doctor";
         } else if(rm.ladder&&rm.ladder.dir==="down"){
           let toll=(rm.ladder.toll&&!rm.ladder.tollPaid);
-          symbol=toll?"🚧↓":"🪜↓";
-          cellClass+=rm.ladder.used?" ladder-used":toll?" ladder-toll":" ladder-down";
+          if(rm.ladder.emergency){
+            symbol="🕳️↓";
+            cellClass+=rm.ladder.used?" ladder-used":" ladder-emergency";
+          } else {
+            symbol=toll?"🚧↓":"🪜↓";
+            cellClass+=rm.ladder.used?" ladder-used":toll?" ladder-toll":" ladder-down";
+          }
         } else if(rm.ladder&&rm.ladder.dir==="up"){
           let toll=(rm.ladder.toll&&!rm.ladder.tollPaid);
           symbol=toll?"🚧↑":"🪜↑";
           cellClass+=rm.ladder.used?" ladder-used":toll?" ladder-toll":" ladder-up";
-        } else if(rm.secret){
-          symbol="✦";
+        } else if(rm.portal){
+          symbol="🌀";
           cellClass+=" secret";
         } else if(rm.rest&&!rm.rest.depleted){
           symbol=rm.rest.type==="luck"?"🍀":"💚";
@@ -122,16 +128,21 @@ function checkFloorEscape(){
   if(hasUnexploredExit)return; // Still rooms to explore
   if(hasUnsearchedRoom)return; // Still rooms to search — might find hidden ladder
 
-  // Truly stuck: no ladder, no exits, all searched — spawn emergency portal
+  // Truly stuck: no ladder, no exits, all searched — spawn an EMERGENCY ESCAPE.
+  // This is a forced descent (a collapsing pit / escape shaft), NOT a quick-travel
+  // portal. It is flagged + shown distinctly (🕳️) so it's never confused with the
+  // 🌀 secret-passage portals in the Quick-Travel section.
   let r=room();
   if(!r.ladder){
-    r.ladder={dir:"down",used:false,targetKey:null};
-    msg("🌀 The walls shimmer... A mysterious portal materializes! The dungeon demands you descend.");
-    // On a boss floor, if the floor's boss hasn't appeared yet, it guards the portal.
+    r.ladder={dir:"down",used:false,targetKey:null,emergency:true};
+    S.emergencyEscapes=(S.emergencyEscapes||0)+1;
+    msg("🕳️ The floor gives way beneath you! An emergency escape shaft opens — the only way is down. (This is a forced descent, not a quick-travel portal.)");
+    if(typeof checkAchievements==="function") checkAchievements();
+    // On a boss floor, if the floor's boss hasn't appeared yet, it guards the escape.
     if(S.floor%5===0&&!S.bossSpawnedFloors[S.floor]&&!(r.enemy&&r.enemy.hp>0)){
       S.bossSpawnedFloors[S.floor]=true;
       r.enemy=spawnBoss();
-      msg(`👑 BOSS FIGHT! ${r.enemy.name} manifests to guard the portal!\n⚡ Abilities: ${r.enemy.abilities.join(" · ")}`);
+      msg(`👑 BOSS FIGHT! ${r.enemy.name} manifests to guard the escape!\n⚡ Abilities: ${r.enemy.abilities.join(" · ")}`);
     }
   }
 }

@@ -117,10 +117,12 @@ function doctorHeal(){
   let modal=document.getElementById("doctorModal");
   if(modal)modal.remove();
   S.gold-=cost;
+  S.goldSpent=(S.goldSpent||0)+cost;
   let healAmt=Math.round(effMaxHp()*0.35*(hasTrait("Potion Amplifier")?1.5:1));
   let old=S.hp;
   S.hp=Math.min(effMaxHp(),S.hp+healAmt);
   msg(`💧 ${r.doctor.name} shares a healing sip. +${S.hp-old} HP (${S.hp}/${effMaxHp()}). -${cost} 💰`);
+  if(typeof checkAchievements==="function") checkAchievements();
   save();
   // Reopen so player can heal again or restore fingers
   if(r.doctor) showDoctorModal(r.doctor);
@@ -142,6 +144,8 @@ function restoreFingers(count){
 
   // Gold is taken upfront
   S.gold-=cost;
+  S.goldSpent=(S.goldSpent||0)+cost;
+  if(typeof checkAchievements==="function") checkAchievements();
 
   // --- D20 SURGERY ROLL ---
   let roll=d20();
