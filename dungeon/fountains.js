@@ -86,6 +86,13 @@ function useRest(){
         S.stats[sk]=Math.max(1,cur-drain);
         msg(`🌀 A wave of misfortune saps your ${sk.toUpperCase()} by ${drain}!`);
       }
+      // ~15% chance the curse claims a FINGER. Routed through loseFinger() so it
+      // respects the exponential rarity, Finger Ward traits, and the floor 1-2
+      // no-finger-loss protection. A signature "risky sip" consequence.
+      if(Math.random()<0.15&&S.floor>2&&typeof loseFinger==="function"){
+        msg(`🩸 The cursed waters twist your hand — the misfortune reaches for a finger!`);
+        loseFinger();
+      }
     } else {
       let poisonDmg=Math.max(2,Math.round(effMaxHp()*r.rest.healPct*0.8));
       msg(`☠️ The ${r.rest.name} is POLLUTED! You drink tainted water and take ${poisonDmg} poison damage!`);

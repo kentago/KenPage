@@ -432,9 +432,19 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 
 /* Scarred (repaired) fingers — fragile, may be lost again */
 .ring-wrap{position:relative}
-.ring-wrap.scarred .item{border-color:#e67e22 !important;box-shadow:0 0 5px rgba(230,126,34,0.5)}
+.ring-wrap.scarred .item{border-color:#e74c3c !important;box-shadow:0 0 5px rgba(231,76,60,0.5);color:#e74c3c !important}
+.ring-wrap.scarred .item b,.ring-wrap.scarred .item *{color:#e74c3c !important}
 .scar-tag{position:absolute;top:2px;right:2px;font-size:14px;z-index:2}
-.scarred-empty{background:#2a1a0a !important;border-color:#e67e22 !important;color:#e67e22;text-align:center}
+.scarred-empty{background:#2a0a0a !important;border-color:#e74c3c !important;color:#e74c3c !important;text-align:center}
+/* Finger picker modal */
+.finger-hand{margin:8px 0}
+.finger-hand>b{font-size:13px;color:#aaa}
+.finger-row{display:flex;gap:6px;margin-top:4px}
+.finger-pick{flex:1;min-width:56px;background:#1a3a1a;border:1px solid #2ecc71;color:#2ecc71;border-radius:8px;padding:6px 4px;text-align:center;font-weight:bold;font-size:13px;cursor:pointer}
+.finger-pick:hover{background:#2a4a2a;border-color:#4caf50}
+.finger-pick.finger-scarred{background:#2a0a0a;border-color:#e74c3c;color:#e74c3c}
+.finger-pick.finger-scarred:hover{background:#3a1010}
+.finger-pick.finger-lost{background:#1a1a1a;border-color:#555;color:#666;cursor:not-allowed}
 
 /* ===== DISCARD MODAL ===== */
 .discard-overlay{

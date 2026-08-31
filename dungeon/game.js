@@ -600,11 +600,18 @@ function pickStarterRing(idx){
     S.stats.luck=(S.stats.luck||0)+ring.stats.luck;
     delete ring.stats.luck;
   }
-  // Equip on first finger
-  S.equipment.rings[0]=ring;
+  // Equip on a RANDOM finger (random hand, random finger on it) — since fingers
+  // are lost at random, where you place your heirloom is a gut-feeling gamble.
+  // Slots 0-4 = Left hand, 5-9 = Right hand. Pick any not-lost, empty slot.
+  let candidates=[];
+  for(let si=0;si<10;si++){ if(!isFingerLost(si)&&!S.equipment.rings[si]) candidates.push(si); }
+  let slot=candidates.length?candidates[Math.floor(Math.random()*candidates.length)]:0;
+  S.equipment.rings[slot]=ring;
+  let handName=slot<5?"left":"right";
+  let fingerNum=(slot%5)+1;
   S.starterRingPicked=true;
   delete S._starterOptions;
-  msg(`💍 You wear your heirloom: ${chosen.name}. "${chosen.desc}"`);
+  msg(`💍 You wear your heirloom: ${chosen.name} on your ${handName} hand, finger ${fingerNum}. "${chosen.desc}"`);
   save();render();
 }
 window.pickStarterRing=pickStarterRing;
@@ -785,7 +792,7 @@ document.addEventListener("keydown",(e)=>{
     return; // block all other input while the potion prompt is up
   }
   // Don't trigger if a modal is open
-  if(document.getElementById("discardModal")||document.getElementById("ringSwapModal")||document.getElementById("traderModal")||document.getElementById("doctorModal")||document.getElementById("starterRingModal")||document.getElementById("potionModal"))return;
+  if(document.getElementById("discardModal")||document.getElementById("ringSwapModal")||document.getElementById("fingerPicker")||document.getElementById("traderModal")||document.getElementById("doctorModal")||document.getElementById("starterRingModal")||document.getElementById("potionModal"))return;
   if(S.hp<=0)return;
 
   let r=room();

@@ -548,16 +548,13 @@ function equip(id){
   }
 
   if(s==="rings"){
-    let f=S.equipment.rings.findIndex((x,idx)=>!x&&!isFingerLost(idx));
-    if(f>=0){
-      // Empty ring slot — just move it there
-      S.equipment.rings[f]=i;
-      S.inventory.splice(n,1);
-    } else {
-      // All ring slots full (or lost) — show ring swap picker
-      showRingSwapModal(id);
-      return;
-    }
+    // Player CHOOSES which finger to wear the ring on (a gut-feeling gamble, since
+    // fingers are lost at random). Always open the finger picker; if there's not a
+    // single usable finger (all lost), fall back to a message.
+    let anyUsable=S.equipment.rings.some((x,idx)=>!isFingerLost(idx));
+    if(!anyUsable) return msg("⚠️ You have no fingers left to wear a ring.");
+    showFingerPicker(id);
+    return;
   } else {
     let old=S.equipment[s];
     S.equipment[s]=i;
@@ -567,6 +564,57 @@ function equip(id){
   if(typeof checkAchievements==="function") checkAchievements();
   save();render();
 }
+
+// --- FINGER PICKER: choose which finger to wear a ring on ---
+// Fingers are lost at random, so choosing WHERE to place a ring is a gamble.
+// Scarred (repaired) fingers are shown in red — they're more likely to be lost
+// again, so a cautious player wears rings on un-scarred fingers first.
+function showFingerPicker(itemId){
+  let it=S.inventory.find(x=>x.id===itemId);
+  if(!it) return;
+  let scarred=(S.repairedFingers||[]);
+  function fingerCell(slotIdx){
+    let handName=slotIdx<5?"L":"R";
+    let fingerNum=(slotIdx%5)+1;
+    if(isFingerLost(slotIdx)) return `<div class="finger-pick finger-lost">❌ ${handName}${fingerNum}<br><span class="small">Lost</span></div>`;
+    let scar=scarred.includes(slotIdx);
+    let occupied=S.equipment.rings[slotIdx];
+    let scarClass=scar?" finger-scarred":"";
+    let statePreview=occupied?`swap<br><span class="small">${occupied.name.length>12?occupied.name.slice(0,12)+"…":occupied.name}</span>`:(scar?"place<br><span class=small>⚠️scarred</span>":"place<br><span class=small>empty</span>");
+    return `<div class="finger-pick${scarClass}" onclick="placeRingOnFinger('${itemId}',${slotIdx})" title="${handName==="L"?"Left":"Right"} hand, finger ${fingerNum}${scar?" — SCARRED (fragile, more likely to be lost again)":""}${occupied?" — currently: "+occupied.name:""}">${scar?"🩹 ":""}${handName}${fingerNum}<br><span class="small">${statePreview}</span></div>`;
+  }
+  let left=[0,1,2,3,4].map(fingerCell).join("");
+  let right=[5,6,7,8,9].map(fingerCell).join("");
+  let html=`<div class="discard-overlay" id="fingerPicker">
+    <div class="discard-box">
+      <h3>💍 Choose a finger for ${it.name}</h3>
+      <p class="small">Fingers are lost at random — pick wisely. <span style="color:#e74c3c">Red = scarred</span> (fragile, more likely to be lost again). Occupied fingers will swap (old ring → inventory).</p>
+      <div class="finger-hand"><b>🫲 Left hand</b><div class="finger-row">${left}</div></div>
+      <div class="finger-hand"><b>🫱 Right hand</b><div class="finger-row">${right}</div></div>
+      <button onclick="document.getElementById('fingerPicker').remove()">Cancel</button>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML("beforeend",html);
+}
+window.showFingerPicker=showFingerPicker;
+
+// Place the ring on the chosen finger. Empty slot = just place; occupied = swap
+// (old ring returns to inventory). Blocked on lost fingers.
+function placeRingOnFinger(itemId,slotIdx){
+  let modal=document.getElementById("fingerPicker");
+  if(modal)modal.remove();
+  if(isFingerLost(slotIdx)) return;
+  let n=S.inventory.findIndex(x=>x.id===itemId);
+  if(n<0)return;
+  let newRing=S.inventory[n];
+  let old=S.equipment.rings[slotIdx];
+  S.equipment.rings[slotIdx]=newRing;
+  if(old){ S.inventory[n]=old; msg(`💍 Swapped ${old.name} for ${newRing.name}.`); }
+  else { S.inventory.splice(n,1); msg(`💍 You wear ${newRing.name}.`); }
+  if(typeof checkAchievements==="function") checkAchievements();
+  save();render();
+}
+window.placeRingOnFinger=placeRingOnFinger;
 
 function showRingSwapModal(itemId){
   let html=`<div class="discard-overlay" id="ringSwapModal">
