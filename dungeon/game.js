@@ -643,7 +643,12 @@ function render(){
   map.innerHTML=drawMap();
   if(r.enemy&&r.enemy.hp>0){
     let bossBanner=r.enemy.isBoss?`<div class="boss-banner">👑 BOSS FIGHT — must be defeated to descend</div>`:"";
-    actions.innerHTML=bossBanner+`<div class="combat-actions"><button onclick="act('fight')">⚔️ Fight (F)</button><button onclick="act('flee')">🏃 Flee (R)</button></div>`;
+    // Boss banner stays in the corner overlay slot; Fight/Flee render in
+    // #extraActions (below the map) so they sit on the SAME horizontal line as
+    // Search/Talk/etc. would — a consistent action row under the map.
+    actions.innerHTML=bossBanner;
+    let extEl=document.getElementById("extraActions");
+    if(extEl) extEl.innerHTML=`<div class="extra-actions"><button class="action-btn fight-btn" onclick="act('fight')">⚔️ Fight (F)</button><button class="action-btn flee-btn" onclick="act('flee')">🏃 Flee (R)</button></div>`;
   } else {
     let extras="";
     if(!r.searched&&!(r.enemy&&r.enemy.hp>0)) extras+=`<button class="action-btn" onclick="act('search')">🔎 Search (E)</button>`;

@@ -389,6 +389,10 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
   padding:12px 24px;
   font-size:16px;
 }
+.fight-btn{ border-color:#e74c3c !important; color:#e74c3c; }
+.fight-btn:hover{ background:#3a1a1a !important; }
+.flee-btn{ border-color:#f39c12 !important; color:#f39c12; }
+.flee-btn:hover{ background:#3a2a0a !important; }
 .npc-btn{ border-color:#3498db !important; color:#3498db; }
 .npc-btn:hover{ background:#1a1a3a !important; }
 .trader-btn{ border-color:#f1c40f !important; color:#f1c40f; }
