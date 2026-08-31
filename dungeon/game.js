@@ -498,32 +498,31 @@ function toggleCountry(checked){
 // After each action, player can pick one stat to boost by 1
 // S.statBoostAvailable = true means player hasn't picked yet this turn
 
-function renderStatButtons(){
-  // Stats are green/clickable when: stat points available OR initial boost available
+// Render a single clickable/allocatable primary-stat button (str/dex/int/cha).
+function renderStatBtn(k){
   let hasPoints=(S.statPoints||0)>0;
   let hasInitialBoost=S.statBoostAvailable;
   let available=(hasPoints||hasInitialBoost)&&S.hp>0;
   let label=hasPoints?`(${S.statPoints} pts)`:"(+1)";
   let E=eff();
-  return["str","dex","int","cha"].map(k=>{
-    let base=S.stats[k]||0;
-    let total=E[k]||0;
-    let bonus=total-base;
-    // Show "STR 12 (+8)" when gear adds to the base
-    let display=bonus>0?`${k.toUpperCase()} ${total} <span class="stat-bonus">(+${bonus})</span>`:`${k.toUpperCase()} ${total}`;
-    if(available){
-      let pts=S.statPoints||0;
-      // Clicking the stat body = +1 (also the single initial free boost).
-      // +5 and +10 mini-buttons appear when enough points are banked.
-      let bulk="";
-      if(hasPoints){
-        if(pts>=5) bulk+=`<button class="mini-stat mini-stat-5" onclick="event.stopPropagation();boostStat('${k}',5)">+5</button>`;
-        if(pts>=10) bulk+=`<button class="mini-stat mini-stat-10" onclick="event.stopPropagation();boostStat('${k}',10)">+10</button>`;
-      }
-      return`<div class="stat-btn stat-available" onclick="boostStat('${k}',1)">${display} <span class="boost-hint">${label}</span>${bulk?`<div class="bulk-row">${bulk}</div>`:""}</div>`;
+  let base=S.stats[k]||0;
+  let total=E[k]||0;
+  let bonus=total-base;
+  let display=bonus>0?`${k.toUpperCase()} ${total} <span class="stat-bonus">(+${bonus})</span>`:`${k.toUpperCase()} ${total}`;
+  if(available){
+    let pts=S.statPoints||0;
+    let bulk="";
+    if(hasPoints){
+      if(pts>=5) bulk+=`<button class="mini-stat mini-stat-5" onclick="event.stopPropagation();boostStat('${k}',5)">+5</button>`;
+      if(pts>=10) bulk+=`<button class="mini-stat mini-stat-10" onclick="event.stopPropagation();boostStat('${k}',10)">+10</button>`;
     }
-    return`<div class="stat-btn">${display}</div>`;
-  }).join("");
+    return`<div class="stat-btn stat-available" onclick="boostStat('${k}',1)">${display} <span class="boost-hint">${label}</span>${bulk?`<div class="bulk-row">${bulk}</div>`:""}</div>`;
+  }
+  return`<div class="stat-btn">${display}</div>`;
+}
+// Legacy helper — all four primary stat buttons joined (kept for compatibility).
+function renderStatButtons(){
+  return ["str","dex","int","cha"].map(renderStatBtn).join("");
 }
 
 function boostStat(stat,amount){
@@ -625,10 +624,12 @@ function render(){
   let into=Math.max(0,Math.min(span,S.xp-curThresh)); // clamp within this level for display
   let pct=Math.round(into/span*100);
   let xpBar=`<div class="xp-wrap"><div class="xp-label">⭐ Level ${S.level} · XP ${into}/${span} to next</div><div class="xp-bar"><div class="xp-fill" style="width:${pct}%"></div></div></div>`;
-  stats.innerHTML=`<div class="stats-col stats-primary">${renderStatButtons()}</div>`+
-    `<div class="stats-col stats-vitals">`+
-      [`❤️ HP ${Math.max(0,S.hp)}/${effMaxHp()}`,`🍀 Luck ${eff().luck||0}`,`💰 ${S.gold}`].map(x=>`<div class="vital">${x}</div>`).join("")+
-    `</div>`;
+  let vital=(t)=>`<div class="vital">${t}</div>`;
+  stats.innerHTML=
+    `<div class="stats-col">${renderStatBtn("str")}${renderStatBtn("dex")}</div>`+
+    `<div class="stats-col">${renderStatBtn("int")}${renderStatBtn("cha")}</div>`+
+    `<div class="stats-col">${vital(`❤️ HP ${Math.max(0,S.hp)}/${effMaxHp()}`)}${vital(`🍀 Luck ${eff().luck||0}`)}</div>`+
+    `<div class="stats-col">${vital(`💰 ${S.gold}`)}</div>`;
   xpbar.innerHTML=xpBar;
   roomTitle.textContent=`Floor ${S.floor} — Chamber`;
   roomText.textContent=r.enemy&&r.enemy.hp>0?`⚔️ ${r.enemy.name} (${r.enemy.hp} HP)${r.enemy.element?` [${r.enemy.element}]`:""}${r.enemy.isBoss?` 👑 BOSS — ${r.enemy.abilities.join(" | ")}`:""} blocks the chamber.`:r.npc&&!r.npc.completed?`🔵 ${r.npc.name}, ${r.npc.title}, is here.`:r.trader?`💲 ${r.trader.name}, ${r.trader.title}, awaits.`:r.doctor?`⚕️ ${r.doctor.name}, ${r.doctor.title}, tends the wounded here.`:r.rest&&!r.rest.depleted?`${r.rest.emoji} A ${r.rest.name} flows here. (${r.rest.sips} sips remain)`:"The chamber is quiet.";
