@@ -670,20 +670,29 @@ function render(){
   }
   if(S.hp<=0){actions.innerHTML="☠️ Dead — press New Run.";let extEl=document.getElementById("extraActions");if(extEl)extEl.innerHTML="";}
   log.innerHTML=S.log.map(x=>`<div>${x}</div>`).join("");
-  equipment.innerHTML=["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet"].map(k=>{
+  // Equipment laid out in 4 explicit rows:
+  //  Row 1: weapon, helmet, armor, boots, shoulders
+  //  Row 2: trousers, cape, amulet
+  //  Row 3: Right hand rings
+  //  Row 4: Left hand rings
+  let gearCard=(k)=>{
     let disabled=(k==="weapon"&&S.lostFingers&&S.lostFingers.right&&S.lostFingers.right.length>=5);
     return`<div class=card><b>${k.toUpperCase()}</b>${disabled?`<div class="small lost-finger">⚠️ Right hand mangled — cannot wield</div>`:S.equipment[k]?item(S.equipment[k],false,k):"<div class=small>Empty</div>"}</div>`;
-  }).join("")+`<div class=card><b>RINGS — Left Hand 🫲</b><div class="ring-grid">${S.equipment.rings.slice(0,5).map((x,i)=>{
-    if(isFingerLost(i)) return`<div class="item lost-finger">❌ ${i+1}. Lost</div>`;
-    let scar=(S.repairedFingers||[]).includes(i);
-    if(x) return`<div class="ring-wrap${scar?" scarred":""}">${scar?`<span class="scar-tag" title="Scarred — fragile, may be lost again">🩹</span>`:""}${item(x,false,"ring"+i)}</div>`;
-    return`<div class="item${scar?" scarred-empty":""}">${scar?"🩹 ":""}${i+1}. ${scar?"Scarred":"Empty"}</div>`;
-  }).join("")}</div>${S.lostFingers&&S.lostFingers.left&&S.lostFingers.left.length>=5?`<div class="small lost-finger">⚠️ Left hand mangled — no shield grip</div>`:""}</div><div class=card><b>RINGS — Right Hand 🫱</b><div class="ring-grid">${S.equipment.rings.slice(5).map((x,i)=>{
-    if(isFingerLost(i+5)) return`<div class="item lost-finger">❌ ${i+1}. Lost</div>`;
-    let scar=(S.repairedFingers||[]).includes(i+5);
-    if(x) return`<div class="ring-wrap${scar?" scarred":""}">${scar?`<span class="scar-tag" title="Scarred — fragile, may be lost again">🩹</span>`:""}${item(x,false,"ring"+(i+5))}</div>`;
-    return`<div class="item${scar?" scarred-empty":""}">${scar?"🩹 ":""}${i+1}. ${scar?"Scarred":"Empty"}</div>`;
-  }).join("")}</div>${S.lostFingers&&S.lostFingers.right&&S.lostFingers.right.length>=5?`<div class="small lost-finger">⚠️ Right hand mangled — no weapon grip</div>`:""}</div>`;
+  };
+  let ringHand=(offset)=>S.equipment.rings.slice(offset,offset+5).map((x,j)=>{
+    let idx=offset+j;
+    if(isFingerLost(idx)) return`<div class="item lost-finger">❌ ${j+1}. Lost</div>`;
+    let scar=(S.repairedFingers||[]).includes(idx);
+    if(x) return`<div class="ring-wrap${scar?" scarred":""}">${scar?`<span class="scar-tag" title="Scarred — fragile, may be lost again">🩹</span>`:""}${item(x,false,"ring"+idx)}</div>`;
+    return`<div class="item${scar?" scarred-empty":""}">${scar?"🩹 ":""}${j+1}. ${scar?"Scarred":"Empty"}</div>`;
+  }).join("");
+  let rightMangled=S.lostFingers&&S.lostFingers.right&&S.lostFingers.right.length>=5;
+  let leftMangled=S.lostFingers&&S.lostFingers.left&&S.lostFingers.left.length>=5;
+  equipment.innerHTML=
+    `<div class="equip-row row-gear5">${["weapon","helmet","armor","boots","shoulders"].map(gearCard).join("")}</div>`+
+    `<div class="equip-row row-gear3">${["trousers","cape","amulet"].map(gearCard).join("")}</div>`+
+    `<div class="equip-row row-hand"><div class=card><b>RINGS — Right Hand 🫱</b><div class="ring-grid">${ringHand(5)}</div>${rightMangled?`<div class="small lost-finger">⚠️ Right hand mangled — no weapon grip</div>`:""}</div></div>`+
+    `<div class="equip-row row-hand"><div class=card><b>RINGS — Left Hand 🫲</b><div class="ring-grid">${ringHand(0)}</div>${leftMangled?`<div class="small lost-finger">⚠️ Left hand mangled — no shield grip</div>`:""}</div></div>`;
   inventory.innerHTML=S.inventory.length?S.inventory.map(x=>item(x,true,false)).join(""):"<div class=small>Empty</div>";
   // --- QUEST DISPLAY: Active hunts + Completed trophies ---
   let activeHtml=S.quests.length?S.quests.map(q=>{

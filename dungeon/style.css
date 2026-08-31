@@ -432,6 +432,17 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 
 /* Scarred (repaired) fingers — fragile, may be lost again */
 .ring-wrap{position:relative}
+/* Equipment panel — 4 explicit rows.
+   Row 1 (5 gear), Row 2 (3 gear), Row 3 (Right hand), Row 4 (Left hand). */
+#equipment{display:flex;flex-direction:column;gap:8px}
+.equip-row{display:grid;gap:8px}
+.equip-row.row-gear5{grid-template-columns:repeat(5,1fr)}
+.equip-row.row-gear3{grid-template-columns:repeat(3,1fr)}
+.equip-row.row-hand{grid-template-columns:1fr}
+@media (max-width:640px){
+  .equip-row.row-gear5{grid-template-columns:repeat(3,1fr)}
+  .equip-row.row-gear3{grid-template-columns:repeat(3,1fr)}
+}
 /* Rings laid out HORIZONTALLY — 5 fingers across per hand (no vertical dead space).
    Compact cells so a whole hand fits on one row; wraps only if truly too narrow. */
 .ring-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
