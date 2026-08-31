@@ -18,6 +18,8 @@ const ACHIEVEMENTS=[
   {id:"spend100k",metric:"goldSpent",need:100000,title:"Gold Burns a Hole",desc:"Spend 100,000 gold",xp:30000,gold:0},
   {id:"cleanhouse",metric:"cleanHouse",need:1,title:"Clean House",desc:"Buy out a trader's entire stock",xp:800,gold:0},
   {id:"allrings",metric:"allFingersRinged",need:1,title:"Bejeweled",desc:"Wear a ring on every intact finger at once",xp:1500,gold:400},
+  {id:"elixir10",metric:"maxPotionStack",need:10,title:"Elixir Collector",desc:"Save a full stack of 10 potions",xp:1200,gold:400},
+  {id:"leprosy1",metric:"leprosyCount",need:1,title:"Unclean",desc:"Suffer leprosy from a cursed potion",xp:900,gold:300},
   {id:"fullgear",metric:"fullyEquipped",need:1,title:"Fully Equipped",desc:"Fill EVERY slot: all 8 gear pieces + all 10 rings (restore lost fingers first!)",xp:2000,gold:500},
   // Fingers lost
   {id:"fingers1",metric:"fingersLostTotal",need:1,title:"Flesh Price",desc:"Lose your first finger",xp:150,gold:100},
@@ -51,6 +53,13 @@ function metricValue(metric){
     case"goldEarned": return S.goldEarned||0;
     case"goldSpent": return S.goldSpent||0;
     case"cleanHouse": return S.cleanHouse||0;
+    case"leprosyCount": return S.leprosyCount||0;
+    case"maxPotionStack": {
+      // Largest current potion stack in inventory (for Elixir Collector).
+      let max=0;
+      for(let it of (S.inventory||[])){ if(it.type==="potion") max=Math.max(max,it.count||1); }
+      return max;
+    }
     case"allFingersRinged": {
       // 1 when every INTACT finger slot holds a ring (lost fingers don't count).
       // Requires at least one intact slot AND a ring on the hand (not all lost).

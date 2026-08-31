@@ -455,10 +455,15 @@ function item(i,inv,equipped){
   let val=itemValue(i);
   if(!dead){
     if(inv){
-      buttons+=`<button onclick="equip('${i.id}')">⬆️ Equip</button><button onclick="discard('${i.id}')">🗑️ Drop</button>`;
-      // Sell direct from inventory ONLY when standing at a trader
-      let r=room();
-      if(r&&r.trader) buttons+=`<button onclick="sellFromInventory('${i.id}')">💰 Sell ${val}</button>`;
+      if(i.type==="potion"){
+        // Stored mystery potion — drink it (the gamble) or drop it. Can't equip/sell.
+        buttons+=`<button onclick="drinkStoredPotion('${i.id}')">🧪 Drink</button><button onclick="discard('${i.id}')">🗑️ Drop</button>`;
+      } else {
+        buttons+=`<button onclick="equip('${i.id}')">⬆️ Equip</button><button onclick="discard('${i.id}')">🗑️ Drop</button>`;
+        // Sell direct from inventory ONLY when standing at a trader
+        let r=room();
+        if(r&&r.trader) buttons+=`<button onclick="sellFromInventory('${i.id}')">💰 Sell ${val}</button>`;
+      }
     }
     if(equipped) buttons+=`<button onclick="unequip('${i.id}','${equipped}')">⬇️ Unequip</button>`;
     // Scarred-finger warning: if this ring sits on a repaired (fragile) finger,
@@ -471,8 +476,9 @@ function item(i,inv,equipped){
       }
     }
   }
-  // Comparison vs currently-equipped item in the same slot (inventory items only)
-  let cmp=inv?compareLine(i):"";
+  // Comparison vs currently-equipped item in the same slot (inventory items only;
+  // never for potions, which aren't equippable).
+  let cmp=(inv&&i.type!=="potion")?compareLine(i):"";
   // Trait display — strike out a spent once-per-run/floor cheat-death trait.
   //  Phoenix Rebirth: once per RUN (S.phoenixUsed) → struck out permanently once used.
   //  Death Ward: once per FLOOR → struck out only while on a floor where it's been
@@ -490,7 +496,9 @@ function item(i,inv,equipped){
       traitHtml=`<div class="trait">⚡ ${i.trait}</div>`;
     }
   }
-  return`<div class="item ${i.rarity} ${i.depth}${i.prestige?" prestige-"+i.prestige:""}"><span class="art">${i.art}</span><b>${i.name}</b><div class="item-type">${typeLabel(i.type)}</div><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${traitHtml}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)}${i.prestige?` · ✦${i.prestige[0].toUpperCase()+i.prestige.slice(1)}✦`:""} · 💰 ${val}</div>${cmp}${buttons}</div>`;
+  // Name display — potions show their stack count (e.g. "Mystery Potion 3/10").
+  let nameHtml=(i.type==="potion")?`${i.name} <span class="stack-count">${i.count||1}/10</span>`:i.name;
+  return`<div class="item ${i.rarity} ${i.depth}${i.prestige?" prestige-"+i.prestige:""}"><span class="art">${i.art}</span><b>${nameHtml}</b><div class="item-type">${typeLabel(i.type)}</div><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${traitHtml}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)}${i.prestige?` · ✦${i.prestige[0].toUpperCase()+i.prestige.slice(1)}✦`:""} · 💰 ${val}</div>${cmp}${buttons}</div>`;
 }
 
 // Build a "vs equipped" comparison line for an inventory item
@@ -526,7 +534,7 @@ function statSum(x){ return Object.values(x.stats).reduce((a,b)=>a+b,0); }
 
 // Friendly display label for an item type
 function typeLabel(t){
-  const labels={weapon:"⚔️ Weapon",helmet:"🪖 Helmet",armor:"🛡️ Body Armor",boots:"🥾 Boots",shoulders:"💪 Shoulders",trousers:"👖 Leggings",cape:"🧥 Cape",amulet:"📿 Amulet",ring:"💍 Ring"};
+  const labels={weapon:"⚔️ Weapon",helmet:"🪖 Helmet",armor:"🛡️ Body Armor",boots:"🥾 Boots",shoulders:"💪 Shoulders",trousers:"👖 Leggings",cape:"🧥 Cape",amulet:"📿 Amulet",ring:"💍 Ring",potion:"🧪 Mystery Potion"};
   return labels[t]||t;
 }
 

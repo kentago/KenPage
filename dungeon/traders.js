@@ -195,7 +195,7 @@ function showTraderModal(trader){
 
   let buySection=trader.wares.length?trader.wares.map((x,i)=>{
     let afford=(S.gold||0)>=x.price;
-    return`<div class="item ${x.rarity} ${x.depth}${x.tradersPick?" traders-pick":""}"><span class="art">${x.art}</span><b>${x.name}</b>${x.tradersPick?` <span class="pick-badge">⭐ Trader's Pick</span>`:""}
+    return`<div class="item ${x.rarity} ${x.depth}${x.tradersPick?" traders-pick":""}"><span class="art">${x.art}</span><b>${x.tradersPick?`⭐ ${x.name} ⭐`:x.name}</b>
       <div class="item-type">${typeLabel(x.type)}</div>
       <div>${Object.entries(x.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>
       ${x.trait?`<div class="trait">⚡ ${x.trait}</div>`:""}
@@ -208,7 +208,7 @@ function showTraderModal(trader){
     <div class="discard-box">
       <h3>💲 ${trader.name}, ${trader.title}</h3>
       <p>"${(S.gold||0)>=2000?"Ahh, a hero of <i>means</i>! For you, my finest goods — at a fitting price.":"Welcome, traveler!"} You have 💰 ${S.gold||0} gold."</p>
-      <h4>🛒 For Sale</h4>
+      <h4>🛒 For Sale${(trader.wares||[]).some(w=>w.tradersPick)?` <span class="pick-legend">— ⭐ = Trader's Pick (a guaranteed upgrade) ⭐</span>`:""}</h4>
       <div class="discard-list">${buySection}</div>
       <h4>💰 Sell Your Goods</h4>
       <div class="discard-list">${sellSection}</div>
