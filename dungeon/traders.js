@@ -74,7 +74,8 @@ function generateWares(trader){
   // LUCKY ROLL: guarantee at least one ware is a genuine upgrade over something
   // the hero has equipped in that slot (Luck raises the chance).
   let luck=(typeof eff==="function")?(eff().luck||0):0;
-  let luckyChance=Math.min(0.75,0.35+luck*0.03); // 35% base, +3%/luck, cap 75%
+  // Asymptotic (endless-friendly): base 35%, approaches 90% but never reaches it.
+  let luckyChance=(typeof luckChance==="function")?luckChance(luck,0.35,50):Math.min(0.75,0.35+luck*0.03);
   if(Math.random()<luckyChance){
     let idx=Math.floor(Math.random()*wares.length);
     let w=wares[idx];

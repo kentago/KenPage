@@ -23,8 +23,8 @@ const ACHIEVEMENTS=[
   {id:"fullgear",metric:"fullyEquipped",need:1,title:"Fully Equipped",desc:"Fill EVERY slot: all 8 gear pieces + all 10 rings (restore lost fingers first!)",xp:2000,gold:500},
   // Fingers lost
   {id:"fingers1",metric:"fingersLostTotal",need:1,title:"Flesh Price",desc:"Lose your first finger",xp:150,gold:100},
-  {id:"fingers5",metric:"fingersLostTotal",need:5,title:"Nine and Counting",desc:"Lose 5 fingers total",xp:1200,gold:600},
-  {id:"fingers10",metric:"fingersLostTotal",need:10,title:"Handless Legend",desc:"Lose all 10 fingers",xp:8000,gold:3000},
+  {id:"fingers5",metric:"fingersLostTotal",need:5,title:"Five and Counting",desc:"Lose 5 fingers total",xp:1200,gold:600},
+  {id:"fingers10",metric:"fingersLostTotal",need:10,title:"Fingerless Legend",desc:"Lose all 10 fingers",xp:8000,gold:3000},
   // Floors reached
   {id:"floor5",metric:"deepestFloor",need:5,title:"Descender",desc:"Reach floor 5",xp:300,gold:100},
   {id:"floor10",metric:"deepestFloor",need:10,title:"Deep Delver",desc:"Reach floor 10",xp:1000,gold:300},

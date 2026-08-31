@@ -46,8 +46,8 @@ const traits=[
   "Bone Rend (+25% damage)","Grave Fortune (+2 Luck)","Dragonblood (+25% damage)","Veilstep (15% dodge)","Deep Luck (+2 Luck)","Poison Edge (+poison damage, scales w/ floor)",
   "Lifesteal (heal 15% of damage dealt)","Flameburst (+fire damage, scales w/ floor)","Frostbite (+frost damage, scales w/ floor)","Thunderstrike (+shock damage, scales w/ floor)","Shadow Meld (15% dodge)","Crystal Resonance (+10% kill XP)",
   "Titan Strength (+25% damage)","Void Touch (armor pierce)","Bloodlust (+60% damage when low HP)","Iron Will (-25% damage taken)","Windwalker (15% dodge)","Stoneguard (-25% damage taken)",
-  "Soulbound (+2 all stats)","Mana Drain (heal 15% of damage dealt)","Berserker Rage (+60% damage when low HP)","Dwarven Fortitude (-25% damage taken)","Obsidian Shell (-25% damage taken)",
-  "Phoenix Rebirth (revive once per run)","Death Mark (+35% vs wounded foes)","Spirit Link (heal 5% HP on kill)","Runic Surge (+2 INT)","Ancient Blessing (+1 all stats)",
+  "Soulbound (+2 all stats per 10 levels)","Mana Drain (heal 15% of damage dealt)","Berserker Rage (+60% damage when low HP)","Dwarven Fortitude (-25% damage taken)","Obsidian Shell (-25% damage taken)",
+  "Phoenix Rebirth (revive once per run)","Death Mark (+35% vs wounded foes)","Spirit Link (heal 5% HP on kill)","Runic Surge (+2 INT per level)","Ancient Blessing (+1 all stats per 10 levels)",
   "Elemental Ward (halve element damage)","Deepforge Temper (+15% damage)","Moonlight Heal (regen in combat)","Thornmail (reflect 30% damage)","Echostrike (25% double strike)",
   "Crit Amplifier (bigger crits)","Dread Aura (enemies may cower)","Regeneration (regen in combat)","Venomcoat (+poison damage, scales w/ floor)","Battle Fury (+60% damage when low HP)","Shieldbreaker (+30% vs bosses)"
 ];
@@ -61,8 +61,8 @@ const ringTraits=[
   "Soul Chain (XP +5% per ring worn)","Void Link (ignore 1 damage per ring worn)",
   "Elemental Harmony (resist element damage per ring)","Deep Radiance (loot quality +1 per ring)",
   "Titan Grip (STR×rings for attack)","Arcane Loop (INT×rings for search)",
-  "Ring of Greed (find rings more often)","Dwarf King's Legacy (+all stats per 5 rings)",
-  "Constellation (+1 all stats if 8+ rings worn)","Perfect Ten (+5 all stats if all 10 slots filled)",
+  "Ring of Greed (find rings more often)","Dwarf King's Legacy (+all stats per 5 rings, scales w/ level)",
+  "Constellation (+1 all stats/10 lvls if 8+ rings)","Perfect Ten (+5 all stats/10 lvls if all 10 slots filled)",
   "Fortune's Favor (+2 Luck)","Serendipity (+1 Luck per ring worn)","Dwarf's Blessing (+3 Luck)"
 ];
 // Amulet-specific traits — luck, potions, fortune, protection
@@ -74,9 +74,9 @@ const amuletTraits=[
   "Luck of the Ancients (+5 Luck)","Trinket Collector (double trinket drop chance)",
   "Potion Brewer (rest heals 50% more)","Critical Fortune (crits give bonus gold)",
   "Finger Ward Amulet (prevent finger loss)","XP Amplifier (+15% XP from all sources)",
-  "Second Chance (flee always succeeds once per floor)","Deep Sight (+3 INT for searching)",
+  "Second Chance (flee always succeeds once per floor)","Deep Sight (+3 INT per level for searching)",
   "Merchant's Eye (sell items for double gold)","Life Pulse (+1 HP per room explored)",
-  "Dwarven Ancestry (+1 all stats)"
+  "Dwarven Ancestry (+1 all stats per 10 levels)"
 ];
 const rar=["common","uncommon","rare","epic","mythical","legendary","divine"];
 const dep=["bronze","silver","gold","titan","platinum","glowing","prismatic","astral"];
@@ -127,7 +127,7 @@ const starterRings=[
   {name:"Grandfather's Iron Band",art:"💍",stats:{str:2},trait:"Dwarven Fortitude (-25% damage taken)",desc:"A simple band passed down for generations. Sturdy and reliable."},
   {name:"Mother's Moonstone Loop",art:"🌙",stats:{cha:2},trait:"Lucky Star (+2 Luck, +5% crit)",desc:"A delicate ring that brings fortune to those who wear it."},
   {name:"Scout's Shadow Ring",art:"🖤",stats:{dex:2},trait:"Windwalker (15% dodge)",desc:"Worn by dungeon scouts. Helps you dodge and flee."},
-  {name:"Scholar's Crystal Eye",art:"🔮",stats:{int:2},trait:"Deep Sight (+3 INT for searching)",desc:"The gem pulses when secrets are near."},
+  {name:"Scholar's Crystal Eye",art:"🔮",stats:{int:2},trait:"Deep Sight (+3 INT per level for searching)",desc:"The gem pulses when secrets are near."},
   {name:"Warrior's Bloodstone",art:"🔴",stats:{str:1,dex:1},trait:"Berserker Rage (+60% damage when low HP)",desc:"Thrums with violent energy. For those who choose aggression."},
   {name:"Merchant's Goldheart",art:"🟡",stats:{cha:1,luck:1},trait:"Gold Attraction (+10% gold from sells)",desc:"A trader's lucky charm. Gold seems to follow you."},
   {name:"Seer's Void Eye",art:"👁️",stats:{int:1,luck:1},trait:"Treasure Sense (better loot rolls)",desc:"Whispers of hidden treasure echo from within."},

@@ -75,6 +75,8 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .art{font-size:32px;float:right}
 .small{font-size:.85em;color:#aaa}
 .trait{font-size:.9em;color:#f1c40f;margin-top:4px}
+.reroll-btn{font-size:.8em;background:#2a2a3a;color:#9af;border:1px solid #55f;border-radius:6px;padding:1px 6px;margin-left:6px;cursor:pointer}
+.reroll-btn:hover{background:#3a3a5a;border-color:#88f}
 .trait.trait-used{color:#888}
 .item-type{font-size:.8em;color:#8ab4d8;margin:2px 0}
 .cmp{font-size:.8em;color:#bbb;margin:4px 0;padding:4px 6px;background:#1e1e1e;border-radius:6px;border-left:2px solid #555}

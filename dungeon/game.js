@@ -1,7 +1,7 @@
 // --- CORE GAME STATE ---
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 
-function fresh(){return{name:makeDwarfName(),nickname:loadTag(),country:loadCountry(),level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,roomsSinceKill:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,repairedFingers:[],bossSpawnedFloors:{},tollsPaid:0,portals:[],quickTravelReturn:null,emergencyEscapes:0,phoenixUsed:false,deathWardFloor:null,deathWardFloors:[],secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],questsDelivered:0,questAchievements:[],achievements:[],goldEarned:0,goldSpent:0,cleanHouse:0,leprosyCount:0,fingersLostTotal:0,deepestFloor:1,bossKills:0,log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:makeDwarfName(),nickname:loadTag(),country:loadCountry(),level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,roomsSinceKill:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,repairedFingers:[],bossSpawnedFloors:{},tollsPaid:0,currentTollPrice:null,portals:[],quickTravelReturn:null,emergencyEscapes:0,phoenixUsed:false,deathWardFloor:null,deathWardFloors:[],secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],questsDelivered:0,questAchievements:[],achievements:[],goldEarned:0,goldSpent:0,cleanHouse:0,leprosyCount:0,fingersLostTotal:0,deepestFloor:1,bossKills:0,log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
 
 // --- PERSISTENT TAG / COUNTRY (survive across runs & permadeath) ---
 // The player's tag (nickname) and country flag are stored SEPARATELY from the run
@@ -135,12 +135,11 @@ function move(d){
     // Spawn ladder down? (~10% chance, no enemy blocking it, spaced from other ladders)
     if(!x.enemy&&!x.ladder&&!nearbyHas("ladder",2)&&Math.random()<0.10){
       x.ladder={dir:"down",used:false,targetKey:null};
-      // ALL non-boss ladders are TOLL-gated — must pay gold to use (a gold sink).
-      // Base toll scales with floor depth; the actual price also escalates with
-      // how many tolls you've already paid this run (see useLadder).
-      // Boss-floor ladders are never toll-gated (the boss is already the gate).
+      // Non-boss down-ladders are TOLL-GATED: descending charges the run's current
+      // "cost of passage" (currentTollPrice — scales with level+economy+unluck, and
+      // rises each time you pay). tollPaid marks a ladder you've already paid, which
+      // stays free forever. Boss-floor ladders are exempt (the boss is the gate).
       if(S.floor%5!==0){
-        x.ladder.toll=Math.max(15,Math.round(Math.pow(S.floor,1.3)*4+20));
         x.ladder.tollPaid=false;
       }
       // Boss floors (every 5th floor) — ONE boss guards the FIRST ladder discovered.
@@ -164,7 +163,7 @@ function move(d){
   // --- KILL STREAK DECAY (enemy-free wandering) ---
   // A streak only stays hot while you keep finding things to fight. Enter too
   // many rooms in a row without a live enemy and the streak goes cold.
-  // Base grace = 3 enemy-free rooms; a lucky roll (Luck-scaled) can grant a 4th.
+  // Base grace = 4 enemy-free rooms; a lucky roll (Luck-scaled) can grant a 5th.
   if(x.enemy&&x.enemy.hp>0){
     // A fight is on — streak is safe, reset the idle counter.
     S.roomsSinceKill=0;
@@ -172,8 +171,8 @@ function move(d){
     S.roomsSinceKill=(S.roomsSinceKill||0)+1;
     // Luck gives a chance to earn one extra grace room before the streak breaks.
     let luck=(typeof eff==="function"?(eff().luck||0):0);
-    let luckyGrace=Math.random()<Math.min(0.5,0.10+luck*0.02); // 10% base, +2%/luck, cap 50%
-    let graceRooms=luckyGrace?4:3;
+    let luckyGrace=Math.random()<((typeof luckChance==="function")?luckChance(luck,0.10,40,0.60):Math.min(0.5,0.10+luck*0.02)); // asymptotic: base 10%, approaches 60%
+    let graceRooms=luckyGrace?5:4;
     if(S.roomsSinceKill>graceRooms){
       breakStreak("no prey found for too long");
     }
@@ -265,7 +264,7 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
   let floorHasPortal=(S.portals||[]).some(p=>p.floor===S.floor);
   if(!floorHasPortal && !r.portal){
     // ~14% base chance, +1%/Luck (cap 30%). Rare enough to feel like a discovery.
-    let portalChance=Math.min(0.30,0.14+(eff().luck||0)*0.01);
+    let portalChance=(typeof luckChance==="function")?luckChance(eff().luck||0,0.14,60,0.45):Math.min(0.30,0.14+(eff().luck||0)*0.01); // asymptotic: base 14%, approaches 45%
     if(Math.random()<portalChance){
       let element=questPrefixes[Math.floor(Math.random()*questPrefixes.length)];
       let name=`${element} Floor ${S.floor} Portal`;
@@ -343,25 +342,50 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
   damage(critTrapDmg);
   if(S.floor>2&&S.hp>0&&Math.random()<0.15)loseFinger();
   }
+// Compute (and LOCK) a toll ladder's full cost the FIRST time it's shown, then
+// The run's CURRENT toll price — a single "cost of passage" that applies to ANY
+// The run's CURRENT toll price — a single "cost of passage" that applies to ANY
+// non-boss ladder (not per-ladder). It's an EFFORT GATE: a large, rising share of
+// your current GOLD (bigger the more you've descended this run), bumped higher by
+// bad luck. Buying your way down without fighting/searching drains you fast — you
+// must EARN to keep descending. Locked into S.currentTollPrice (stable display),
+// re-raised each time you pay (see useLadder). Recomputed lazily when missing.
+function currentTollPrice(){
+  if(S.currentTollPrice!==undefined && S.currentTollPrice!==null) return S.currentTollPrice;
+  let paid=S.tollsPaid||0;
+  // EFFORT GATE (not a level tax): the toll is a large, RISING share of your CURRENT
+  // gold. The more you've descended this run, the bigger the share — so buying your
+  // way down without fighting/searching drains you fast and forces you to earn more.
+  // A player who fights/searches between descents can keep going; a rush-buyer can't.
+  let floorMin=30; // tiny flat floor so a near-broke hero still owes something
+  let pct=0.35+Math.min(0.45,paid*0.06); // 35% of gold, +6% per toll paid, up to 80%
+  let base=floorMin+(S.gold||0)*pct;
+  // Unluck surcharge: LOW luck = pricier (up to +50%), shrinking toward ~5% with luck.
+  let luck=(typeof eff==="function"?(eff().luck||0):0);
+  let maxSur=0.50-0.45*(luck/(luck+50));
+  S.currentTollPrice=Math.round(base*(1+Math.random()*maxSur));
+  return S.currentTollPrice;
+}
 
 function useLadder(dir){
   let r=room();
   if(!r.ladder||r.ladder.dir!==dir)return;
 
-  // Toll ladder: must pay gold once to unlock it. The price escalates every
-  // time you pay a toll this run — each toll paid raises the cost of the next
-  // by 50% (compounding). Once THIS ladder is paid it stays free forever.
-  if(r.ladder.toll&&!r.ladder.tollPaid){
-    let cost=Math.round(r.ladder.toll*Math.pow(1.5,S.tollsPaid||0));
+  // Toll: descending a non-boss floor charges the run's CURRENT cost of passage —
+  // UNLESS you've already paid THIS specific ladder (those stay free forever).
+  // Paying a new ladder RAISES the price for all future (unpaid) ladders.
+  if(!r.ladder.emergency && S.floor%5!==0 && dir==="down" && !r.ladder.tollPaid){
+    let cost=currentTollPrice();
     if((S.gold||0)<cost){
-      msg(`🚧 This ladder is toll-gated — it costs ${cost} 💰 to pass. You only have ${S.gold||0}. Earn more gold or find another way.`);
+      msg(`🚧 The way down demands a toll of ${cost} 💰 — you only have ${S.gold||0}. Sell loot or earn more, then descend.`);
       return;
     }
     S.gold-=cost;
     S.goldSpent=(S.goldSpent||0)+cost;
     S.tollsPaid=(S.tollsPaid||0)+1;
-    r.ladder.tollPaid=true;
-    msg(`💰 You pay the ${cost} gold toll. The ladder mechanism unlocks. (Toll #${S.tollsPaid} — the next toll will cost more.)`);
+    r.ladder.tollPaid=true;          // THIS ladder is free from now on
+    S.currentTollPrice=null;         // next UNPAID toll recomputes HIGHER
+    msg(`💰 You pay the ${cost} gold toll to descend. (Toll #${S.tollsPaid} — the price of passage rises, but this ladder is now free forever.)`);
   }
 
   // Mark this ladder as used (green)
@@ -660,7 +684,9 @@ function render(){
     }
     if(r.doctor) extras+=`<button class="action-btn doctor-btn" onclick="talkDoctor()">⚕️ Visit ${r.doctor.name}</button>`;
     if(r.ladder){
-      let tollDue=(r.ladder.toll&&!r.ladder.tollPaid)?Math.round(r.ladder.toll*Math.pow(1.5,S.tollsPaid||0)):0;
+      // Toll applies to DESCENDING a non-boss floor via an UNPAID ladder (paid ones are free).
+      let tollApplies=(!r.ladder.emergency && S.floor%5!==0 && r.ladder.dir==="down" && !r.ladder.tollPaid);
+      let tollDue=tollApplies?currentTollPrice():0;
       let tollLabel=tollDue?` 🚧 ${tollDue}💰`:"";
       let cantAfford=(tollDue&&(S.gold||0)<tollDue);
       extras+=`<button class="action-btn${cantAfford?" toll-locked":""}" onclick="act('${r.ladder.dir}')">🪜 ${r.ladder.dir==="down"?"↓ Descend":"↑ Ascend"}${tollLabel} (Q)</button>`;

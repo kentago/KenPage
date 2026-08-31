@@ -125,23 +125,21 @@ function deliverQuest(npc,quest){
     S.goldEarned=(S.goldEarned||0)+quest.goldReward;
   }
 
-  // --- REWARD ROLL (d20 + luck) ---
-  // Even low-floor quests can give items with a lucky roll!
-  let luckBonus=eff().luck||0; // Luck from stats + gear + traits
-  let rewardRoll=d20()+luckBonus;
+  // --- REWARD ROLL (Luck as an ASYMPTOTIC percentage — endless-friendly) ---
+  // luckChance() (items.js) approaches 90% but never reaches it: every extra luck
+  // point always helps a little, yet rewards are never guaranteed.
+  let luck=eff().luck||0;
   let giveItem=false;
-
   if(quest.itemReward){
-    // Guaranteed item for deep quests
+    // Guaranteed item for deep/legendary quests (unchanged)
     giveItem=true;
-  } else if(rewardRoll>=20){
-    // Lucky roll! Bonus item even on nearby quests
-    giveItem=true;
-    msg(`🍀 Lucky reward! The NPC is so grateful they give you something extra!`);
-  } else if(rewardRoll>=17&&(quest.floorsDown||0)>=1){
-    // Good roll + at least 1 floor distance
-    giveItem=true;
-    msg(`🍀 Bonus reward!`);
+  } else {
+    let deep=(quest.floorsDown||0)>=1;
+    let chance=deep?luckChance(luck,0.20,60):luckChance(luck,0.05,90);
+    if(Math.random()<chance){
+      giveItem=true;
+      msg(deep?`🍀 Bonus reward!`:`🍀 Lucky reward! The NPC is so grateful they give you something extra!`);
+    }
   }
 
   if(giveItem){
@@ -159,8 +157,8 @@ function deliverQuest(npc,quest){
     msg(`🎁 ${npc.name} rewards you with: ${rewardItem.name}! ${obtain(rewardItem)}`);
   }
 
-  // Chance of bonus potion/trinket on high luck
-  if(rewardRoll>=18){
+  // Bonus potion/trinket — same asymptotic luck curve (base 12%, approaches 90%).
+  if(Math.random()<luckChance(luck,0.12,90)){
     let potionRoll=Math.random();
     if(potionRoll<0.3){
       S.stats.luck=(S.stats.luck||0)+1;

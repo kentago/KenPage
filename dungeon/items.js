@@ -18,6 +18,18 @@ function rollPrestige(){
   return "eternal";
 }
 
+// --- LUCK → CHANCE (asymptotic, endless-friendly) ---
+// Converts a Luck value into a probability that APPROACHES `limit` but NEVER reaches
+// it, so every extra luck point always helps a little (diminishing returns) and no
+// outcome is ever guaranteed — the right feel for an endless dungeon.
+//   chance = base + (limit - base) * luck/(luck + k)
+// base = chance at 0 luck; k = how fast it climbs (smaller = faster). limit default 0.90.
+function luckChance(luck, base, k, limit){
+  luck=Math.max(0,luck||0);
+  if(limit===undefined) limit=0.90;
+  return base + (limit - base) * (luck/(luck + k));
+}
+
 // --- EFFECTIVE STATS ---
 // Sums base stats + all equipped item stats + parsed trait bonuses (incl. luck).
 // All game mechanics should read from eff() rather than S.stats directly.
@@ -62,21 +74,28 @@ function applyTraitBonus(trait,e,ringCount){
   if(/Jeweler's Pride/.test(trait)) e.dex+=ringCount;
   if(/Ringmaster/.test(trait)) e.int+=ringCount;
   if(/Crown of Fingers/.test(trait)) e.cha+=ringCount;
-  // Set bonuses
-  if(/Constellation/.test(trait)&&ringCount>=8){e.str++;e.dex++;e.int++;e.cha++;}
-  if(/Perfect Ten/.test(trait)&&ringCount>=10){e.str+=5;e.dex+=5;e.int+=5;e.cha+=5;}
-  if(/Dwarf King's Legacy/.test(trait)){let b=Math.floor(ringCount/5);e.str+=b;e.dex+=b;e.int+=b;e.cha+=b;}
+  // Set bonuses (ring-count gated) — scale the all-stat payout gently with level
+  // via allMult so they stay relevant late-game without exploding.
+  let lvl=S.level||1;
+  let allMult=Math.ceil(lvl/10); // 1 at lvl 1-10, 2 at 11-20 ... 5 at 41-50
+  if(/Constellation/.test(trait)&&ringCount>=8){e.str+=allMult;e.dex+=allMult;e.int+=allMult;e.cha+=allMult;}
+  if(/Perfect Ten/.test(trait)&&ringCount>=10){e.str+=5*allMult;e.dex+=5*allMult;e.int+=5*allMult;e.cha+=5*allMult;}
+  if(/Dwarf King's Legacy/.test(trait)){let b=Math.floor(ringCount/5)*allMult;e.str+=b;e.dex+=b;e.int+=b;e.cha+=b;}
   // Amulet all-stat
-  if(/Dwarven Ancestry/.test(trait)){e.str++;e.dex++;e.int++;e.cha++;}
-  if(/Deep Sight/.test(trait)) e.int+=3;
-  // Soul Keeper — defensive proxy: +3 all stats while equipped
-  if(/Soul Keeper/.test(trait)){e.str+=3;e.dex+=3;e.int+=3;e.cha+=3;}
+  if(/Dwarven Ancestry/.test(trait)){e.str+=allMult;e.dex+=allMult;e.int+=allMult;e.cha+=allMult;}
+  // Single-stat: scales +N per LEVEL (like Runic Surge) so it stays meaningful at depth.
+  if(/Deep Sight/.test(trait)) e.int+=3*lvl;
+  // Soul Keeper — defensive proxy: all stats, gently level-scaled (+3×allMult each)
+  if(/Soul Keeper/.test(trait)){e.str+=3*allMult;e.dex+=3*allMult;e.int+=3*allMult;e.cha+=3*allMult;}
   // Former flavor traits — stat bonuses
   if(/Grave Fortune/.test(trait)) e.luck+=2;
   if(/Deep Luck/.test(trait)) e.luck+=2;
-  if(/Runic Surge/.test(trait)) e.int+=2;
-  if(/Ancient Blessing/.test(trait)){e.str++;e.dex++;e.int++;e.cha++;}
-  if(/Soulbound/.test(trait)){e.str+=2;e.dex+=2;e.int+=2;e.cha+=2;}
+  // Runic Surge — single-stat, scales with level: +2 INT per level
+  // (level 1 = +2, level 50 = +100). Encourages swapping/rerolling toward it at depth.
+  if(/Runic Surge/.test(trait)) e.int+=2*lvl;
+  // All-stat blessings — gentle level scaling (×allMult per stat).
+  if(/Ancient Blessing/.test(trait)){e.str+=allMult;e.dex+=allMult;e.int+=allMult;e.cha+=allMult;}
+  if(/Soulbound/.test(trait)){e.str+=2*allMult;e.dex+=2*allMult;e.int+=2*allMult;e.cha+=2*allMult;}
 }
 
 // Returns true if any equipped item has a trait matching the given name (substring match)
@@ -244,6 +263,18 @@ function makeItem(type){
     i.stats[tertiary]=(i.stats[tertiary]||0)+terVal;
   }
 
+  // Quaternary "PERFECT" stat — only Mythical+ (r>=4), and only ~20% of those.
+  // Fills whatever stat is still MISSING so the item covers ALL FOUR stats, at a
+  // lower value. A rare, coveted roll: a true all-stat item for top-tier gear.
+  if(r>=4&&Math.random()<0.20){
+    let missing=p.filter(k=>!i.stats[k]);
+    if(missing.length>0){
+      let q=missing[Math.floor(Math.random()*missing.length)];
+      let qVal=Math.max(1,Math.round(primaryVal*(0.08+Math.random()*0.17))); // ~8-25% of primary
+      i.stats[q]=qVal;
+    }
+  }
+
   // --- TRAITS ---
   // Chance increases with rarity and floor depth
   let traitChance=0.08+r*0.08+Math.min(0.2,S.floor*0.003);
@@ -342,6 +373,17 @@ function makeLegendaryItem(forceType){
   if(Math.random()<0.6){
     let tertiary=p.filter(x=>x!==primary&&x!==secondary)[Math.floor(Math.random()*2)];
     i.stats[tertiary]=Math.max(1,Math.round(primaryVal*(0.2+Math.random()*0.3)));
+  }
+
+  // Quaternary "PERFECT" 4th stat — legendaries are prime candidates for an
+  // all-four-stat item. ~35% chance to fill whatever stat is still MISSING, at a
+  // lower value. (Higher chance than normal loot since these are the flashy finds.)
+  if(Math.random()<0.35){
+    let missing=p.filter(k=>!i.stats[k]);
+    if(missing.length>0){
+      let q=missing[Math.floor(Math.random()*missing.length)];
+      i.stats[q]=Math.max(1,Math.round(primaryVal*(0.1+Math.random()*0.2)));
+    }
   }
 
   // ALWAYS has a trait, 40% chance of double trait
@@ -484,17 +526,20 @@ function item(i,inv,equipped){
   //  Death Ward: once per FLOOR → struck out only while on a floor where it's been
   //  used (S.deathWardFloors[]); it recharges on the next floor, so the strikeout
   //  updates automatically every ascend/descend (render re-runs with the new floor).
+  // Trait display — one line per trait, each with its own ⚡. Per-trait strikeout
+  // for spent cheat-death traits. Equipped items get a per-trait 🎲 reroll button
+  // (pay gold to reroll THAT specific trait; repeatable).
   let traitHtml="";
   if(i.trait){
-    let phoenixUsed=(/Phoenix Rebirth/.test(i.trait)&&S.phoenixUsed);
-    let wardUsedHere=(/Death Ward/.test(i.trait)&&(S.deathWardFloors||[]).includes(S.floor));
-    if(phoenixUsed){
-      traitHtml=`<div class="trait trait-used"><s>⚡ ${i.trait}</s> <span class="small">(used)</span></div>`;
-    } else if(wardUsedHere){
-      traitHtml=`<div class="trait trait-used"><s>⚡ ${i.trait}</s> <span class="small">(used this floor)</span></div>`;
-    } else {
-      traitHtml=`<div class="trait">⚡ ${i.trait}</div>`;
-    }
+    let traitList=i.trait.split(",").map(t=>t.trim()).filter(t=>t&&t!=="null");
+    traitHtml=traitList.map((t,ti)=>{
+      let phoenixUsed=(/Phoenix Rebirth/.test(t)&&S.phoenixUsed);
+      let wardUsedHere=(/Death Ward/.test(t)&&(S.deathWardFloors||[]).includes(S.floor));
+      let rerollBtn=(!dead&&equipped)?` <button class="reroll-btn" title="Reroll this trait for gold" onclick="rerollTrait('${i.id}','${equipped}',${ti})">🎲 ${rerollCost()}💰</button>`:"";
+      if(phoenixUsed) return `<div class="trait trait-used"><s>⚡ ${t}</s> <span class="small">(used)</span></div>`;
+      if(wardUsedHere) return `<div class="trait trait-used"><s>⚡ ${t}</s> <span class="small">(used this floor)</span>${rerollBtn}</div>`;
+      return `<div class="trait">⚡ ${t}${rerollBtn}</div>`;
+    }).join("");
   }
   // Name display — potions show their stack count (e.g. "Mystery Potion 3/10").
   let nameHtml=(i.type==="potion")?`${i.name} <span class="stack-count">${i.count||1}/10</span>`:i.name;
@@ -549,11 +594,15 @@ function goldMult(){
 
 // Sell value of an item (CHA-boosted, same formula as trader modal)
 function itemValue(x){
-  // CHA improves sell prices (+3%/pt) but is HARD-CAPPED at +100% — uncapped it
-  // let a huge deep-floor CHA stat turn selling into an infinite gold fountain.
+  // CHA improves sell prices (+3%/pt) but is HARD-CAPPED at +100%.
   let chaBonus=1+Math.min(1.0,(eff().cha||1)*0.03);
-  // Sell value is modest — flipping found loot should supplement gold, not flood it.
-  return Math.max(1,Math.floor(((Object.values(x.stats).reduce((a,b)=>a+b,0))*1.2+(rar.indexOf(x.rarity)+1)*4)*chaBonus*goldMult()));
+  // Sell value scales with the item's stats AND with DEPTH — deep-floor loot should
+  // feel genuinely more valuable than shallow loot (a floor-40 item sells far more
+  // than a floor-10 one). depthFactor = 1 + floor/100 (endless, no cap). Tolls are a
+  // big gold sink now, so richer sales don't create a fountain.
+  let depthFactor=1+(S.floor||1)/100;
+  let statSum=Object.values(x.stats).reduce((a,b)=>a+b,0);
+  return Math.max(1,Math.floor((statSum*1.6+(rar.indexOf(x.rarity)+1)*4)*chaBonus*goldMult()*depthFactor));
 }
 
 // Sell an inventory item directly (only valid at a trader)
@@ -729,6 +778,47 @@ function unequip(id,slotKey){
   }
   save();render();
 }
+
+// --- PER-TRAIT REROLL ---
+// Pay gold to reroll ONE chosen trait on an equipped item (repeatable). The cost
+// scales with floor depth so it's a meaningful late-game gold sink. On a multi-trait
+// item, only the selected trait (by index) is replaced with a fresh random trait
+// from the item's appropriate pool.
+function rerollCost(){
+  return Math.max(50,Math.round(Math.pow(S.floor,1.3)*8+40));
+}
+// Resolve an equipped item from a slot key ("weapon".."amulet" or "ring0".."ring9").
+function equippedBySlotKey(slotKey){
+  if(typeof slotKey==="string"&&slotKey.startsWith("ring")){
+    return S.equipment.rings[parseInt(slotKey.replace("ring",""))]||null;
+  }
+  return S.equipment[slotKey]||null;
+}
+function rerollTrait(itemId,slotKey,traitIndex){
+  if(S.hp<=0)return;
+  let it=equippedBySlotKey(slotKey);
+  if(!it||it.id!==itemId||!it.trait) return;
+  let cost=rerollCost();
+  if((S.gold||0)<cost) return msg(`🎲 A trait reroll costs ${cost} 💰 — you only have ${S.gold||0}.`);
+  let list=it.trait.split(",").map(t=>t.trim()).filter(t=>t&&t!=="null");
+  if(traitIndex<0||traitIndex>=list.length) return;
+  // Pick the pool matching the item type (rings/amulets have their own synergy pools).
+  let pool=it.type==="ring"?ringTraits:it.type==="amulet"?amuletTraits:traits;
+  let old=list[traitIndex];
+  // Roll a NEW trait different from the one being replaced (and not duplicating
+  // another trait already on this item, when possible).
+  let candidate=old, tries=0;
+  do{ candidate=pool[Math.floor(Math.random()*pool.length)]; tries++; }
+  while((candidate===old||list.includes(candidate))&&tries<40);
+  list[traitIndex]=candidate;
+  it.trait=list.join(", ");
+  S.gold-=cost;
+  S.goldSpent=(S.goldSpent||0)+cost;
+  msg(`🎲 Reroll! "${old}" became "${candidate}". (-${cost} 💰)`);
+  if(typeof checkAchievements==="function") checkAchievements();
+  save();render();
+}
+window.rerollTrait=rerollTrait;
 
 // --- DISCARD: permanently drop an inventory item ---
 function discard(id){

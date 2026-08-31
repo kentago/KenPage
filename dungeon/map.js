@@ -25,7 +25,7 @@ function drawMap(){
         // Collect ALL features present so secondary ones show as corner badges.
         let feats=[];
         if(rm.ladder){
-          let toll=(rm.ladder.toll&&!rm.ladder.tollPaid);
+          let toll=(rm.ladder.tollPaid===false);
           if(rm.ladder.emergency) feats.push("🕳️↓");
           else feats.push(rm.ladder.dir==="down"?(toll?"🚧↓":"🪜↓"):(toll?"🚧↑":"🪜↑"));
         }
@@ -51,7 +51,7 @@ function drawMap(){
           symbol="⚕️";
           cellClass+=" doctor";
         } else if(rm.ladder&&rm.ladder.dir==="down"){
-          let toll=(rm.ladder.toll&&!rm.ladder.tollPaid);
+          let toll=(rm.ladder.tollPaid===false);
           if(rm.ladder.emergency){
             symbol="🕳️↓";
             cellClass+=rm.ladder.used?" ladder-used":" ladder-emergency";
@@ -60,9 +60,8 @@ function drawMap(){
             cellClass+=rm.ladder.used?" ladder-used":toll?" ladder-toll":" ladder-down";
           }
         } else if(rm.ladder&&rm.ladder.dir==="up"){
-          let toll=(rm.ladder.toll&&!rm.ladder.tollPaid);
-          symbol=toll?"🚧↑":"🪜↑";
-          cellClass+=rm.ladder.used?" ladder-used":toll?" ladder-toll":" ladder-up";
+          symbol="🪜↑";
+          cellClass+=rm.ladder.used?" ladder-used":" ladder-up";
         } else if(rm.portal){
           symbol="🌀";
           cellClass+=" secret";
