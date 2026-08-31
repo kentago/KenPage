@@ -214,11 +214,13 @@ function spawn(){
     // Target hits-to-kill per tier (harder tiers take more solid hits to drop).
     let hitsCfg={common:[3,2],mid:[5,2],hard:[7,3],elite:[10,4]}[tierName]||[3,2];
     let hpFloor=Math.round(heroDmg*(hitsCfg[0]+Math.random()*hitsCfg[1]));
-    // Target enemy hit as a fraction of hero max HP (never a one-shot).
-    // Floors so a hit always MATTERS; a hard cap so a single hit can never exceed
-    // ~22% of max HP — the hero always survives at least a few hits.
-    let pctCfg={common:[0.04,0.04],mid:[0.06,0.04],hard:[0.08,0.05],elite:[0.10,0.06]}[tierName]||[0.04,0.04];
-    let atkFloor=Math.round(heroHp*Math.min(0.22,pctCfg[0]+Math.random()*pctCfg[1]));
+    // Target enemy hit as a fraction of hero max HP (never a one-shot). These were
+    // raised (v1.2): at high level HP balloons, so low hit-% made normal enemies
+    // harmless (clear 10 in a row without healing). Now each hit is a real chunk, so
+    // a string of fights forces you to heal — while the 25% single-hit cap below
+    // still prevents any one-shot.
+    let pctCfg={common:[0.07,0.05],mid:[0.10,0.06],hard:[0.13,0.07],elite:[0.16,0.08]}[tierName]||[0.07,0.05];
+    let atkFloor=Math.round(heroHp*Math.min(0.24,pctCfg[0]+Math.random()*pctCfg[1]));
     hp=Math.max(hp,hpFloor);
     atk=Math.max(atk,atkFloor);
     // Element damage should also stay relevant but never dominate — floor it so it

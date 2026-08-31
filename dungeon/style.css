@@ -76,6 +76,7 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .small{font-size:.85em;color:#aaa}
 .trait{font-size:.9em;color:#f1c40f;margin-top:4px}
 .reroll-btn{font-size:.8em;background:#2a2a3a;color:#9af;border:1px solid #55f;border-radius:6px;padding:1px 6px;margin-left:6px;cursor:pointer}
+.elem-now{font-size:.8em;color:#e67e22;font-weight:bold}
 .reroll-btn:hover{background:#3a3a5a;border-color:#88f}
 .trait.trait-used{color:#888}
 .item-type{font-size:.8em;color:#8ab4d8;margin:2px 0}
@@ -316,6 +317,22 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 }
 /* Compass overlaid in the map's SOUTH-EAST corner (accepts hiding that part of the map) */
 .map-wrap{position:relative}
+/* HP danger border on the map area — at-a-glance flee/heal cue */
+.map-wrap{border:3px solid transparent;border-radius:10px;transition:border-color .3s}
+.map-wrap.hp-ok{border-color:#2e5a2e}
+.map-wrap.hp-good{border-color:#c9b429}
+.map-wrap.hp-warn{border-color:#e67e22}
+.map-wrap.hp-danger{border-color:#e74c3c}
+.map-wrap.hp-critical{border-color:#ff2b2b;animation:hpFlash .7s infinite}
+@keyframes hpFlash{0%,100%{border-color:#ff2b2b;box-shadow:0 0 8px rgba(255,43,43,.7)}50%{border-color:#5a1010;box-shadow:none}}
+/* HP readout pinned to the map's BOTTOM-LEFT corner (opposite the SE compass) */
+.hp-corner{position:absolute;left:8px;bottom:8px;z-index:5;padding:4px 10px;border-radius:8px;
+  font-weight:bold;font-size:15px;background:rgba(10,10,10,.7);border:1px solid #444}
+.hp-corner.hpc-ok{color:#7fd07f}
+.hp-corner.hpc-good{color:#e9d84a;border-color:#c9b429}
+.hp-corner.hpc-warn{color:#f39c12;border-color:#e67e22}
+.hp-corner.hpc-danger{color:#ff6b6b;border-color:#e74c3c}
+.hp-corner.hpc-critical{color:#fff;background:#c0392b;border-color:#ff2b2b;animation:hpFlash .7s infinite}
 .map-wrap #actions{position:absolute;right:8px;bottom:8px;z-index:5;margin:0}
 .map-wrap #actions .compass{margin:0;gap:3px;background:rgba(10,10,10,.6);padding:6px;border-radius:10px;border:1px solid #333}
 .map-wrap #actions .compass-btn{width:46px;height:42px;font-size:16px}
@@ -473,6 +490,7 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .finger-pick:hover{background:#2a4a2a;border-color:#4caf50}
 .finger-pick .finger-ring-name{color:#ddd;font-size:13px}
 .finger-pick .small{color:#9ad;}
+.fp-perstat{margin-top:2px;font-size:.82em}
 .finger-pick.finger-scarred{background:#2a1a0a;border-color:#e67e22;color:#e67e22}
 .finger-pick.finger-scarred:hover{background:#3a2410}
 .finger-pick.finger-lost{background:#1a1a1a;border-color:#555;color:#666;cursor:not-allowed}
@@ -519,7 +537,10 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
    (blocked) and grey on the other three — a clean, even square.
    Placed last + !important so red walls always win over player/enemy/npc/
    trader/ladder border colors. */
-.map-cell.blocked-n{ border-top:2px solid #ff3b30 !important; }
-.map-cell.blocked-s{ border-bottom:2px solid #ff3b30 !important; }
-.map-cell.blocked-e{ border-right:2px solid #ff3b30 !important; }
-.map-cell.blocked-w{ border-left:2px solid #ff3b30 !important; }
+/* Blocked edges draw a bold red border on THIS cell's side. Walls are reciprocal
+   (both adjacent rooms block the shared edge), so a wall shows as a DOUBLE red line
+   — one on each cell's side of the grid gap — clearly signalling "blocked both ways". */
+.map-cell.blocked-n{ border-top:3px solid #ff3b30 !important; }
+.map-cell.blocked-s{ border-bottom:3px solid #ff3b30 !important; }
+.map-cell.blocked-e{ border-right:3px solid #ff3b30 !important; }
+.map-cell.blocked-w{ border-left:3px solid #ff3b30 !important; }

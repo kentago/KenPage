@@ -30,6 +30,23 @@ function luckChance(luck, base, k, limit){
   return base + (limit - base) * (luck/(luck + k));
 }
 
+// Split an item's trait string into individual traits. Multiple traits are joined
+// with ", " but each trait's DESCRIPTION can also contain commas (e.g. "Thunderstrike
+// (+shock damage, scales w/ floor)"). So we split ONLY on commas that are OUTSIDE
+// parentheses — never breaking a description into a fake extra trait.
+function splitTraits(traitStr){
+  if(!traitStr) return [];
+  let out=[], depth=0, cur="";
+  for(let ch of traitStr){
+    if(ch==="(") depth++;
+    else if(ch===")") depth=Math.max(0,depth-1);
+    if(ch==="," && depth===0){ out.push(cur.trim()); cur=""; }
+    else cur+=ch;
+  }
+  if(cur.trim()) out.push(cur.trim());
+  return out.filter(t=>t&&t!=="null");
+}
+
 // --- EFFECTIVE STATS ---
 // Sums base stats + all equipped item stats + parsed trait bonuses (incl. luck).
 // All game mechanics should read from eff() rather than S.stats directly.
@@ -53,7 +70,7 @@ function eff(){
     }
     // Parse trait bonuses (traits are strings that may contain stat effects)
     if(it.trait){
-      let traits=it.trait.split(",").map(t=>t.trim());
+      let traits=splitTraits(it.trait);
       for(let t of traits) applyTraitBonus(t,e,ringCount);
     }
   }
@@ -158,7 +175,7 @@ function effMaxHp(){
   S.equipment.rings.forEach(x=>{if(x)equipped.push(x);});
   for(let it of equipped){
     if(!it.trait) continue;
-    let traits=it.trait.split(",").map(t=>t.trim());
+    let traits=splitTraits(it.trait);
     for(let t of traits){
       if(/Gem Fortitude/.test(t)) hp+=2*ringCount;
     }
@@ -531,14 +548,19 @@ function item(i,inv,equipped){
   // (pay gold to reroll THAT specific trait; repeatable).
   let traitHtml="";
   if(i.trait){
-    let traitList=i.trait.split(",").map(t=>t.trim()).filter(t=>t&&t!=="null");
+    let traitList=splitTraits(i.trait);
+    // Current floor-scaled elemental damage (matches combat.js: base..2×base per trait).
+    let elemBase=Math.max(1,Math.round(Math.pow(S.floor,1.1)*0.3));
+    let elemNames=["Flameburst","Thunderstrike","Frostbite","Poison Edge","Venomcoat"];
     traitHtml=traitList.map((t,ti)=>{
       let phoenixUsed=(/Phoenix Rebirth/.test(t)&&S.phoenixUsed);
       let wardUsedHere=(/Death Ward/.test(t)&&(S.deathWardFloors||[]).includes(S.floor));
-      let rerollBtn=(!dead&&equipped)?` <button class="reroll-btn" title="Reroll this trait for gold" onclick="rerollTrait('${i.id}','${equipped}',${ti})">🎲 ${rerollCost()}💰</button>`:"";
+      let rerollBtn=(!dead&&(equipped||inv))?` <button class="reroll-btn" title="Reroll this trait for gold" onclick="rerollTrait('${i.id}','',${ti})">🎲 ${rerollCost()}💰</button>`:"";
+      // Append the ACTUAL current damage for elemental traits (updates per floor).
+      let elemNote=elemNames.some(n=>t.includes(n))?` <span class="elem-now">≈ +${elemBase}-${elemBase*2} now</span>`:"";
       if(phoenixUsed) return `<div class="trait trait-used"><s>⚡ ${t}</s> <span class="small">(used)</span></div>`;
       if(wardUsedHere) return `<div class="trait trait-used"><s>⚡ ${t}</s> <span class="small">(used this floor)</span>${rerollBtn}</div>`;
-      return `<div class="trait">⚡ ${t}${rerollBtn}</div>`;
+      return `<div class="trait">⚡ ${t}${elemNote}${rerollBtn}</div>`;
     }).join("");
   }
   // Name display — potions show their stack count (e.g. "Mystery Potion 3/10").
@@ -657,10 +679,23 @@ function ringStatLine(x){
   let stats=Object.entries(x.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ");
   return `${stats}${x.trait?` · ⚡ ${x.trait}`:""}`;
 }
+// Per-stat ▲/▼ comparison of an incoming ring vs the ring currently on a finger.
+// Shows each stat that differs (incoming − current), e.g. "STR ▲+30 · DEX ▼-5".
+function perStatCompare(incoming,occ){
+  let keys=["str","dex","int","cha","luck"];
+  let parts=[];
+  for(let k of keys){
+    let d=(incoming.stats[k]||0)-((occ&&occ.stats[k])||0);
+    if(d>0) parts.push(`<span class="cmp-up">${k.toUpperCase()} ▲+${d}</span>`);
+    else if(d<0) parts.push(`<span class="cmp-down">${k.toUpperCase()} ▼${d}</span>`);
+  }
+  return parts.length?parts.join(" · "):`<span>same stats</span>`;
+}
 function showFingerPicker(itemId){
   let it=S.inventory.find(x=>x.id===itemId);
   if(!it) return;
   let scarred=(S.repairedFingers||[]);
+  let incomingSum=statSum(it); // total stats of the ring we're placing
   function fingerCell(slotIdx){
     let handName=slotIdx<5?"L":"R";
     let fingerNum=(slotIdx%5)+1;
@@ -668,8 +703,19 @@ function showFingerPicker(itemId){
     let scar=scarred.includes(slotIdx);
     let occ=S.equipment.rings[slotIdx];
     let scarClass=scar?" finger-scarred":"";
-    let head=`${scar?"🩹 ":""}${handName}${fingerNum} ${occ?"— REPLACE:":"— empty (place here)"}`;
-    let body=occ?`<div class="finger-ring-name"><b>${occ.name}</b></div><div class="small">${ringStatLine(occ)}</div>`:(scar?`<div class="small">⚠️ scarred — fragile</div>`:"");
+    // Comparison vs the incoming ring — TOTAL verdict + PER-STAT arrows.
+    let cmp, perStat="";
+    if(occ){
+      let delta=incomingSum-statSum(occ);
+      cmp=delta>0?`<span class="cmp-up">▲ +${delta} total</span>`
+        :delta<0?`<span class="cmp-down">▼ ${delta} total</span>`
+        :`<span>= same total</span>`;
+      perStat=`<div class="small fp-perstat">${perStatCompare(it,occ)}</div>`;
+    } else {
+      cmp=`<span class="cmp-up">✨ empty — free upgrade</span>`;
+    }
+    let head=`${scar?"🩹 ":""}${handName}${fingerNum} ${occ?"— REPLACE:":"— empty"}  ${cmp}`;
+    let body=occ?`<div class="finger-ring-name"><b>${occ.name}</b></div><div class="small">${ringStatLine(occ)}</div>${perStat}`:(scar?`<div class="small">⚠️ scarred — fragile</div>`:"");
     return `<div class="finger-pick${scarClass}" onclick="placeRingOnFinger('${itemId}',${slotIdx})" title="${handName==="L"?"Left":"Right"} hand, finger ${fingerNum}${scar?" — SCARRED (fragile, more likely lost again)":""}">${head}${body}</div>`;
   }
   let left=[0,1,2,3,4].map(fingerCell).join("");
@@ -682,9 +728,9 @@ function showFingerPicker(itemId){
       <h3>💍 Where to wear ${it.name}?</h3>
       <div class="fp-found item ${it.rarity} ${it.depth}">
         <span class="art">${it.art}</span> <b>${it.name}</b>
-        <div class="small">Found ring: ${ringStatLine(it)||"(no stats)"}</div>
+        <div class="small">Found ring (total ${incomingSum}): ${ringStatLine(it)||"(no stats)"}</div>
       </div>
-      <p class="small">Compare against your equipped rings below. <span style="color:#e67e22">🩹 = scarred</span> (fragile, more likely to be lost again). Placing on an occupied finger swaps the old ring back to inventory.</p>
+      <p class="small">Each finger shows the <b>total</b> verdict and <b>per-stat</b> ▲/▼ vs its current ring (green = the new ring is better). <span style="color:#e67e22">🩹 = scarred</span> (fragile). Placing on an occupied finger swaps the old ring back to inventory.</p>
       <div class="finger-hand"><b>🫲 Left hand</b><div class="finger-col">${left}</div></div>
       <div class="finger-hand"><b>🫱 Right hand</b><div class="finger-col">${right}</div></div>
       <div class="fp-actions">
@@ -780,27 +826,28 @@ function unequip(id,slotKey){
 }
 
 // --- PER-TRAIT REROLL ---
-// Pay gold to reroll ONE chosen trait on an equipped item (repeatable). The cost
-// scales with floor depth so it's a meaningful late-game gold sink. On a multi-trait
-// item, only the selected trait (by index) is replaced with a fresh random trait
-// from the item's appropriate pool.
+// Pay gold to reroll ONE chosen trait on ANY item you own — equipped OR in extra
+// inventory (so you can improve a near-miss before deciding to equip it). Repeatable;
+// cost scales with floor depth. On a multi-trait item, only the selected trait
+// (by index) is replaced with a fresh random trait from the item's appropriate pool.
 function rerollCost(){
   return Math.max(50,Math.round(Math.pow(S.floor,1.3)*8+40));
 }
-// Resolve an equipped item from a slot key ("weapon".."amulet" or "ring0".."ring9").
-function equippedBySlotKey(slotKey){
-  if(typeof slotKey==="string"&&slotKey.startsWith("ring")){
-    return S.equipment.rings[parseInt(slotKey.replace("ring",""))]||null;
+// Find an owned item by id, searching equipment slots, ring slots, and inventory.
+function findItemById(id){
+  for(let k of ["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet"]){
+    if(S.equipment[k]&&S.equipment[k].id===id) return S.equipment[k];
   }
-  return S.equipment[slotKey]||null;
+  for(let r of S.equipment.rings){ if(r&&r.id===id) return r; }
+  return S.inventory.find(x=>x.id===id)||null;
 }
 function rerollTrait(itemId,slotKey,traitIndex){
   if(S.hp<=0)return;
-  let it=equippedBySlotKey(slotKey);
-  if(!it||it.id!==itemId||!it.trait) return;
+  let it=findItemById(itemId); // works for equipped OR inventory items
+  if(!it||!it.trait) return;
   let cost=rerollCost();
   if((S.gold||0)<cost) return msg(`🎲 A trait reroll costs ${cost} 💰 — you only have ${S.gold||0}.`);
-  let list=it.trait.split(",").map(t=>t.trim()).filter(t=>t&&t!=="null");
+  let list=splitTraits(it.trait);
   if(traitIndex<0||traitIndex>=list.length) return;
   // Pick the pool matching the item type (rings/amulets have their own synergy pools).
   let pool=it.type==="ring"?ringTraits:it.type==="amulet"?amuletTraits:traits;

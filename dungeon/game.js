@@ -105,17 +105,27 @@ function move(d){
     if(hasTrait("Life Pulse")&&S.hp>0&&S.hp<effMaxHp()){
       S.hp=Math.min(effMaxHp(),S.hp+1);
     }
-    // Roll walls for the other three directions (never the way we came from — that
-    // edge is proven open). Skip any edge that leads to an ALREADY-EXPLORED room
-    // which is known to be open, so we never retroactively seal a usable path.
+    // STEP 1 — INHERIT existing walls: for every direction, if the adjacent
+    // (already-explored) room ALREADY blocks the shared edge, mirror that block
+    // here immediately. This is why a wall a neighbor knows about now shows the
+    // instant you enter (no more discovering it by bumping).
+    for(let dd of ["N","S","E","W"]){
+      let ax=S.x+DIR_DX[dd], ay=S.y+DIR_DY[dd];
+      let neighbor=S.rooms[`${S.floor}:${ax}:${ay}`];
+      if(neighbor && neighbor.blocked[OPP[dd]]) x.blocked[dd]=true;
+    }
+    // STEP 2 — ROLL NEW walls for the other three directions (never the way we came
+    // from — that edge is proven open). Skip edges that are already resolved: an
+    // inherited wall (done above) or a known-OPEN edge to an explored neighbor
+    // (never retroactively seal a usable path). Only truly-unknown edges get rolled.
     let dirs=["N","S","E","W"].filter(dd=>dd!==OPP[d]);
     for(let dd of dirs){
+      if(x.blocked[dd]) continue; // already walled (inherited)
       let ax=S.x+DIR_DX[dd], ay=S.y+DIR_DY[dd];
-      let ak=`${S.floor}:${ax}:${ay}`;
-      let neighbor=S.rooms[ak];
-      // If the neighbor exists and does NOT already block this shared edge, leave it
-      // open (it's a known-traversable connection). Otherwise it's fair game to wall.
+      let neighbor=S.rooms[`${S.floor}:${ax}:${ay}`];
+      // Explored neighbor with an OPEN shared edge → keep it open (known path).
       if(neighbor && !neighbor.blocked[OPP[dd]]) continue;
+      // Unknown edge → fair game to wall (reciprocally).
       if(Math.random()<0.22){
         enforceReciprocal(S.floor,S.x,S.y,dd);
       }
@@ -665,6 +675,23 @@ function render(){
   roomTitle.textContent=`Floor ${S.floor} — Chamber`;
   roomText.textContent=r.enemy&&r.enemy.hp>0?`⚔️ ${r.enemy.name} (${r.enemy.hp} HP)${r.enemy.element?` [${r.enemy.element}]`:""}${r.enemy.isBoss?` 👑 BOSS — ${r.enemy.abilities.join(" | ")}`:""} blocks the chamber.`:r.npc&&!r.npc.completed?`🔵 ${r.npc.name}, ${r.npc.title}, is here.`:r.trader?`💲 ${r.trader.name}, ${r.trader.title}, awaits.`:r.doctor?`⚕️ ${r.doctor.name}, ${r.doctor.title}, tends the wounded here.`:r.rest&&!r.rest.depleted?`${r.rest.emoji} A ${r.rest.name} flows here. (${r.rest.sips} sips remain)`:"The chamber is quiet.";
   map.innerHTML=drawMap();
+  // --- HP DANGER BORDER + corner readout on the map area ---
+  // Border colours by HP fraction: green(>75%) → yellow(≤75%) → orange(≤50%) →
+  // red(≤25%) → flashing red(≤10%). A constant at-a-glance "flee/heal!" cue.
+  let mw=document.querySelector(".map-wrap");
+  if(mw){
+    let frac=effMaxHp()>0?(S.hp/effMaxHp()):0;
+    mw.classList.remove("hp-ok","hp-good","hp-warn","hp-danger","hp-critical");
+    let cls=S.hp<=0?"hp-critical":frac<=0.10?"hp-critical":frac<=0.25?"hp-danger":frac<=0.50?"hp-warn":frac<=0.75?"hp-good":"hp-ok";
+    mw.classList.add(cls);
+  }
+  let hpc=document.getElementById("hpCorner");
+  if(hpc){
+    let frac=effMaxHp()>0?(S.hp/effMaxHp()):0;
+    let cls=frac<=0.10?"hpc-critical":frac<=0.25?"hpc-danger":frac<=0.50?"hpc-warn":frac<=0.75?"hpc-good":"hpc-ok";
+    hpc.className="hp-corner "+cls;
+    hpc.textContent=`❤️ ${Math.max(0,S.hp)}/${effMaxHp()}`;
+  }
   if(r.enemy&&r.enemy.hp>0){
     let bossBanner=r.enemy.isBoss?`<div class="boss-banner">👑 BOSS FIGHT — must be defeated to descend</div>`:"";
     // Boss banner stays in the corner overlay slot; Fight/Flee render in
