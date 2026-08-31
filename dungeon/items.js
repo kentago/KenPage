@@ -473,7 +473,24 @@ function item(i,inv,equipped){
   }
   // Comparison vs currently-equipped item in the same slot (inventory items only)
   let cmp=inv?compareLine(i):"";
-  return`<div class="item ${i.rarity} ${i.depth}${i.prestige?" prestige-"+i.prestige:""}"><span class="art">${i.art}</span><b>${i.name}</b><div class="item-type">${typeLabel(i.type)}</div><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${i.trait?`<div class="trait">⚡ ${i.trait}</div>`:""}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)}${i.prestige?` · ✦${i.prestige[0].toUpperCase()+i.prestige.slice(1)}✦`:""} · 💰 ${val}</div>${cmp}${buttons}</div>`;
+  // Trait display — strike out a spent once-per-run/floor cheat-death trait.
+  //  Phoenix Rebirth: once per RUN (S.phoenixUsed) → struck out permanently once used.
+  //  Death Ward: once per FLOOR → struck out only while on a floor where it's been
+  //  used (S.deathWardFloors[]); it recharges on the next floor, so the strikeout
+  //  updates automatically every ascend/descend (render re-runs with the new floor).
+  let traitHtml="";
+  if(i.trait){
+    let phoenixUsed=(/Phoenix Rebirth/.test(i.trait)&&S.phoenixUsed);
+    let wardUsedHere=(/Death Ward/.test(i.trait)&&(S.deathWardFloors||[]).includes(S.floor));
+    if(phoenixUsed){
+      traitHtml=`<div class="trait trait-used"><s>⚡ ${i.trait}</s> <span class="small">(used)</span></div>`;
+    } else if(wardUsedHere){
+      traitHtml=`<div class="trait trait-used"><s>⚡ ${i.trait}</s> <span class="small">(used this floor)</span></div>`;
+    } else {
+      traitHtml=`<div class="trait">⚡ ${i.trait}</div>`;
+    }
+  }
+  return`<div class="item ${i.rarity} ${i.depth}${i.prestige?" prestige-"+i.prestige:""}"><span class="art">${i.art}</span><b>${i.name}</b><div class="item-type">${typeLabel(i.type)}</div><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${traitHtml}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)}${i.prestige?` · ✦${i.prestige[0].toUpperCase()+i.prestige.slice(1)}✦`:""} · 💰 ${val}</div>${cmp}${buttons}</div>`;
 }
 
 // Build a "vs equipped" comparison line for an inventory item

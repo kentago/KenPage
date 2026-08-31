@@ -114,9 +114,12 @@ function loseFinger(){
 function damage(n){
   S.hp=Math.max(0,S.hp-n);
   if(S.hp===0){
-    // Death Ward: survive one fatal hit per floor at 1 HP
-    if(hasTrait("Death Ward")&&S.deathWardFloor!==S.floor){
-      S.deathWardFloor=S.floor;
+    // Death Ward: survive one fatal hit per floor at 1 HP. Track the floors it has
+    // been used on in an array so the trait can be struck out per-floor in the UI.
+    if(hasTrait("Death Ward")&&!(S.deathWardFloors||[]).includes(S.floor)){
+      if(!S.deathWardFloors) S.deathWardFloors=[];
+      S.deathWardFloors.push(S.floor);
+      S.deathWardFloor=S.floor; // legacy field kept in sync
       S.hp=1;
       msg(`🛡️ DEATH WARD! A fatal blow is turned aside — you cling to life at 1 HP! (once per floor)`);
       render();
