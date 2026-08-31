@@ -625,7 +625,10 @@ function render(){
   let into=Math.max(0,Math.min(span,S.xp-curThresh)); // clamp within this level for display
   let pct=Math.round(into/span*100);
   let xpBar=`<div class="xp-wrap"><div class="xp-label">⭐ Level ${S.level} · XP ${into}/${span} to next</div><div class="xp-bar"><div class="xp-fill" style="width:${pct}%"></div></div></div>`;
-  stats.innerHTML=[`❤️ HP ${Math.max(0,S.hp)}/${effMaxHp()}`,`🍀 Luck ${eff().luck||0}`,`💰 ${S.gold}`].map(x=>`<div>${x}</div>`).join("")+renderStatButtons();
+  stats.innerHTML=`<div class="stats-col stats-primary">${renderStatButtons()}</div>`+
+    `<div class="stats-col stats-vitals">`+
+      [`❤️ HP ${Math.max(0,S.hp)}/${effMaxHp()}`,`🍀 Luck ${eff().luck||0}`,`💰 ${S.gold}`].map(x=>`<div class="vital">${x}</div>`).join("")+
+    `</div>`;
   xpbar.innerHTML=xpBar;
   roomTitle.textContent=`Floor ${S.floor} — Chamber`;
   roomText.textContent=r.enemy&&r.enemy.hp>0?`⚔️ ${r.enemy.name} (${r.enemy.hp} HP)${r.enemy.element?` [${r.enemy.element}]`:""}${r.enemy.isBoss?` 👑 BOSS — ${r.enemy.abilities.join(" | ")}`:""} blocks the chamber.`:r.npc&&!r.npc.completed?`🔵 ${r.npc.name}, ${r.npc.title}, is here.`:r.trader?`💲 ${r.trader.name}, ${r.trader.title}, awaits.`:r.doctor?`⚕️ ${r.doctor.name}, ${r.doctor.title}, tends the wounded here.`:r.rest&&!r.rest.depleted?`${r.rest.emoji} A ${r.rest.name} flows here. (${r.rest.sips} sips remain)`:"The chamber is quiet.";
