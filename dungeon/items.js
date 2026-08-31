@@ -292,6 +292,19 @@ function makeItem(type){
     }
   }
 
+  // FOCUSED-ITEM BONUS: if the item ended up with only ONE stat, bump that stat
+  // hard (×1.5-1.9) so a "pure" single-stat piece is a genuine specialist choice
+  // vs a spread-stat item — never just a strictly-worse roll. The more stats an
+  // item has, the more total value it carries; this keeps single-stat items in the
+  // conversation by concentrating that value into one big number.
+  {
+    let statKeys=Object.keys(i.stats);
+    if(statKeys.length===1){
+      let k=statKeys[0];
+      i.stats[k]=Math.max(1,Math.round(i.stats[k]*(1.5+Math.random()*0.4)));
+    }
+  }
+
   // --- TRAITS ---
   // Chance increases with rarity and floor depth
   let traitChance=0.08+r*0.08+Math.min(0.2,S.floor*0.003);
@@ -301,6 +314,8 @@ function makeItem(type){
   if(type==="amulet") traitChance+=0.25;
   // Dual Spark: +10% trait chance globally while equipped
   if(hasTrait("Dual Spark")) traitChance+=0.10;
+  // Mythical+ (r>=4) ALWAYS get their signature base trait — pinnacle gear is never blank.
+  if(r>=4) traitChance=1;
   if(Math.random()<traitChance){
     // Rings get ring-specific synergy traits 60% of the time
     if(type==="ring"&&Math.random()<0.6){
@@ -311,17 +326,38 @@ function makeItem(type){
       i.trait=traits[Math.floor(Math.random()*traits.length)];
     }
   }
-  // Rare chance of DOUBLE trait on epic+ (r>=3)
-  if(r>=3&&Math.random()<0.15+r*0.03){
-    let pool=type==="ring"&&Math.random()<0.5?ringTraits:type==="amulet"&&Math.random()<0.5?amuletTraits:traits;
-    let second=pool[Math.floor(Math.random()*pool.length)];
-    if(!i.trait){
-      // No first trait rolled — the "second" becomes the sole trait
-      i.trait=second;
-    } else if(second!==i.trait){
-      i.trait=i.trait+", "+second;
-    }
+  // EXTRA TRAITS by rarity/prestige (v1.2):
+  //  - Epic+ (r>=3): chance at a 2nd trait.
+  //  - Mythical+ (r>=4): chance at a 3rd trait.
+  //  - Prestige items (floor 250+, i.prestige set): chance at a coveted 4th trait.
+  // Each added trait is picked from the item's pool and must not duplicate an
+  // existing one. Traits are stored comma-joined (", "); descriptions are comma-free.
+  function traitPool(){
+    return type==="ring"&&Math.random()<0.5?ringTraits
+      :type==="amulet"&&Math.random()<0.5?amuletTraits:traits;
   }
+  function addTrait(){
+    let have=splitTraits(i.trait);
+    // Try a few times to find a trait not already on the item.
+    for(let tries=0;tries<20;tries++){
+      let cand=traitPool()[Math.floor(Math.random()*traitPool().length)];
+      if(!have.includes(cand)){
+        i.trait=i.trait?i.trait+", "+cand:cand;
+        return true;
+      }
+    }
+    return false;
+  }
+  // Extra-trait chances scale with rarity, with a big PRESTIGE (floor 250+) bonus so
+  // pinnacle endgame items rarely have just one trait.
+  let pBonus=i.prestige?0.35:0;
+  // 2nd trait — RARE+; near-GUARANTEED by Divine, and effectively guaranteed on
+  // prestige items (0.40 + r*0.12 + prestige → ≥1.0 for Divine/prestige).
+  if(r>=2&&Math.random()<0.40+r*0.12+pBonus) addTrait();
+  // 3rd trait — EPIC+; climbs with rarity, strongly boosted by prestige.
+  if(r>=3&&Math.random()<0.18+(r-3)*0.07+pBonus) addTrait();
+  // 4th trait — prestige (floor 250+) items only; a coveted endgame chase.
+  if(i.prestige&&Math.random()<0.45) addTrait();
 
   return i;
 }
@@ -403,12 +439,19 @@ function makeLegendaryItem(forceType){
     }
   }
 
-  // ALWAYS has a trait, 40% chance of double trait
+  // ALWAYS has a trait; extra traits by rarity/prestige (v1.2), non-duplicate.
   i.trait=traits[Math.floor(Math.random()*traits.length)];
-  if(Math.random()<0.4){
-    let second=traits[Math.floor(Math.random()*traits.length)];
-    if(second!==i.trait) i.trait=i.trait+", "+second;
+  function addLegTrait(){
+    let have=splitTraits(i.trait);
+    for(let tries=0;tries<20;tries++){
+      let cand=traits[Math.floor(Math.random()*traits.length)];
+      if(!have.includes(cand)){ i.trait=i.trait+", "+cand; return true; }
+    }
+    return false;
   }
+  if(Math.random()<0.55) addLegTrait();                 // 2nd (legendaries are flashy)
+  if(r>=3&&Math.random()<0.30) addLegTrait();           // 3rd on epic+
+  if(i.prestige&&Math.random()<0.45) addLegTrait();     // 4th on prestige (floor 250+)
 
   return i;
 }

@@ -204,7 +204,7 @@ function searchBonus(){
   return b;
 }
 
-function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Search is unavailable during combat.");if(r.searched)return;r.searched=true;
+function search(){let r=room();if(r.startRoom)return msg("🏛️ The entrance hall holds nothing to search — venture onward.");if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Search is unavailable during combat.");if(r.searched)return;r.searched=true;
 
   // --- QUEST ITEM DISCOVERY (d20 based) ---
   // Items can ONLY be found on the quest's target floor (or current floor for "same floor" quests)
@@ -440,6 +440,23 @@ function useLadder(dir){
 
     // Link source ladder to this new room
     r.ladder.targetKey=destKey;
+
+    // DESCENT: roll walls on the landing room so floors can be small/maze-like from
+    // the moment you arrive (a tiny floor 2 is a fun surprise). Each of the 4
+    // directions has a chance to be walled (reciprocally) — it can even become a
+    // 1-exit or fully-sealed room, in which case exploring outward may dead-end and
+    // the emergency escape shaft opens. The return ladder is always usable, so you
+    // can climb back up regardless. (Not rolled when ascending.)
+    if(dir==="down"){
+      newRoom.wallsRolled=true;
+      for(let dd of ["N","S","E","W"]){
+        // Skip an edge to an already-explored neighbor that's known-open (don't seal a path).
+        let ax=destX+DIR_DX[dd], ay=destY+DIR_DY[dd];
+        let neigh=S.rooms[`${targetFloor}:${ax}:${ay}`];
+        if(neigh && !neigh.blocked[OPP[dd]]) continue;
+        if(Math.random()<0.28) enforceReciprocal(targetFloor,destX,destY,dd);
+      }
+    }
   }
 
   msg(dir==="down"?`🟨 You descend to floor ${S.floor}.`:`🟩 You ascend to floor ${S.floor}.`);
@@ -702,7 +719,7 @@ function render(){
     if(extEl) extEl.innerHTML=`<div class="extra-actions"><button class="action-btn fight-btn" onclick="act('fight')">⚔️ Fight (F)</button><button class="action-btn flee-btn" onclick="act('flee')">🏃 Flee (R)</button></div>`;
   } else {
     let extras="";
-    if(!r.searched&&!(r.enemy&&r.enemy.hp>0)) extras+=`<button class="action-btn" onclick="act('search')">🔎 Search (E)</button>`;
+    if(!r.searched&&!r.startRoom&&!(r.enemy&&r.enemy.hp>0)) extras+=`<button class="action-btn" onclick="act('search')">🔎 Search (E)</button>`;
     if(r.npc&&!r.npc.completed) extras+=`<button class="action-btn npc-btn" onclick="talkNPC()">🔵 Talk (T)</button>`;
     if(r.trader) extras+=`<button class="action-btn trader-btn" onclick="talkTrader()">💲 Trade (T)</button>`;
     if(r.rest&&!r.rest.depleted){
@@ -928,20 +945,21 @@ normalizeXp();
 // get their walls when first entered (see move()). The STARTING room is created up
 // front by fresh(), so roll its walls once here too — but never seal more than 2 of
 // 4 directions, so the player is never trapped at spawn.
-(function initStartRoomWalls(){
-  let r=room();
-  if(r.wallsRolled) return;           // only once
-  let dirs=["N","S","E","W"];
-  let blockedCount=0;
-  for(let dd of dirs){
-    if(blockedCount>=2) break;        // keep at least 2 exits open at spawn
-    if(!r.blocked[dd] && Math.random()<0.22){
-      enforceReciprocal(S.floor,S.x,S.y,dd);
-      blockedCount++;
-    }
+// The GAME'S VERY FIRST room (floor 1 spawn, "1:0:0") is fully OPEN — all four
+// directions explorable — and immune to wall generation, so the player can freely
+// scout every way at the start. (This immunity is ONLY the starting room; landing
+// rooms on DESCENT generate walls normally and can even be sealed into a dead-end
+// that spawns the emergency escape.) Flagged r.startRoom so move() never walls it.
+(function initStartRoom(){
+  // Target ONLY the true spawn (1:0:0) — never the player's current room (which,
+  // on a loaded save deep in the dungeon, would be wrongly flagged immune).
+  let start=S.rooms["1:0:0"];
+  if(start){
+    start.blocked={};       // no walls — all directions open
+    start.wallsRolled=true; // don't roll walls on it later
+    start.startRoom=true;   // permanent immunity marker
+    save();
   }
-  r.wallsRolled=true;
-  save();
 })();
 
 render();
