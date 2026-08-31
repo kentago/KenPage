@@ -31,8 +31,8 @@ function findMysteryPotion(){
       <h3>🧪 A Mysterious Potion</h3>
       <p>You find an unmarked vial of swirling liquid. It could be a healing draught... or poison... or something stranger. There's no way to know without drinking.</p>
       <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
-        <button onclick="drinkPotion()">🧪 Drink it</button>
-        <button onclick="leavePotion()">🚫 Leave it</button>
+        <button onclick="drinkPotion()">🧪 Drink it (F)</button>
+        <button onclick="leavePotion()">🚫 Leave it (C)</button>
       </div>
     </div>
   </div>`;

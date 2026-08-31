@@ -634,7 +634,7 @@ function render(){
     actions.innerHTML=bossBanner+`<div class="combat-actions"><button onclick="act('fight')">⚔️ Fight (F)</button><button onclick="act('flee')">🏃 Flee (R)</button></div>`;
   } else {
     let extras="";
-    if(!r.searched) extras+=`<button class="action-btn" onclick="act('search')">🔎 Search (E)</button>`;
+    if(!r.searched&&!(r.enemy&&r.enemy.hp>0)) extras+=`<button class="action-btn" onclick="act('search')">🔎 Search (E)</button>`;
     if(r.npc&&!r.npc.completed) extras+=`<button class="action-btn npc-btn" onclick="talkNPC()">🔵 Talk (T)</button>`;
     if(r.trader) extras+=`<button class="action-btn trader-btn" onclick="talkTrader()">💲 Trade (T)</button>`;
     if(r.rest&&!r.rest.depleted){
@@ -769,6 +769,12 @@ document.addEventListener("keydown",(e)=>{
   // Ignore if typing in an input/textarea (e.g. the nickname tag field)
   let tag=(e.target&&e.target.tagName)?e.target.tagName.toLowerCase():"";
   if(tag==="input"||tag==="textarea"||tag==="select")return;
+  // Potion modal: F = drink, C = cancel/leave. Swallow other keys while it's open.
+  if(document.getElementById("potionModal")){
+    if(e.key==="f"||e.key==="F"){ e.preventDefault(); drinkPotion(); }
+    else if(e.key==="c"||e.key==="C"){ e.preventDefault(); leavePotion(); }
+    return; // block all other input while the potion prompt is up
+  }
   // Don't trigger if a modal is open
   if(document.getElementById("discardModal")||document.getElementById("ringSwapModal")||document.getElementById("traderModal")||document.getElementById("doctorModal")||document.getElementById("starterRingModal")||document.getElementById("potionModal"))return;
   if(S.hp<=0)return;
