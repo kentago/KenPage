@@ -461,6 +461,15 @@ function item(i,inv,equipped){
       if(r&&r.trader) buttons+=`<button onclick="sellFromInventory('${i.id}')">💰 Sell ${val}</button>`;
     }
     if(equipped) buttons+=`<button onclick="unequip('${i.id}','${equipped}')">⬇️ Unequip</button>`;
+    // Scarred-finger warning: if this ring sits on a repaired (fragile) finger,
+    // show a big 🩹 patch icon right after Unequip so the player is clearly warned
+    // it's more likely to be lost again (replaces the earlier red-font approach).
+    if(equipped&&typeof equipped==="string"&&equipped.startsWith("ring")){
+      let ringIdx=parseInt(equipped.replace("ring",""));
+      if((S.repairedFingers||[]).includes(ringIdx)){
+        buttons+=`<span class="scar-patch" title="Scarred finger — fragile, more likely to be lost again">🩹</span>`;
+      }
+    }
   }
   // Comparison vs currently-equipped item in the same slot (inventory items only)
   let cmp=inv?compareLine(i):"";
@@ -565,10 +574,15 @@ function equip(id){
   save();render();
 }
 
-// --- FINGER PICKER: choose which finger to wear a ring on ---
-// Fingers are lost at random, so choosing WHERE to place a ring is a gamble.
-// Scarred (repaired) fingers are shown in red — they're more likely to be lost
-// again, so a cautious player wears rings on un-scarred fingers first.
+// --- FINGER PICKER: choose which finger to wear a ring on (a comparison screen) ---
+// Shows the found ring's stats up top, and EACH occupied finger's ring stats so you
+// can decide which to replace. Also: "Put in inventory" (only if space) and
+// "Toss away" (permanently discard) so the ring is never forced onto a finger.
+function ringStatLine(x){
+  if(!x) return "";
+  let stats=Object.entries(x.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ");
+  return `${stats}${x.trait?` · ⚡ ${x.trait}`:""}`;
+}
 function showFingerPicker(itemId){
   let it=S.inventory.find(x=>x.id===itemId);
   if(!it) return;
@@ -576,27 +590,52 @@ function showFingerPicker(itemId){
   function fingerCell(slotIdx){
     let handName=slotIdx<5?"L":"R";
     let fingerNum=(slotIdx%5)+1;
-    if(isFingerLost(slotIdx)) return `<div class="finger-pick finger-lost">❌ ${handName}${fingerNum}<br><span class="small">Lost</span></div>`;
+    if(isFingerLost(slotIdx)) return `<div class="finger-pick finger-lost">❌ ${handName}${fingerNum} — Lost</div>`;
     let scar=scarred.includes(slotIdx);
-    let occupied=S.equipment.rings[slotIdx];
+    let occ=S.equipment.rings[slotIdx];
     let scarClass=scar?" finger-scarred":"";
-    let statePreview=occupied?`swap<br><span class="small">${occupied.name.length>12?occupied.name.slice(0,12)+"…":occupied.name}</span>`:(scar?"place<br><span class=small>⚠️scarred</span>":"place<br><span class=small>empty</span>");
-    return `<div class="finger-pick${scarClass}" onclick="placeRingOnFinger('${itemId}',${slotIdx})" title="${handName==="L"?"Left":"Right"} hand, finger ${fingerNum}${scar?" — SCARRED (fragile, more likely to be lost again)":""}${occupied?" — currently: "+occupied.name:""}">${scar?"🩹 ":""}${handName}${fingerNum}<br><span class="small">${statePreview}</span></div>`;
+    let head=`${scar?"🩹 ":""}${handName}${fingerNum} ${occ?"— REPLACE:":"— empty (place here)"}`;
+    let body=occ?`<div class="finger-ring-name"><b>${occ.name}</b></div><div class="small">${ringStatLine(occ)}</div>`:(scar?`<div class="small">⚠️ scarred — fragile</div>`:"");
+    return `<div class="finger-pick${scarClass}" onclick="placeRingOnFinger('${itemId}',${slotIdx})" title="${handName==="L"?"Left":"Right"} hand, finger ${fingerNum}${scar?" — SCARRED (fragile, more likely lost again)":""}">${head}${body}</div>`;
   }
   let left=[0,1,2,3,4].map(fingerCell).join("");
   let right=[5,6,7,8,9].map(fingerCell).join("");
+  let canStore=S.inventory.length<30; // the found ring occupies a slot already, so
+  // "keep in inventory" is only offered when there is genuine free space to leave it.
+  let storeBtn=canStore?`<button class="fp-store" onclick="document.getElementById('fingerPicker').remove()">📦 Keep in inventory</button>`:"";
   let html=`<div class="discard-overlay" id="fingerPicker">
     <div class="discard-box">
-      <h3>💍 Choose a finger for ${it.name}</h3>
-      <p class="small">Fingers are lost at random — pick wisely. <span style="color:#e74c3c">Red = scarred</span> (fragile, more likely to be lost again). Occupied fingers will swap (old ring → inventory).</p>
-      <div class="finger-hand"><b>🫲 Left hand</b><div class="finger-row">${left}</div></div>
-      <div class="finger-hand"><b>🫱 Right hand</b><div class="finger-row">${right}</div></div>
-      <button onclick="document.getElementById('fingerPicker').remove()">Cancel</button>
+      <h3>💍 Where to wear ${it.name}?</h3>
+      <div class="fp-found item ${it.rarity} ${it.depth}">
+        <span class="art">${it.art}</span> <b>${it.name}</b>
+        <div class="small">Found ring: ${ringStatLine(it)||"(no stats)"}</div>
+      </div>
+      <p class="small">Compare against your equipped rings below. <span style="color:#e67e22">🩹 = scarred</span> (fragile, more likely to be lost again). Placing on an occupied finger swaps the old ring back to inventory.</p>
+      <div class="finger-hand"><b>🫲 Left hand</b><div class="finger-col">${left}</div></div>
+      <div class="finger-hand"><b>🫱 Right hand</b><div class="finger-col">${right}</div></div>
+      <div class="fp-actions">
+        ${storeBtn}
+        <button class="fp-toss" onclick="tossRing('${itemId}')">🗑️ Toss away</button>
+      </div>
     </div>
   </div>`;
   document.body.insertAdjacentHTML("beforeend",html);
 }
 window.showFingerPicker=showFingerPicker;
+
+// Toss the found ring — permanently destroyed (replaces "Cancel" when you don't
+// want it on any finger and won't keep it).
+function tossRing(itemId){
+  let modal=document.getElementById("fingerPicker");
+  if(modal)modal.remove();
+  let n=S.inventory.findIndex(x=>x.id===itemId);
+  if(n<0)return;
+  let tossed=S.inventory[n];
+  S.inventory.splice(n,1);
+  msg(`🗑️ ${tossed.name} permanently destroyed. It is gone forever.`);
+  save();render();
+}
+window.tossRing=tossRing;
 
 // Place the ring on the chosen finger. Empty slot = just place; occupied = swap
 // (old ring returns to inventory). Blocked on lost fingers.
