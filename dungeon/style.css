@@ -71,9 +71,13 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .restock-offer{background:#1e1e1e;border:1px dashed #f1c40f;border-radius:9px;padding:12px;text-align:center}
 .restock-offer .restock-rules{font-size:.85em;color:#cbb26b;margin:6px 0 10px;line-height:1.4}
 /* Quick-travel portal cards */
-.portal-card{text-align:center}
-.portal-card.portal-here{border-color:#9b59b6;box-shadow:0 0 8px rgba(155,89,182,.5)}
-.portal-btn{background:#6c3483;border-color:#9b59b6;margin-top:6px}
+/* Quick-travel portal bar — compact horizontal strip alongside the map */
+.portal-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
+.portal-bar:empty{display:none}
+.portal-bar-label{font-size:13px;color:#b48fd0;font-weight:bold}
+.portal-chip{background:#6c3483;color:#fff;border:1px solid #9b59b6;border-radius:8px;padding:5px 10px;font-size:13px;font-weight:bold;cursor:pointer}
+.portal-chip:hover{background:#7d3f9a;border-color:#c39bd3}
+.portal-chip.portal-here{background:#4a235a;border-color:#c39bd3;box-shadow:0 0 6px rgba(155,89,182,.5)}
 /* ===== ITEM BORDERS =====
    Two independent axes, max 2 borders total.
    Common rarity + Bronze depth = NO special border (plain box — the majority).
@@ -385,6 +389,12 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .ach-locked{border-left:3px solid #555;opacity:0.7}
 .quest-npc-loc{color:#5dade2}
 .quest-completed-header{font-weight:bold;color:#2ecc71;margin:14px 0 8px;border-top:1px solid #444;padding-top:10px}
+/* Collapsible completed-quests trophy list (bragging feature — collapsed by default) */
+.quest-completed-collapse{margin-top:6px}
+.quest-completed-collapse>summary{cursor:pointer;list-style:none}
+.quest-completed-collapse>summary::-webkit-details-marker{display:none}
+.quest-completed-collapse>summary::before{content:"▸ ";color:#2ecc71}
+.quest-completed-collapse[open]>summary::before{content:"▾ "}
 .quest-card.quest-done{ border-left:3px solid #2ecc71; background:#152a15; opacity:0.85; }
 
 /* Season navigation */

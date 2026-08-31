@@ -269,11 +269,12 @@ function search(){let r=room();if(r.enemy&&r.enemy.hp>0)return msg("⚔️ Searc
     if(Math.random()<portalChance){
       let element=questPrefixes[Math.floor(Math.random()*questPrefixes.length)];
       let name=`${element} Floor ${S.floor} Portal`;
-      let portal={name,floor:S.floor,x:S.x,y:S.y,art:"🌀"};
+      let code=`F${S.floor}P`;
+      let portal={name,code,floor:S.floor,x:S.x,y:S.y,art:"🌀"};
       if(!S.portals) S.portals=[];
       S.portals.push(portal);
       r.portal=portal;               // mark room so the map shows it
-      msg(`🌀 SECRET PASSAGE! You uncover a shimmering gateway — the ${name}. It's now saved to your Portals for instant quick-travel.`);
+      msg(`🌀 SECRET PASSAGE! You uncover the ${name} (${code}). Quick-travel to it anytime from the 🌀 bar by the map.`);
       if(typeof checkAchievements==="function") checkAchievements();
       save();render();return;
     }
@@ -686,9 +687,9 @@ function render(){
   }).join(""):"<div class=small>No active quests.</div>";
 
   let completed=S.completedQuests||[];
-  let completedHtml=completed.length?`<div class="quest-completed-header">🏆 Completed (${completed.length})</div>`+completed.map(q=>
+  let completedHtml=completed.length?`<details class="quest-completed-collapse"><summary class="quest-completed-header">🏆 Completed (${completed.length})</summary>`+completed.map(q=>
     `<div class="card quest-card quest-done">🏅 <b>${q.itemName}</b><div class="small">Delivered to ${q.npcName} · +${q.xpAwarded} XP${q.itemReward?" + 🎁":""} · Floor ${q.floor}</div></div>`
-  ).join(""):"";
+  ).join("")+`</details>`:"";
 
   // Achievement progress banner
   let delivered=S.questsDelivered||0;
@@ -699,18 +700,22 @@ function render(){
   let portalsEl=document.getElementById("portals");
   if(portalsEl){
     let ps=S.portals||[];
-    if(!ps.length){
-      portalsEl.innerHTML=`<div class=small>No portals discovered yet. Search rooms to uncover secret passages (max one portal per floor).</div>`;
+    let inCombatNow=r.enemy&&r.enemy.hp>0;
+    if(inCombatNow||S.hp<=0){
+      // Hide portal buttons during a fight (or when dead) — can't quick-travel,
+      // so don't tease the player with an impossible action.
+      portalsEl.innerHTML="";
+    } else if(!ps.length){
+      portalsEl.innerHTML="";
     } else {
-      portalsEl.innerHTML=ps.map((p,i)=>{
+      // Compact horizontal quick-travel bar. Each portal shows as "FxP" (F+floor+P),
+      // full name in the tooltip. Sits alongside the map so no scrolling is needed.
+      portalsEl.innerHTML=`<span class="portal-bar-label">🌀 Quick Travel:</span>`+ps.map((p,i)=>{
         let here=(S.floor===p.floor&&S.x===p.x&&S.y===p.y);
-        let pending=S.quickTravelReturn&&here; // standing on it with a return saved
-        let label=here?(S.quickTravelReturn?"↩️ Return":"📍 You are here"):"🌀 Travel";
-        return`<div class="card portal-card${here?" portal-here":""}">
-          <b>🌀 ${p.name}</b>
-          <div class="small">Floor ${p.floor}${here?" · you are here":""}</div>
-          <button class="action-btn portal-btn" onclick="quickTravel(${i})">${label}</button>
-        </div>`;
+        let code=`F${p.floor}P`;
+        let label=here?(S.quickTravelReturn?"↩️ Back":"📍 Here"):`🌀 ${code}`;
+        let title=here?(S.quickTravelReturn?`Return from ${p.name} to where you left`:`You are at ${p.name}`):`Travel to ${p.name}`;
+        return`<button class="portal-chip${here?" portal-here":""}" title="${title}" onclick="quickTravel(${i})">${label}</button>`;
       }).join("");
     }
   }
