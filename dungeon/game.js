@@ -1,7 +1,26 @@
 // --- CORE GAME STATE ---
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 
-function fresh(){return{name:makeDwarfName(),nickname:"",level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,roomsSinceKill:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,repairedFingers:[],bossSpawnedFloors:{},tollsPaid:0,portals:[],quickTravelReturn:null,emergencyEscapes:0,phoenixUsed:false,deathWardFloor:null,secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],questsDelivered:0,questAchievements:[],achievements:[],goldEarned:0,goldSpent:0,cleanHouse:0,fingersLostTotal:0,deepestFloor:1,bossKills:0,log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){return{name:makeDwarfName(),nickname:loadTag(),country:loadCountry(),level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,roomsSinceKill:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,repairedFingers:[],bossSpawnedFloors:{},tollsPaid:0,portals:[],quickTravelReturn:null,emergencyEscapes:0,phoenixUsed:false,deathWardFloor:null,secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],questsDelivered:0,questAchievements:[],achievements:[],goldEarned:0,goldSpent:0,cleanHouse:0,fingersLostTotal:0,deepestFloor:1,bossKills:0,log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+
+// --- PERSISTENT TAG / COUNTRY (survive across runs & permadeath) ---
+// The player's tag (nickname) and country flag are stored SEPARATELY from the run
+// state (S), under their own localStorage keys, so a new run keeps them — no need
+// to retype the tag every expedition. "Forget Me" clears them (secret again).
+const TAG_KEY="infinite-dungeon-tag";
+const COUNTRY_KEY="infinite-dungeon-country";
+function loadTag(){try{return localStorage.getItem(TAG_KEY)||""}catch(e){return""}}
+function loadCountry(){try{return localStorage.getItem(COUNTRY_KEY)||""}catch(e){return""}}
+function persistTag(v){try{if(v)localStorage.setItem(TAG_KEY,v);else localStorage.removeItem(TAG_KEY)}catch(e){}}
+function persistCountry(v){try{if(v)localStorage.setItem(COUNTRY_KEY,v);else localStorage.removeItem(COUNTRY_KEY)}catch(e){}}
+// "Forget Me" — wipe the remembered identity so the hero becomes anonymous again.
+function forgetMe(){
+  persistTag(""); persistCountry("");
+  S.nickname=""; S.country="";
+  save(); render();
+  msg("🕵️ Your identity is forgotten. You are a Secret Hero once more.");
+}
+window.forgetMe=forgetMe;
 function save(){localStorage.setItem(KEY,JSON.stringify(S))}
 function key(){return`${S.floor}:${S.x}:${S.y}`}
 function room(){return S.rooms[key()]||(S.rooms[key()]={searched:false,blocked:{},enemy:null,ladder:null,secret:null,portal:null,npc:null,trader:null,rest:null,doctor:null})}
@@ -452,6 +471,7 @@ function newRun(){
 
 function setNickname(val){
   S.nickname=val.trim().slice(0,20);
+  persistTag(S.nickname); // remember across runs
   save();
 }
 
@@ -469,6 +489,7 @@ function toggleCountry(checked){
   } else {
     S.country="";
   }
+  persistCountry(S.country); // remember across runs
   save();render();
 }
 
@@ -631,9 +652,11 @@ function render(){
       <div class="compass-row"><button class="compass-btn north${r.blocked&&r.blocked.N?" blocked":""}" onclick="act('N')"${r.blocked&&r.blocked.N?" disabled":""}>▲<br><span>W / ↑</span></button></div>
       <div class="compass-row middle"><button class="compass-btn west${r.blocked&&r.blocked.W?" blocked":""}" onclick="act('W')"${r.blocked&&r.blocked.W?" disabled":""}>◀<br><span>A / ←</span></button><div class="compass-center">◎</div><button class="compass-btn east${r.blocked&&r.blocked.E?" blocked":""}" onclick="act('E')"${r.blocked&&r.blocked.E?" disabled":""}>▶<br><span>D / →</span></button></div>
       <div class="compass-row"><button class="compass-btn south${r.blocked&&r.blocked.S?" blocked":""}" onclick="act('S')"${r.blocked&&r.blocked.S?" disabled":""}>▼<br><span>S / ↓</span></button></div>
-    </div>${extras?`<div class="extra-actions">${extras}</div>`:""}`;
+    </div>`;
+    let extEl=document.getElementById("extraActions");
+    if(extEl) extEl.innerHTML=extras?`<div class="extra-actions">${extras}</div>`:"";
   }
-  if(S.hp<=0)actions.innerHTML="☠️ Dead — press New Run.";
+  if(S.hp<=0){actions.innerHTML="☠️ Dead — press New Run.";let extEl=document.getElementById("extraActions");if(extEl)extEl.innerHTML="";}
   log.innerHTML=S.log.map(x=>`<div>${x}</div>`).join("");
   equipment.innerHTML=["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet"].map(k=>{
     let disabled=(k==="weapon"&&S.lostFingers&&S.lostFingers.right&&S.lostFingers.right.length>=5);

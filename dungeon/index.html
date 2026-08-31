@@ -5,7 +5,7 @@
 <meta http-equiv="Expires" content="0">
 <title>Infinite Dungeon</title><link rel="stylesheet" href="style.css"></head>
 <body><main>
-<header><h1>⚔️ Infinite Dungeon <span class="beta-badge">BETA</span></h1><div class="header-btns"><button onclick="shareGame()">🔗 Share</button><button onclick="newRun()">🔄 New Run</button></div></header>
+<header><h1>⚔️ Infinite Dungeon <span class="beta-badge">BETA</span></h1><div class="header-btns"><div class="nickname-row"><label>🏷️ Tag: </label><input id="nicknameInput" type="text" placeholder="Secret Hero" maxlength="20" onchange="setNickname(this.value)"><label class="country-opt"><input id="showCountry" type="checkbox" onchange="toggleCountry(this.checked)"> Flag</label><button id="forgetMe" class="forget-btn" onclick="forgetMe()" title="Clear your remembered tag and flag — become a Secret Hero again">🕵️ Forget me</button></div><button onclick="shareGame()">🔗 Share</button><button onclick="newRun()">🔄 New Run</button></div></header>
 <details id="instructions">
 <summary>📜 Game Instructions (click to expand)</summary>
 <div class="instructions-body">
@@ -125,10 +125,9 @@
 </div>
 </details>
 <p id="intro"></p>
-<div class="nickname-row"><label>🏷️ Tag: </label><input id="nicknameInput" type="text" placeholder="Secret Hero" maxlength="20" onchange="setNickname(this.value)"><label class="country-opt"><input id="showCountry" type="checkbox" onchange="toggleCountry(this.checked)"> Show my flag</label></div>
 <div id="xpbar"></div>
 <div id="stats" class="stats"></div>
-<section><h2 id="roomTitle"></h2><p id="roomText"></p><div id="map"></div><div id="actions"></div></section>
+<section><h2 id="roomTitle"></h2><p id="roomText"></p><div class="map-wrap"><div id="map"></div><div id="actions"></div></div><div id="extraActions"></div></section>
 <section><h2>📜 Activity Log</h2><div id="log"></div></section>
 <section><h2>⚔️ Equipment</h2><div id="equipment" class="grid"></div></section>
 <section><h2>🎒 Extra Inventory</h2><div id="inventory" class="grid"></div></section>
