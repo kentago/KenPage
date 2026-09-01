@@ -352,7 +352,7 @@ function search(){let r=room();if(r.startRoom)return msg("🏛️ The entrance h
   }
   if(searchRoll>=2){
     // Trap! DEX gives a chance to dodge it
-    let trapDodge=Math.min(0.35,(eff().dex||1)*0.015); // +1.5% per DEX, max 35%
+    let trapDodge=Math.min(0.99,1-Math.pow(0.989,(eff().dex||1))); // asymptotic: ~1.1%/DEX, approaches but never reaches 100%
     if(Math.random()<trapDodge){
       msg("⚠️ A trap triggers but you leap aside unharmed! (DEX)");
       return;

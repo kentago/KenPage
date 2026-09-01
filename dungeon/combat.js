@@ -41,15 +41,16 @@ function loseFinger(){
   if(Math.random()>fingerLossChance()) return;
 
   // Finger Ward traits STACK multiplicatively (diminishing returns, never 100%).
-  // Each ward reduces the remaining chance of losing the finger.
-  // Count them independently — "Finger Ward" is a substring of "Finger Ward Amulet",
-  // so detect the amulet first, then check for a ring ward that isn't the amulet.
-  let hasAmuletWard=hasTrait("Finger Ward Amulet");
-  let hasRingWard=hasTraitExact("Finger Ward"); // ring-style, exact base (not the amulet)
-  let surviveChance=1;
-  if(hasAmuletWard) surviveChance*=(1-0.60);
-  if(hasRingWard)   surviveChance*=(1-0.50);
-  let wardChance=Math.min(0.85,1-surviveChance); // hard cap — fingers always carry some risk
+  // Each ward reduces the remaining chance of losing the finger. STACKS per copy —
+  // more wards multiply the survive chance (never a hard cap), so the spare-chance
+  // asymptotically approaches but never reaches 100%: adding another ward always
+  // helps a little, and fingers always keep a sliver of risk. Count each copy
+  // independently — "Finger Ward" is a substring of "Finger Ward Amulet", so count the
+  // amulet form separately from the exact ring form.
+  let amuletWards=countTrait("Finger Ward Amulet");
+  let ringWards=countTraitExact("Finger Ward"); // ring-style, exact base (not the amulet)
+  let surviveChance=Math.pow(1-0.60,amuletWards)*Math.pow(1-0.50,ringWards);
+  let wardChance=1-surviveChance; // approaches 1 with more wards, never reaches it
   if(wardChance>0&&Math.random()<wardChance){
     msg(`💍 Finger Ward flares — your fingers are spared this time!`);
     return;
@@ -342,64 +343,83 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
 
   // --- OFFENSIVE COMBAT TRAITS ---
   let hpPct=S.hp/effMaxHp();
-  // Berserker Rage / Battle Fury / Bloodlust: bonus damage when low HP
-  if((hasTrait("Berserker Rage")||hasTrait("Battle Fury")||hasTrait("Bloodlust"))&&hpPct<0.4){
-    n=Math.round(n*1.6); msg("🩸 Berserker rage surges — bonus damage while wounded!");
+  // Berserker Rage / Battle Fury / Bloodlust: bonus damage when low HP. STACKS — each
+  // equipped copy applies its own ×1.6 (mult^count), so more copies always help.
+  let rageCount=countAnyTrait(["Berserker Rage","Battle Fury","Bloodlust"]);
+  if(rageCount>0&&hpPct<0.4){
+    n=Math.round(n*stackMult(1.6,rageCount)); msg("🩸 Berserker rage surges — bonus damage while wounded!");
   }
-  // Titan Strength / Dragonblood / Bone Rend / Deepforge Temper: flat +25%/+15% damage
-  if(hasTrait("Titan Strength")||hasTrait("Dragonblood")||hasTrait("Bone Rend")) n=Math.round(n*1.25);
-  if(hasTrait("Deepforge Temper")) n=Math.round(n*1.15);
+  // Titan Strength / Dragonblood / Bone Rend (+25%) and Deepforge Temper (+15%): flat
+  // damage multipliers. STACK — every copy multiplies (mult^count), across the family.
+  let dmg25=countAnyTrait(["Titan Strength","Dragonblood","Bone Rend"]);
+  if(dmg25>0) n=Math.round(n*stackMult(1.25,dmg25));
+  let dmg15=countTrait("Deepforge Temper");
+  if(dmg15>0) n=Math.round(n*stackMult(1.15,dmg15));
   // --- RING SYNERGY DAMAGE TRAITS ---
   let ringCount=S.equipment.rings.filter(x=>x).length;
-  // Paired Resonance: +15% damage when 2+ rings equipped
-  if(hasTrait("Paired Resonance")&&ringCount>=2) n=Math.round(n*1.15);
-  // Titan Grip: STR × rings scaling bonus to attack
-  if(hasTrait("Titan Grip")){
-    let grip=Math.round((E.str||1)*ringCount*0.1);
+  // Paired Resonance: +15% damage when 2+ rings equipped. STACKS per copy.
+  let pairedCount=countTrait("Paired Resonance");
+  if(pairedCount>0&&ringCount>=2) n=Math.round(n*stackMult(1.15,pairedCount));
+  // Titan Grip: STR × rings scaling bonus to attack. Already additive → scales with
+  // copies naturally (each copy adds its own grip bonus).
+  let gripCount=countTrait("Titan Grip");
+  if(gripCount>0){
+    let grip=Math.round((E.str||1)*ringCount*0.1)*gripCount;
     if(grip>0){ n+=grip; }
   }
-  // Death Mark: execute bonus vs enemies below 30% HP
-  if(hasTrait("Death Mark")&&r.enemy.hp<r.enemy.maxHp*0.3){
-    n=Math.round(n*1.35); msg("💀 Death Mark — you strike the wounded foe harder!");
+  // Death Mark: execute bonus vs enemies below 30% HP. STACKS per copy (×1.35 each).
+  let deathMarkCount=countTrait("Death Mark");
+  if(deathMarkCount>0&&r.enemy.hp<r.enemy.maxHp*0.3){
+    n=Math.round(n*stackMult(1.35,deathMarkCount)); msg("💀 Death Mark — you strike the wounded foe harder!");
   }
-  // Void Touch: armor pierce — extra flat damage based on enemy's remaining HP
-  if(hasTrait("Void Touch")){
-    let pierce=Math.max(1,Math.round(r.enemy.hp*0.1));
+  // Void Touch: armor pierce — extra flat damage based on enemy's remaining HP. STACKS
+  // (each copy adds its own 10%-of-remaining-HP pierce).
+  let voidTouchCount=countTrait("Void Touch");
+  if(voidTouchCount>0){
+    let pierce=Math.max(1,Math.round(r.enemy.hp*0.1))*voidTouchCount;
     n+=pierce;
   }
-  // Crit hit on natural 20 (Crit Amplifier boosts crit multiplier)
+  // Crit hit on natural 20 (Crit Amplifier boosts crit multiplier). Amplifier STACKS —
+  // each copy adds its own bonus to the crit multiplier (2.5 base + 1.0 per Amplifier).
   if(hit===20){
-    let critMult=hasTrait("Crit Amplifier")?3.5:2.5;
+    let ampCount=countTrait("Crit Amplifier");
+    let critMult=2.5+ampCount*1.0;
     n=Math.floor(n*critMult);
-    msg(`💥 CRITICAL HIT!${hasTrait("Crit Amplifier")?" (Amplified!)":""}`);
-    // Critical Fortune: crits shower bonus gold
-    if(hasTrait("Critical Fortune")){
-      let critGold=Math.max(1,Math.round(Math.pow(S.floor,1.2)*0.6));
+    msg(`💥 CRITICAL HIT!${ampCount>0?" (Amplified!)":""}`);
+    // Critical Fortune: crits shower bonus gold. STACKS per copy.
+    let critFortuneCount=countTrait("Critical Fortune");
+    if(critFortuneCount>0){
+      let critGold=Math.max(1,Math.round(Math.pow(S.floor,1.2)*0.6))*critFortuneCount;
       S.gold=(S.gold||0)+critGold;
       msg(`🪙 Critical Fortune! You strike loose +${critGold} gold!`);
     }
   }
   // Flameburst / Thunderstrike / Frostbite / Poison Edge / Venomcoat: bonus elemental/poison damage.
-  // Each elemental trait equipped adds its own roll (they STACK). Range: base to ~2× base.
-  let elemTraits=["Flameburst","Thunderstrike","Frostbite","Poison Edge","Venomcoat"].filter(t=>hasTrait(t)).length;
+  // Each elemental trait COPY equipped adds its own roll (they STACK). Range: base to ~2× base.
+  let elemTraits=countAnyTrait(["Flameburst","Thunderstrike","Frostbite","Poison Edge","Venomcoat"]);
   if(elemTraits>0){
     let base=Math.max(1,Math.round(Math.pow(S.floor,1.1)*0.3));
     let elem=0;
     for(let e=0;e<elemTraits;e++) elem+=base+Math.floor(Math.random()*(base+1)); // base..2×base each
     n+=elem; msg(`🔥 Elemental strike adds +${elem} damage!`);
   }
-  // Echostrike: chance to hit twice
-  if(hasTrait("Echostrike")&&Math.random()<0.25){
+  // Echostrike: chance to hit twice. STACKS with diminishing returns — each copy raises
+  // the proc chance toward (but never to) 100% via 1-0.75^count (25% → 43.75% → 57.8%…).
+  // More copies always help; it never becomes a guaranteed double-hit or hits a cap.
+  let echoCount=countTrait("Echostrike");
+  if(echoCount>0&&Math.random()<stackChance(0.25,echoCount)){
     n=Math.round(n*1.8); msg("⚡ Echostrike! Your blow strikes twice!");
   }
-  // Shieldbreaker: extra vs high-HP enemies (bosses/elites)
-  if(hasTrait("Shieldbreaker")&&(r.enemy.isBoss||r.enemy.tier==="elite")) n=Math.round(n*1.3);
+  // Shieldbreaker: extra vs high-HP enemies (bosses/elites). STACKS per copy (×1.3 each).
+  let shieldbreakCount=countTrait("Shieldbreaker");
+  if(shieldbreakCount>0&&(r.enemy.isBoss||r.enemy.tier==="elite")) n=Math.round(n*stackMult(1.3,shieldbreakCount));
 
   r.enemy.hp=Math.max(0,r.enemy.hp-n);
 
-  // Lifesteal / Mana Drain: heal a portion of damage dealt
-  if((hasTrait("Lifesteal")||hasTrait("Mana Drain"))&&S.hp<effMaxHp()){
-    let heal=Math.max(1,Math.round(n*0.15));
+  // Lifesteal / Mana Drain: heal a portion of damage dealt. STACKS per copy (15% each).
+  let lifestealCount=countAnyTrait(["Lifesteal","Mana Drain"]);
+  if(lifestealCount>0&&S.hp<effMaxHp()){
+    let heal=Math.max(1,Math.round(n*0.15*lifestealCount));
     S.hp=Math.min(effMaxHp(),S.hp+heal);
     msg(`🩸 Lifesteal restores ${heal} HP.`);
   }
@@ -436,19 +456,23 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
     if(S.killStreak>(S.bestKillStreak||0)) S.bestKillStreak=S.killStreak;
     // Combo XP multiplier: +10% per streak kill (caps at 3×)
     let comboMult=Math.min(3,1+S.killStreak*0.1);
-    // Crystal Resonance: +10% XP from kills
-    if(hasTrait("Crystal Resonance")) comboMult*=1.1;
-    // Soul Chain: +5% XP per ring worn
-    if(hasTrait("Soul Chain")){
+    // Crystal Resonance: +10% XP from kills. STACKS per copy (mult^count).
+    let crystalCount=countTrait("Crystal Resonance");
+    if(crystalCount>0) comboMult*=stackMult(1.1,crystalCount);
+    // Soul Chain: +5% XP per ring worn. STACKS per copy.
+    let soulChainCount=countTrait("Soul Chain");
+    if(soulChainCount>0){
       let rc=S.equipment.rings.filter(x=>x).length;
-      comboMult*=(1+0.05*rc);
+      comboMult*=(1+0.05*rc*soulChainCount);
     }
-    // XP Amplifier: +15% XP from all sources
-    if(hasTrait("XP Amplifier")) comboMult*=1.15;
+    // XP Amplifier: +15% XP from all sources. STACKS per copy (mult^count).
+    let xpAmpCount=countTrait("XP Amplifier");
+    if(xpAmpCount>0) comboMult*=stackMult(1.15,xpAmpCount);
     S.xp+=Math.round(xpGain*comboMult);
-    // Spirit Link: heal 5% max HP on kill
-    if(hasTrait("Spirit Link")&&S.hp<effMaxHp()){
-      let heal=Math.max(1,Math.round(effMaxHp()*0.05));
+    // Spirit Link: heal 5% max HP on kill. STACKS per copy.
+    let spiritCount=countTrait("Spirit Link");
+    if(spiritCount>0&&S.hp<effMaxHp()){
+      let heal=Math.max(1,Math.round(effMaxHp()*0.05*spiritCount));
       S.hp=Math.min(effMaxHp(),S.hp+heal);
       msg(`✨ Spirit Link restores ${heal} HP on the kill.`);
     }
@@ -473,61 +497,71 @@ function fight(){let r=room();if(!r.enemy||r.enemy.hp<=0)return;let hit=d20();if
     }
   } else {
     msg(`⚔️ You hit ${r.enemy.name} for ${n}. (${r.enemy.hp} HP left)`);
-    // Dread Aura: chance the terrified enemy skips its attack
-    if(hasTrait("Dread Aura")&&Math.random()<0.12){
+    // Dread Aura: chance the terrified enemy skips its attack. STACKS with diminishing
+    // returns (1-0.88^count): 12% → 22.6% → ... approaching but never reaching 100%.
+    let dreadCount=countTrait("Dread Aura");
+    if(dreadCount>0&&Math.random()<stackChance(0.12,dreadCount)){
       msg(`😨 ${r.enemy.name} cowers before your dread aura and skips its attack!`);
       return;
     }
     // Enemy attacks back using its atk stat
     let enemyAtk=r.enemy.atk||Math.max(1,d20()%6);
-    // DEX dodge chance — completely avoid the hit
-    let dodgeChance=Math.min(0.30,(E.dex||1)*0.012); // +1.2% per DEX, max 30%
+    // DEX dodge chance — completely avoid the hit. Asymptotic toward (never reaching)
+    // 100% so more DEX always helps a little; no hard cap that makes points worthless.
+    // A tiny ceiling (0.99) guards against float rounding ever hitting a guaranteed dodge.
+    let dodgeChance=Math.min(0.99,1-Math.pow(0.9915,(E.dex||1))); // ~0.85% removed from miss-space per DEX
     if(Math.random()<dodgeChance){
       msg(`🌀 You dodge ${r.enemy.name}'s attack! (DEX)`);
       return;
     }
-    // Veilstep / Windwalker / Shadow Meld: extra chance to phase out of an attack
-    if((hasTrait("Veilstep")||hasTrait("Windwalker")||hasTrait("Shadow Meld"))&&Math.random()<0.15){
+    // Veilstep / Windwalker / Shadow Meld: extra chance to phase out of an attack.
+    // STACKS with diminishing returns (1-0.85^count): 15% → 27.75% → ... approaching 1.
+    let phaseCount=countAnyTrait(["Veilstep","Windwalker","Shadow Meld"]);
+    if(phaseCount>0&&Math.random()<stackChance(0.15,phaseCount)){
       msg(`👻 You slip through the shadows, avoiding the blow!`);
       return;
     }
     let incomingDmg=Math.max(1,enemyAtk+d20()%3-1);
-    // CHA reduces incoming damage slightly — monsters find you endearing
-    let chaReduction=1-Math.min(0.25,(E.cha||1)*0.01); // -1% per CHA, max -25%
+    // CHA reduces incoming damage slightly — monsters find you endearing. Asymptotic
+    // (each point removes ~0.9% of remaining damage), approaching but never reaching 0.
+    let chaReduction=Math.pow(0.991,(E.cha||1));
     incomingDmg=Math.max(1,Math.round(incomingDmg*chaReduction));
     // Defensive traits: Iron Will / Stoneguard / Obsidian Shell / Dwarven Fortitude.
     // Each equipped copy removes 25% of WHATEVER DAMAGE REMAINS (multiplicative
-    // stacking), so more defensive gear helps with diminishing returns and can
-    // never reach 0 — a hard cap of 75% total reduction keeps combat lethal.
-    // 1 ward = -25%, 2 = -44%, 3 = -58%, 4 = -68% (capped 75%).
+    // stacking via stackReduce), approaching but NEVER reaching 0 — no hard cap, so
+    // stacking more defensive gear always helps a little and never becomes worthless.
+    // 1 ward -25%, 2 -44%, 3 -58%, 4 -68%, 5 -76%, ... (always ≥1 damage lands).
     let wards=(typeof countDefensiveWards==="function")?countDefensiveWards():0;
     if(wards>0){
-      let taken=Math.pow(0.75,wards);        // fraction of damage still taken
-      taken=Math.max(0.25,taken);            // hard cap: never reduce beyond 75%
+      let taken=stackReduce(0.25,wards);     // fraction of damage still taken (never 0)
       incomingDmg=Math.max(1,Math.round(incomingDmg*taken));
     }
     // Element bonus damage (Elemental Ward halves it)
     let elemDmg=r.enemy.elementDmg||0;
     if(elemDmg>0){
       let rc=S.equipment.rings.filter(x=>x).length;
-      if(hasTrait("Elemental Ward")) elemDmg=Math.floor(elemDmg*0.5);
-      // Element Shield: reduce element damage by 50% (stacks with Elemental Ward)
-      if(hasTrait("Element Shield")) elemDmg=Math.floor(elemDmg*0.5);
-      // Elemental Harmony: reduce element damage by ringCount (floor at 0)
-      if(hasTrait("Elemental Harmony")) elemDmg=Math.max(0,elemDmg-rc);
+      // Elemental Ward + Element Shield each halve element damage, and now STACK per
+      // copy (0.5^count) — more copies always help, approaching but never reaching 0.
+      let halveCount=countTrait("Elemental Ward")+countTrait("Element Shield");
+      if(halveCount>0) elemDmg=Math.floor(elemDmg*stackReduce(0.5,halveCount));
+      // Elemental Harmony: reduce element damage by ringCount per copy (floor at 0)
+      let harmonyCount=countTrait("Elemental Harmony");
+      if(harmonyCount>0) elemDmg=Math.max(0,elemDmg-rc*harmonyCount);
       incomingDmg+=elemDmg;
       if(elemDmg>0) msg(`🔥 ${r.enemy.element} burns for +${elemDmg} damage!`);
     }
     if(leftMangled) incomingDmg=Math.ceil(incomingDmg*1.5);
-    // Void Link: ignore 1 damage per ring worn (min 1 damage still lands)
-    if(hasTrait("Void Link")){
+    // Void Link: ignore 1 damage per ring worn, PER COPY (min 1 damage still lands)
+    let voidLinkCount=countTrait("Void Link");
+    if(voidLinkCount>0){
       let rc=S.equipment.rings.filter(x=>x).length;
-      incomingDmg=Math.max(1,incomingDmg-rc);
+      incomingDmg=Math.max(1,incomingDmg-rc*voidLinkCount);
     }
     damage(incomingDmg);
-    // Thornmail: reflect damage back to the attacker
-    if(hasTrait("Thornmail")&&r.enemy&&r.enemy.hp>0){
-      let reflect=Math.max(1,Math.round(incomingDmg*0.3));
+    // Thornmail: reflect damage back to the attacker. STACKS per copy (30% each).
+    let thornCount=countTrait("Thornmail");
+    if(thornCount>0&&r.enemy&&r.enemy.hp>0){
+      let reflect=Math.max(1,Math.round(incomingDmg*0.3*thornCount));
       r.enemy.hp=Math.max(0,r.enemy.hp-reflect);
       msg(`🌵 Thornmail reflects ${reflect} damage back!`);
       if(r.enemy.hp===0) msg(`☠️ ${r.enemy.name} dies to its own strike!`);

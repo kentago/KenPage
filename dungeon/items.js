@@ -125,6 +125,49 @@ function hasTrait(name){
   return equipped.some(it=>it.trait&&it.trait.includes(name));
 }
 
+// Counts how many EQUIPPED trait-slots match `name` (a single multi-trait item can
+// carry it more than once, and each copy on different items counts). This drives
+// STACKING for every combat trait — the design rule is that traits ALWAYS stack and
+// are NEVER hard-capped, so hunting/rerolling for more copies of a trait always pays
+// off a little more. Use with the diminishing-stack helpers below in combat.
+function countTrait(name){
+  let equipped=[];
+  ["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet"].forEach(k=>{
+    if(S.equipment[k]) equipped.push(S.equipment[k]);
+  });
+  S.equipment.rings.forEach(x=>{if(x)equipped.push(x);});
+  let c=0;
+  for(let it of equipped){
+    if(!it.trait) continue;
+    // splitTraits so "Echostrike, Echostrike" on one item counts twice, and so a
+    // substring like "Titan Strength" isn't matched inside an unrelated trait name.
+    for(let t of splitTraits(it.trait)){ if(t.includes(name)) c++; }
+  }
+  return c;
+}
+
+// Count how many of ANY of the given trait names are equipped (summed). Handy for
+// trait FAMILIES that share one effect (e.g. the +25% damage group) so all copies
+// across the whole family stack together.
+function countAnyTrait(names){ return names.reduce((a,n)=>a+countTrait(n),0); }
+
+// --- DIMINISHING STACK HELPERS (no hard caps) ---
+// A "chance" effect (dodge, proc): each copy removes a FRACTION `per` of the remaining
+// miss-space, so it asymptotically approaches — but never reaches — 100%. More copies
+// always help; nothing is ever wasted, nothing is ever guaranteed/capped.
+//   stackChance(0.25, count): 25% -> 43.75% -> 57.8% -> ... -> ~1 (never 1)
+function stackChance(per,count){ return Math.min(0.999, 1-Math.pow(1-per,Math.max(0,count))); }
+// A "multiplier" effect (+25% damage etc.): each copy applies its OWN multiplier, so
+// N copies = mult^N. Unbounded on purpose (endless game, no caps) but each extra copy
+// only multiplies what remains — natural soft scaling.
+//   stackMult(1.25, count): 1x -> 1.25x -> 1.5625x -> ...
+function stackMult(mult,count){ return Math.pow(mult,Math.max(0,count)); }
+// A "reduction toward 0" effect (damage taken, element resist): each copy removes a
+// fraction `per` of what remains, approaching but never reaching 0 (never a hard cap,
+// never full immunity). Returns the FRACTION of damage still taken.
+//   stackReduce(0.25, count): 1 -> 0.75 -> 0.5625 -> ... -> ~0 (never 0)
+function stackReduce(per,count){ return Math.pow(1-per,Math.max(0,count)); }
+
 // Counts how many EQUIPPED items carry a "-25% damage taken" defensive trait.
 // Each one stacks multiplicatively (25% off whatever damage remains), so this
 // count drives 0.75^count in combat. Multiple copies of the same trait name on
@@ -158,6 +201,25 @@ function hasTraitExact(name){
     // match "Finger Ward" but NOT "Finger Ward Amulet"
     return it.trait.includes(name)&&!it.trait.includes(name+" Amulet");
   });
+}
+
+// Count copies of an EXACT-base trait across equipped items (excludes the "<name>
+// Amulet" variant), splitting multi-trait strings so each copy counts. Used for
+// Finger Ward stacking (ring form) so more wards keep helping without a hard cap.
+function countTraitExact(name){
+  let equipped=[];
+  ["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet"].forEach(k=>{
+    if(S.equipment[k]) equipped.push(S.equipment[k]);
+  });
+  S.equipment.rings.forEach(x=>{if(x)equipped.push(x);});
+  let c=0;
+  for(let it of equipped){
+    if(!it.trait) continue;
+    for(let t of splitTraits(it.trait)){
+      if(t.includes(name)&&!t.includes(name+" Amulet")) c++;
+    }
+  }
+  return c;
 }
 
 // --- EFFECTIVE MAX HP ---
@@ -657,7 +719,27 @@ function item(i,inv,equipped){
   }
   // Name display — potions show their stack count (e.g. "Mystery Potion 3/10").
   let nameHtml=(i.type==="potion")?`${i.name} <span class="stack-count">${i.count||1}/10</span>`:i.name;
-  return`<div class="item ${i.rarity} ${i.depth}${i.prestige?" prestige-"+i.prestige:""}"><span class="art">${i.art}</span><b>${nameHtml}</b><div class="item-type">${typeLabel(i.type)}</div><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${traitHtml}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)}${i.prestige?` · ✦${i.prestige[0].toUpperCase()+i.prestige.slice(1)}✦`:""} · 💰 ${val}</div>${cmp}${buttons}</div>`;
+  // Per-item EXPECTED DAMAGE indicator (⚔️). Mirrors the per-trait ⚡ line, but shows
+  // the item's RAW contribution to your average hit — from its STR only, WITHOUT any
+  // trait multipliers/bonuses. Combat base swing = 1 + d8 + floor(STR*0.4), so each
+  // STR point adds 0.4 expected damage; an item's share = 0.4 × its granted STR. These
+  // per-item numbers sum to the STR portion of your average swing. Non-STR items show
+  // nothing (they add no raw damage — only traits/utility). Potions excluded.
+  let dmgHtml="";
+  if(i.type!=="potion"){
+    let d=itemDamage(i);
+    if(d>0) dmgHtml=`<div class="item-dmg" title="Average damage this item adds to a hit, from its STR alone (no trait bonuses)">⚔️ +${d} dmg/hit</div>`;
+  }
+  return`<div class="item ${i.rarity} ${i.depth}${i.prestige?" prestige-"+i.prestige:""}"><span class="art">${i.art}</span><b>${nameHtml}</b><div class="item-type">${typeLabel(i.type)}</div><div>${Object.entries(i.stats).map(([k,v])=>`+${v} ${k.toUpperCase()}`).join(" · ")}</div>${dmgHtml}${traitHtml}<div class="small">${i.rarity[0].toUpperCase()+i.rarity.slice(1)} · ${i.depth[0].toUpperCase()+i.depth.slice(1)}${i.prestige?` · ✦${i.prestige[0].toUpperCase()+i.prestige.slice(1)}✦`:""} · 💰 ${val}</div>${cmp}${buttons}</div>`;
+}
+
+// Expected per-hit damage an item contributes from its RAW STR alone (no trait bump).
+// Combat: base swing = 1 + d8(avg 4.5) + floor(STR*0.4); the STR-scaled part is 0.4/STR.
+// So an item's damage share = round(0.4 × its granted STR). Kept in ONE place so the
+// item indicator and any summary stay consistent with combat.js (0.4 per STR).
+function itemDamage(i){
+  if(!i||!i.stats) return 0;
+  return Math.round((i.stats.str||0)*0.4);
 }
 
 // Build a "vs equipped" comparison line for an inventory item

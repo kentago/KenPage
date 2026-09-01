@@ -77,6 +77,7 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .art{font-size:32px;float:right}
 .small{font-size:.85em;color:#aaa}
 .trait{font-size:.9em;color:#f1c40f;margin-top:4px}
+.item-dmg{font-size:.85em;color:#e07a5f;font-weight:bold;margin-top:3px}
 .reroll-btn{font-size:.8em;background:#2a2a3a;color:#9af;border:1px solid #55f;border-radius:6px;padding:1px 6px;margin-left:6px;cursor:pointer}
 .elem-now{font-size:.8em;color:#e67e22;font-weight:bold}
 .reroll-btn:hover{background:#3a3a5a;border-color:#88f}
