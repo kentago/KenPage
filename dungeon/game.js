@@ -764,8 +764,8 @@ function render(){
   let rightMangled=S.lostFingers&&S.lostFingers.right&&S.lostFingers.right.length>=5;
   let leftMangled=S.lostFingers&&S.lostFingers.left&&S.lostFingers.left.length>=5;
   equipment.innerHTML=
-    `<div class="equip-row row-gear5">${["weapon","helmet","armor","boots","shoulders"].map(gearCard).join("")}</div>`+
-    `<div class="equip-row row-gear3">${["trousers","cape","amulet"].map(gearCard).join("")}</div>`+
+    `<div class="equip-row row-gear4">${["weapon","helmet","armor","amulet"].map(gearCard).join("")}</div>`+
+    `<div class="equip-row row-gear4">${["trousers","cape","shoulders","boots"].map(gearCard).join("")}</div>`+
     `<div class="equip-row row-hand"><div class=card><b>RINGS — Right Hand 🫱</b><div class="ring-grid">${ringHand(5)}</div>${rightMangled?`<div class="small lost-finger">⚠️ Right hand mangled — no weapon grip</div>`:""}</div></div>`+
     `<div class="equip-row row-hand"><div class=card><b>RINGS — Left Hand 🫲</b><div class="ring-grid">${ringHand(0)}</div>${leftMangled?`<div class="small lost-finger">⚠️ Left hand mangled — no shield grip</div>`:""}</div></div>`;
   inventory.innerHTML=S.inventory.length?S.inventory.map(x=>item(x,true,false)).join(""):"<div class=small>Empty</div>";

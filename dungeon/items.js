@@ -44,7 +44,7 @@ function splitTraits(traitStr){
     else cur+=ch;
   }
   if(cur.trim()) out.push(cur.trim());
-  return out.filter(t=>t&&t!=="null");
+  return out.filter(t=>t&&t!=="null"&&t!=="undefined");
 }
 
 // --- EFFECTIVE STATS ---
@@ -340,8 +340,9 @@ function makeItem(type){
     let have=splitTraits(i.trait);
     // Try a few times to find a trait not already on the item.
     for(let tries=0;tries<20;tries++){
-      let cand=traitPool()[Math.floor(Math.random()*traitPool().length)];
-      if(!have.includes(cand)){
+      let pool=traitPool();                              // pick the pool ONCE
+      let cand=pool[Math.floor(Math.random()*pool.length)];
+      if(cand&&!have.includes(cand)){
         i.trait=i.trait?i.trait+", "+cand:cand;
         return true;
       }
@@ -445,7 +446,7 @@ function makeLegendaryItem(forceType){
     let have=splitTraits(i.trait);
     for(let tries=0;tries<20;tries++){
       let cand=traits[Math.floor(Math.random()*traits.length)];
-      if(!have.includes(cand)){ i.trait=i.trait+", "+cand; return true; }
+      if(cand&&!have.includes(cand)){ i.trait=i.trait+", "+cand; return true; }
     }
     return false;
   }
@@ -548,10 +549,11 @@ function discardChoice(type,idx){
 // --- ITEM DISPLAY ---
 function item(i,inv,equipped){
   let dead=S.hp<=0;
-  // Defensive: repair any legacy "null, X" trait from the old double-trait bug
-  if(i.trait&&/^null(,\s*|$)/.test(i.trait)){
-    i.trait=i.trait.replace(/^null,\s*/,"")||null;
-    if(i.trait==="null") i.trait=null;
+  // Defensive: repair legacy/broken trait strings — strip any "null" or "undefined"
+  // fragments (from old double-trait / pool-index bugs) so stale saved items self-heal.
+  if(i.trait){
+    let clean=splitTraits(i.trait).filter(t=>t&&t!=="null"&&t!=="undefined");
+    i.trait=clean.length?clean.join(", "):null;
   }
   let buttons="";
   let val=itemValue(i);

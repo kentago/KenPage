@@ -25,9 +25,11 @@ function drawMap(){
         // Collect ALL features present so secondary ones show as corner badges.
         let feats=[];
         if(rm.ladder){
-          let toll=(rm.ladder.tollPaid===false);
+          let toll=(rm.ladder.tollPaid===false)&&!rm.ladder.used; // paid/used ladders are never 🚧
+          let arrow=rm.ladder.dir==="down"?"↓":"↑";
           if(rm.ladder.emergency) feats.push("🕳️↓");
-          else feats.push(rm.ladder.dir==="down"?(toll?"🚧↓":"🪜↓"):(toll?"🚧↑":"🪜↑"));
+          else if(rm.ladder.used) feats.push(`<span class="badge-used">🪜${arrow}</span>`); // GREEN (used/available)
+          else feats.push(toll?`🚧${arrow}`:`🪜${arrow}`);
         }
         if(rm.npc&&!rm.npc.completed) feats.push("🔵");
         if(rm.trader) feats.push("💲");
@@ -51,7 +53,7 @@ function drawMap(){
           symbol="⚕️";
           cellClass+=" doctor";
         } else if(rm.ladder&&rm.ladder.dir==="down"){
-          let toll=(rm.ladder.tollPaid===false);
+          let toll=(rm.ladder.tollPaid===false)&&!rm.ladder.used; // used/paid never 🚧
           if(rm.ladder.emergency){
             symbol="🕳️↓";
             cellClass+=rm.ladder.used?" ladder-used":" ladder-emergency";
@@ -75,7 +77,15 @@ function drawMap(){
 
         // Corner badges = features not already shown as the primary symbol.
         // If standing on the cell (player ◎), every feature becomes a badge.
-        let extra=isPlayer?feats:feats.filter(f=>f!==symbol);
+        // Otherwise drop the feat that matches the primary symbol. The ladder feat
+        // may be wrapped (badge-used span), so also drop any feat that contains the
+        // ladder's arrow when the ladder IS the primary (avoids a duplicate badge).
+        let ladderIsPrimary=(!isPlayer&&rm.ladder&&(symbol.includes("↓")||symbol.includes("↑")));
+        let extra=isPlayer?feats:feats.filter(f=>{
+          if(f===symbol) return false;
+          if(ladderIsPrimary&&(f.includes("↓")||f.includes("↑"))) return false;
+          return true;
+        });
         let badges=extra.length?`<span class="map-badges">${extra.slice(0,3).join("")}</span>`:"";
 
         let borders="";

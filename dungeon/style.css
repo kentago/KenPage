@@ -34,13 +34,15 @@ section{background:#202020;border:1px solid #444;border-radius:12px;padding:14px
 @media (max-width:760px){.room-section>#roomTitle,.room-section>#roomText{padding-right:0}}
 #stats.stats{position:absolute;top:12px;right:14px;z-index:4;display:flex;gap:5px;
   background:rgba(20,20,20,.85);border:1px solid #444;border-radius:10px;padding:6px;max-width:64%}
-.stats-col{display:flex;flex-direction:column;gap:4px}
-.stats-col .stat-btn,.stats-col .vital{padding:4px 7px;font-size:12px;border-radius:7px;min-width:88px;text-align:center}
+.stats-col{display:flex;flex-direction:column;gap:4px;width:96px}
+/* FIXED cell width so the box NEVER resizes as stat numbers/bonuses or the
+   allocation (+5/+10) buttons appear/disappear — layout stays stable while walking. */
+.stats-col .stat-btn,.stats-col .vital{box-sizing:border-box;width:100%;padding:4px 7px;font-size:12px;border-radius:7px;text-align:center}
 .stats-col .vital{background:#292929;border:1px solid #555}
 /* Tablets/phones: drop the box into normal flow above the title (no overlap) */
 @media (max-width:760px){
   #stats.stats{position:static;max-width:none;margin-bottom:8px;flex-wrap:wrap}
-  .stats-col{flex:1;min-width:120px}
+  .stats-col{flex:1 1 96px}
 }
 
 /* XP progress bar */
@@ -63,13 +65,13 @@ section{background:#202020;border:1px solid #444;border-radius:12px;padding:14px
 .boost-hint{font-size:11px;color:#4caf50;margin-left:4px}
 .stat-bonus{font-size:12px;color:#3498db}
 button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;padding:9px;margin:4px;cursor:pointer}
-.nickname-row{display:flex;align-items:center;gap:6px;margin:0;flex-wrap:wrap}
+.nickname-row{display:flex;align-items:center;gap:4px;margin:0;flex-wrap:wrap}
 .nickname-row input{background:#1a1a1a;color:#f1c40f;border:1px solid #555;border-radius:6px;padding:6px 10px;font-size:14px;width:130px;max-width:40vw}
 .nickname-row input::placeholder{color:#666;font-style:italic}
 .nickname-row label{color:#aaa;font-size:13px}
 .forget-btn{background:#2a2a2a;color:#bbb;border:1px solid #555;border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer}
 .forget-btn:hover{background:#3a1a1a;color:#e88;border-color:#a55}
-.country-opt{display:flex;align-items:center;gap:4px;font-size:13px;color:#888;margin-left:0;cursor:pointer}
+.country-opt{display:flex;align-items:center;gap:2px;font-size:13px;color:#888;margin-left:-2px;cursor:pointer}
 .country-opt input{cursor:pointer}
 #log{height:220px;overflow:auto;background:#0c0c0c;padding:10px;border-radius:8px}
 .art{font-size:32px;float:right}
@@ -208,6 +210,9 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
   text-shadow:0 0 2px #000;
   pointer-events:none;
 }
+/* A used/available ladder badge renders GREEN (matches ladder-used) so it stays
+   green even when the player stands on it or it's a secondary feature. */
+.badge-used{color:#2ecc71;text-shadow:0 0 2px #000}
 
 /* Color-coded cell types */
 .map-cell.player{
@@ -338,6 +343,13 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
 .map-wrap #actions .compass-btn{width:46px;height:42px;font-size:16px}
 .map-wrap #actions .compass-btn span{font-size:9px}
 .map-wrap #actions .compass-center{width:38px;height:38px;font-size:17px}
+/* Mobile: compass ~25% smaller so it hides less of the map */
+@media (max-width:640px){
+  .map-wrap #actions .compass{gap:2px;padding:4px}
+  .map-wrap #actions .compass-btn{width:35px;height:32px;font-size:13px}
+  .map-wrap #actions .compass-btn span{font-size:8px}
+  .map-wrap #actions .compass-center{width:28px;height:28px;font-size:14px}
+}
 .compass-row{
   display:flex;
   justify-content:center;
@@ -462,12 +474,13 @@ button{background:#333;color:#fff;border:1px solid #777;border-radius:8px;paddin
    Row 1 (5 gear), Row 2 (3 gear), Row 3 (Right hand), Row 4 (Left hand). */
 #equipment{display:flex;flex-direction:column;gap:8px}
 .equip-row{display:grid;gap:8px}
-.equip-row.row-gear5{grid-template-columns:repeat(5,1fr)}
-.equip-row.row-gear3{grid-template-columns:repeat(3,1fr)}
+.equip-row.row-gear4{grid-template-columns:repeat(4,1fr)}
 .equip-row.row-hand{grid-template-columns:1fr}
 @media (max-width:640px){
-  .equip-row.row-gear5{grid-template-columns:repeat(3,1fr)}
-  .equip-row.row-gear3{grid-template-columns:repeat(3,1fr)}
+  /* Keep 4 gear per row on mobile (matches the 5-across ring rows for width) but
+     tighten the gap so it fits narrow screens. */
+  .equip-row{gap:4px}
+  .equip-row .card{padding:6px;font-size:12px}
 }
 /* Rings laid out HORIZONTALLY — 5 fingers across per hand (no vertical dead space).
    Compact cells so a whole hand fits on one row; wraps only if truly too narrow. */
