@@ -1,7 +1,24 @@
 // --- CORE GAME STATE ---
 let S=JSON.parse(localStorage.getItem(KEY)||"null")||fresh();
 
-function fresh(){return{name:makeDwarfName(),nickname:loadTag(),country:loadCountry(),level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,roomsSinceKill:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,repairedFingers:[],bossSpawnedFloors:{},tollsPaid:0,currentTollPrice:null,portals:[],quickTravelReturn:null,emergencyEscapes:0,phoenixUsed:false,deathWardFloor:null,deathWardFloors:[],secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],questsDelivered:0,questAchievements:[],achievements:[],goldEarned:0,goldSpent:0,cleanHouse:0,leprosyCount:0,fingersLostTotal:0,deepestFloor:1,bossKills:0,log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]}}
+function fresh(){
+  let S0={name:makeDwarfName(),nickname:loadTag(),country:loadCountry(),level:1,xp:0,hp:20,maxHp:20,floor:1,x:0,y:0,prevX:0,prevY:0,gold:0,stats:{str:1,dex:1,int:1,cha:1},statBoostAvailable:true,starterRingPicked:false,statPoints:0,killStreak:0,bestKillStreak:0,roomsSinceKill:0,totalKills:0,actions:0,rooms:{"1:0:0":{searched:false,blocked:{},enemy:null,ladder:null,secret:null,npc:null,trader:null,rest:null,doctor:null}},inventory:[],equipment:{weapon:null,helmet:null,armor:null,boots:null,shoulders:null,trousers:null,cape:null,amulet:null,rings:Array(10).fill(null)},lostFingers:{left:[],right:[]},fingersRestored:0,repairedFingers:[],bossSpawnedFloors:{},tollsPaid:0,currentTollPrice:null,lastTollAmount:0,lastTollEconomyLevel:0,portals:[],quickTravelReturn:null,emergencyEscapes:0,phoenixUsed:false,deathWardFloor:null,deathWardFloors:[],secondChanceFloor:null,floorPositions:{},quests:[],completedQuests:[],questsDelivered:0,questAchievements:[],achievements:[],goldEarned:0,goldSpent:0,cleanHouse:0,leprosyCount:0,fingersLostTotal:0,deepestFloor:1,bossKills:0,log:[`📖 ${intros[Math.floor(Math.random()*intros.length)]}`]};
+  // SOUL KEEPER: place a retained (re-rolled, level-1) item into the new run for a
+  // slight head-start. Auto-equip into its slot (fresh slots are empty).
+  try{
+    let kept=(typeof loadSoulKeeper==="function")?loadSoulKeeper():null;
+    if(kept&&kept.type){
+      if(kept.type==="ring"){
+        S0.equipment.rings[0]=kept;
+        // A retained ring fills the starter-ring role — the player SHALL NOT also pick a starting ring.
+        S0.starterRingPicked=true;
+      }
+      else if(S0.equipment[kept.type]!==undefined){ S0.equipment[kept.type]=kept; }
+      S0.log.unshift(`💜 Soul Keeper: your ${kept.name} endured the fall — re-forged and carried into this run.`);
+    }
+  }catch(e){}
+  return S0;
+}
 
 // --- PERSISTENT TAG / COUNTRY (survive across runs & permadeath) ---
 // The player's tag (nickname) and country flag are stored SEPARATELY from the run
@@ -355,25 +372,49 @@ function search(){let r=room();if(r.startRoom)return msg("🏛️ The entrance h
 // Compute (and LOCK) a toll ladder's full cost the FIRST time it's shown, then
 // The run's CURRENT toll price — a single "cost of passage" that applies to ANY
 // The run's CURRENT toll price — a single "cost of passage" that applies to ANY
-// non-boss ladder (not per-ladder). It's an EFFORT GATE: a large, rising share of
-// your current GOLD (bigger the more you've descended this run), bumped higher by
-// bad luck. Buying your way down without fighting/searching drains you fast — you
-// must EARN to keep descending. Locked into S.currentTollPrice (stable display),
-// re-raised each time you pay (see useLadder). Recomputed lazily when missing.
+// non-boss ladder (not per-ladder). It's an EFFORT + DEPTH GATE that NEVER reads your
+// wallet: driven only by how many tolls you've paid this run and how deep you are, so
+// it always RISES and can't shrink just because paying left you poorer. Bad luck bumps
+// it a little higher. Buying your way down without fighting/searching makes each toll
+// balloon — you must EARN to keep descending. Locked into S.currentTollPrice (stable
+// display), re-raised each time you pay (see useLadder). Recomputed lazily when missing.
 function currentTollPrice(){
   if(S.currentTollPrice!==undefined && S.currentTollPrice!==null) return S.currentTollPrice;
   let paid=S.tollsPaid||0;
-  // EFFORT GATE (not a level tax): the toll is a large, RISING share of your CURRENT
-  // gold. The more you've descended this run, the bigger the share — so buying your
-  // way down without fighting/searching drains you fast and forces you to earn more.
-  // A player who fights/searches between descents can keep going; a rush-buyer can't.
-  let floorMin=30; // tiny flat floor so a near-broke hero still owes something
-  let pct=0.35+Math.min(0.45,paid*0.06); // 35% of gold, +6% per toll paid, up to 80%
-  let base=floorMin+(S.gold||0)*pct;
+  // EFFORT + DEPTH GATE — the toll NEVER reads your wallet (no peeking at gold), so it
+  // can't shrink just because you're poorer after paying. It's a rising curve driven
+  // ONLY by how many tolls you've bought this run and how deep you are:
+  //   core = START * GROWTH^(tolls paid) * (1 + floor * DEPTH)
+  // Each toll paid raises the next one; descending raises it too. A rush-buyer's tolls
+  // balloon fast (forcing them to earn between descents); a fighter/searcher keeps up.
+  const START=40, GROWTH=1.18, DEPTH=0.03;
+  let core=START*Math.pow(GROWTH,paid)*(1+(S.floor||1)*DEPTH);
   // Unluck surcharge: LOW luck = pricier (up to +50%), shrinking toward ~5% with luck.
+  // Multiplicative and >= 1, so it can only ADD to the toll, never discount it.
   let luck=(typeof eff==="function"?(eff().luck||0):0);
   let maxSur=0.50-0.45*(luck/(luck+50));
-  S.currentTollPrice=Math.round(base*(1+Math.random()*maxSur));
+  let toll=Math.round(core*(1+Math.random()*maxSur));
+  // ECONOMY PEEK (milestones only): at every 10th level the toll is allowed to glance
+  // at the wallet ONCE and re-anchor to the economy, so a hoarder who has ballooned
+  // rich between milestones doesn't get artificially cheap passage. It takes a modest
+  // SHARE of current gold as a CANDIDATE and only applies it if it's HIGHER — it can
+  // NEVER lower the toll (uses max). Each milestone peeks at most once per run
+  // (tracked in S.lastTollEconomyLevel), and the strictly-increasing guard below still
+  // applies afterwards, so the cost only ever climbs.
+  let lvl=S.level||1;
+  if(lvl>=10 && lvl%10===0 && (S.lastTollEconomyLevel||0)!==lvl){
+    let wealthShare=Math.round((S.gold||0)*0.25); // peek: up to 25% of current gold
+    if(wealthShare>toll) toll=wealthShare;         // only ever RAISE, never lower
+    S.lastTollEconomyLevel=lvl;                    // this milestone is now spent
+  }
+  // STRICTLY INCREASING: every toll must exceed the previous one paid this run
+  // (at least +5%, min +10 flat), even if a low-luck roll or curve rounding dipped.
+  let last=S.lastTollAmount||0;
+  if(last>0){
+    let minNext=last+Math.max(10,Math.round(last*0.05));
+    if(toll<minNext) toll=minNext;
+  }
+  S.currentTollPrice=toll;
   return S.currentTollPrice;
 }
 
@@ -393,6 +434,7 @@ function useLadder(dir){
     S.gold-=cost;
     S.goldSpent=(S.goldSpent||0)+cost;
     S.tollsPaid=(S.tollsPaid||0)+1;
+    S.lastTollAmount=cost;           // reference so the NEXT toll is strictly higher
     r.ladder.tollPaid=true;          // THIS ladder is free from now on
     S.currentTollPrice=null;         // next UNPAID toll recomputes HIGHER
     msg(`💰 You pay the ${cost} gold toll to descend. (Toll #${S.tollsPaid} — the price of passage rises, but this ladder is now free forever.)`);
@@ -401,6 +443,10 @@ function useLadder(dir){
   // Mark this ladder as used (green)
   r.ladder.used=true;
   let sourceKey=key();
+
+  // Rare slippery-ladder mishap: climbing can cost a finger (more likely with scarred
+  // fingers / rings). Skip while dead; harmless if the player has no fingers left.
+  if(S.hp>0 && typeof slipperyLadder==="function") slipperyLadder();
 
   // Move to target floor
   let targetFloor=dir==="down"?S.floor+1:S.floor-1;
@@ -726,7 +772,7 @@ function render(){
       let restFull=(r.rest.type!=="luck"&&S.hp>=effMaxHp());
       extras+=`<button class="action-btn ${r.rest.type==="luck"?"luck-btn":"rest-btn"}" onclick="useRest()"${restFull?" disabled":""}>${r.rest.type==="luck"?"🍀":"💚"} ${r.rest.name} (${r.rest.sips}/${r.rest.maxSips})${restFull?" — Full HP":" (G)"}</button>`;
     }
-    if(r.doctor) extras+=`<button class="action-btn doctor-btn" onclick="talkDoctor()">⚕️ Visit ${r.doctor.name}</button>`;
+    if(r.doctor) extras+=`<button class="action-btn doctor-btn" onclick="talkDoctor()">⚕️ Visit ${r.doctor.name} (T)</button>`;
     if(r.ladder){
       // Toll applies to DESCENDING a non-boss floor via an UNPAID ladder (paid ones are free).
       let tollApplies=(!r.ladder.emergency && S.floor%5!==0 && r.ladder.dir==="down" && !r.ladder.tollPaid);
@@ -752,7 +798,10 @@ function render(){
   //  Row 4: Left hand rings
   let gearCard=(k)=>{
     let disabled=(k==="weapon"&&S.lostFingers&&S.lostFingers.right&&S.lostFingers.right.length>=5);
-    return`<div class=card><b>${k.toUpperCase()}</b>${disabled?`<div class="small lost-finger">⚠️ Right hand mangled — cannot wield</div>`:S.equipment[k]?item(S.equipment[k],false,k):"<div class=small>Empty</div>"}</div>`;
+    let body=disabled?`<div class="item"><div class="gear-slot-label">${k.toUpperCase()}</div><div class="small lost-finger">⚠️ mangled</div></div>`
+      :S.equipment[k]?item(S.equipment[k],false,k)
+      :`<div class="item gear-empty"><div class="gear-slot-label">${k.toUpperCase()}</div><div class=small>Empty</div></div>`;
+    return`<div class="gear-cell">${body}</div>`;
   };
   let ringHand=(offset)=>S.equipment.rings.slice(offset,offset+5).map((x,j)=>{
     let idx=offset+j;
@@ -764,8 +813,8 @@ function render(){
   let rightMangled=S.lostFingers&&S.lostFingers.right&&S.lostFingers.right.length>=5;
   let leftMangled=S.lostFingers&&S.lostFingers.left&&S.lostFingers.left.length>=5;
   equipment.innerHTML=
-    `<div class="equip-row row-gear4">${["weapon","helmet","armor","amulet"].map(gearCard).join("")}</div>`+
-    `<div class="equip-row row-gear4">${["trousers","cape","shoulders","boots"].map(gearCard).join("")}</div>`+
+    `<div class="equip-row"><div class=card><div class="gear-grid">${["weapon","helmet","armor","amulet"].map(gearCard).join("")}</div></div></div>`+
+    `<div class="equip-row"><div class=card><div class="gear-grid">${["trousers","cape","shoulders","boots"].map(gearCard).join("")}</div></div></div>`+
     `<div class="equip-row row-hand"><div class=card><b>RINGS — Right Hand 🫱</b><div class="ring-grid">${ringHand(5)}</div>${rightMangled?`<div class="small lost-finger">⚠️ Right hand mangled — no weapon grip</div>`:""}</div></div>`+
     `<div class="equip-row row-hand"><div class=card><b>RINGS — Left Hand 🫲</b><div class="ring-grid">${ringHand(0)}</div>${leftMangled?`<div class="small lost-finger">⚠️ Left hand mangled — no shield grip</div>`:""}</div></div>`;
   inventory.innerHTML=S.inventory.length?S.inventory.map(x=>item(x,true,false)).join(""):"<div class=small>Empty</div>";
@@ -805,7 +854,10 @@ function render(){
     } else {
       // Compact horizontal quick-travel bar. Each portal shows as "FxP" (F+floor+P),
       // full name in the tooltip. Sits alongside the map so no scrolling is needed.
-      portalsEl.innerHTML=`<span class="portal-bar-label">🌀 Quick Travel:</span>`+ps.map((p,i)=>{
+      // No inline label — the 🌀 Quick Travel explanation lives in the Rules; the
+      // purple chips simply appear here as portals are discovered. Chips are small
+      // and wrap so many fit per row (advanced searchers can find one per floor).
+      portalsEl.innerHTML=ps.map((p,i)=>{
         let here=(S.floor===p.floor&&S.x===p.x&&S.y===p.y);
         let code=`F${p.floor}P`;
         let label=here?(S.quickTravelReturn?"↩️ Back":"📍 Here"):`🌀 ${code}`;

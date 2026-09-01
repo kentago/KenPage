@@ -110,6 +110,28 @@ function loseFinger(){
   }
 }
 
+// --- SLIPPERY LADDER ---
+// A RARE mishap when using a ladder: your grip fails and you may lose a finger.
+// Slippery rungs aren't common, so the base chance is low. A hand marked by old
+// wounds is far more at risk: each SCARRED (previously-repaired) finger raises the
+// slip chance the most, and each EQUIPPED RING adds a little (rings worsen your grip).
+// If a slip triggers, we defer to loseFinger() — which ALREADY biases toward scarred
+// fingers (60%) and can be blocked by Finger Ward — so a scarred/ringed finger goes
+// first and a healthy bare hand is the safest. Called from useLadder() on any climb.
+function slipperyLadder(){
+  let scarred=(S.repairedFingers||[]).filter(idx=>!isFingerLost(idx)).length; // intact scars
+  let rings=(S.equipment&&S.equipment.rings)?S.equipment.rings.filter(x=>x).length:0;
+  let chance=0.025;                          // rare — slippery ladders are uncommon
+  chance+=Math.min(0.06,scarred*0.02);       // scarred fingers are slip-prone (+2% each, cap +6%)
+  chance+=Math.min(0.03,rings*0.006);        // ringed hand grips worse (+0.6% each, cap +3%)
+  chance=Math.min(0.12,chance);              // absolute cap — never common
+  if(Math.random()>=chance) return;
+  // A slip happened — announce it, then let loseFinger() resolve (its own odds + wards
+  // apply, and it favours scarred fingers). loseFinger() prints the outcome.
+  msg(`🪜💦 The rungs are slick — your grip slips!`);
+  loseFinger();
+}
+
 // --- DEATH HANDLING ---
 function damage(n){
   S.hp=Math.max(0,S.hp-n);
@@ -134,6 +156,12 @@ function damage(n){
       return;
     }
     S.hp=0;
+    // SOUL KEEPER: an equipped item with this trait is RETAINED into the next run —
+    // but re-rolled to level-1/floor-1 stats (a modest head-start, not a snowball),
+    // and its Soul Keeper trait is replaced with a different one so it can't retain
+    // AGAIN (no infinite chain). Stashed to a separate localStorage key so it survives
+    // the fresh() wipe; fresh() restores it into the new run.
+    if(typeof stashSoulKeeperOnDeath==="function") stashSoulKeeperOnDeath();
     msg("☠️ HP reached 0. The expedition has ended.");
     // Submit to global Hall of Fame and immediately re-render
     submitToGlobalHall().then(()=>renderHall());

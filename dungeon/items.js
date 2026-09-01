@@ -362,6 +362,53 @@ function makeItem(type){
 
   return i;
 }
+// --- SOUL KEEPER RETENTION ---
+// On death, if an equipped item carries "Soul Keeper", retain a re-rolled copy into
+// the next run: same type, but stats regenerated as if freshly found at LEVEL 1 /
+// FLOOR 1 (weak head-start), and the Soul Keeper trait swapped for a different one so
+// it can NEVER retain again (no infinite chain). Stashed under its own localStorage
+// key so it survives fresh(); loaded once by fresh() into the new run.
+const SOULKEEPER_KEY="infinite-dungeon-soulkeeper";
+function stashSoulKeeperOnDeath(){
+  try{
+    // Find one equipped item bearing Soul Keeper (gear slots or rings).
+    let carrier=null;
+    ["weapon","helmet","armor","boots","shoulders","trousers","cape","amulet"].forEach(k=>{
+      if(!carrier&&S.equipment[k]&&S.equipment[k].trait&&/Soul Keeper/.test(S.equipment[k].trait)) carrier=S.equipment[k];
+    });
+    if(!carrier) S.equipment.rings.forEach(x=>{ if(!carrier&&x&&x.trait&&/Soul Keeper/.test(x.trait)) carrier=x; });
+    if(!carrier) return;
+    // Re-roll a level-1/floor-1 item of the same type (temporarily override floor/level).
+    let savedFloor=S.floor, savedLevel=S.level;
+    S.floor=1; S.level=1;
+    let rerolled;
+    try{ rerolled=makeItem(carrier.type); } finally { S.floor=savedFloor; S.level=savedLevel; }
+    // Strip Soul Keeper from the retained item and ensure it has a DIFFERENT trait,
+    // so it can't retain again.
+    let pool=carrier.type==="ring"?ringTraits:carrier.type==="amulet"?amuletTraits:traits;
+    let keptTraits=splitTraits(rerolled.trait).filter(t=>!/Soul Keeper/.test(t));
+    if(keptTraits.length===0){
+      // give it one fresh non-SoulKeeper trait
+      for(let tries=0;tries<20;tries++){ let c=pool[Math.floor(Math.random()*pool.length)]; if(c&&!/Soul Keeper/.test(c)){ keptTraits=[c]; break; } }
+    }
+    rerolled.trait=keptTraits.length?keptTraits.join(", "):null;
+    rerolled.name=carrier.name; // keep the beloved name (a re-forged heirloom)
+    localStorage.setItem(SOULKEEPER_KEY,JSON.stringify(rerolled));
+  }catch(e){/* never block death on a retention hiccup */}
+}
+window.stashSoulKeeperOnDeath=stashSoulKeeperOnDeath;
+
+// Pull a stashed Soul Keeper item for a NEW run (consumes it — one carry only).
+function loadSoulKeeper(){
+  try{
+    let raw=localStorage.getItem(SOULKEEPER_KEY);
+    if(!raw) return null;
+    localStorage.removeItem(SOULKEEPER_KEY); // consume — carries only once
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+window.loadSoulKeeper=loadSoulKeeper;
+
 function slot(i){return i.type==="ring"?"rings":i.type}
 
 // --- LEGENDARY ITEM GENERATION (critical success d20=20) ---

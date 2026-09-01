@@ -70,7 +70,7 @@ const amuletTraits=[
   "Fortune's Heart (+3 Luck)","Lucky Star (+2 Luck & +5% crit)","Potion Amplifier (healing ×1.5)",
   "Treasure Sense (better loot rolls)","Quest Compass (easier quest item discovery)",
   "Death Ward (survive one fatal hit per floor)","Gold Magnet (+25% gold from sells)",
-  "Element Shield (reduce element damage by 50%)","Soul Keeper (retain 1 item on death)",
+  "Element Shield (reduce element damage by 50%)","Soul Keeper (retain this item on death — re-forged to level-1 power)",
   "Luck of the Ancients (+5 Luck)","Trinket Collector (double trinket drop chance)",
   "Potion Brewer (rest heals 50% more)","Critical Fortune (crits give bonus gold)",
   "Finger Ward Amulet (prevent finger loss)","XP Amplifier (+15% XP from all sources)",
