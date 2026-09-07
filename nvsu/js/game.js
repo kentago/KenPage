@@ -443,6 +443,59 @@ function tryMove(p, dx) {
   }
 }
 
+// ---------- Touch / on-screen controls ----------
+// One shared pad, since the device gets passed between turns — it always
+// drives whoever's turn it currently is, rather than having a fixed side.
+function activeKeyFor(dir) {
+  const p = currentPlayer();
+  const map = p.key === 'p1'
+    ? { left: 'a', right: 'd', up: 'w', down: 's' }
+    : { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown' };
+  return map[dir];
+}
+
+function bindHold(el, onDown, onUp) {
+  let active = false;
+  const start = (e) => {
+    e.preventDefault();
+    if (active) return;
+    active = true;
+    onDown();
+  };
+  const end = (e) => {
+    e.preventDefault();
+    if (!active) return;
+    active = false;
+    onUp();
+  };
+  el.addEventListener('pointerdown', start);
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+  el.addEventListener('pointerleave', end);
+  el.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+
+function bindDirectionButton(el, dir) {
+  let heldKey = null;
+  bindHold(
+    el,
+    () => { heldKey = activeKeyFor(dir); keys.add(heldKey); },
+    () => { if (heldKey) keys.delete(heldKey); heldKey = null; }
+  );
+}
+
+function setupTouchControls() {
+  bindDirectionButton(document.getElementById('tp-left'), 'left');
+  bindDirectionButton(document.getElementById('tp-right'), 'right');
+  bindDirectionButton(document.getElementById('tp-up'), 'up');
+  bindDirectionButton(document.getElementById('tp-down'), 'down');
+  bindHold(
+    document.getElementById('tp-fire'),
+    () => { if (phase === 'aiming') startCharging(currentPlayer()); },
+    () => { if (phase === 'aiming') releaseFire(currentPlayer()); }
+  );
+}
+
 // ---------- Turn timer ----------
 function tickTimer(dt) {
   if (phase !== 'aiming') return;
@@ -659,6 +712,7 @@ function init() {
   resetMatch();
   buildWeaponPanel('p1weapons', 0);
   buildWeaponPanel('p2weapons', 1);
+  setupTouchControls();
   refreshHUD();
   phase = 'menu';
   requestAnimationFrame(loop);
