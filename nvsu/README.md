@@ -18,6 +18,9 @@ Open `index.html` directly in a browser, or serve the folder with any static ser
 
 Pick a weapon by clicking its button in your panel below the battlefield before firing.
 
+## Touch controls (phones/tablets)
+Since two people typically share one device, there's a single on-screen pad (Left/Right, Aim Up/Down, and a hold-to-charge Fire button) rather than two separate touch layouts. It always drives whoever's turn it currently is — pass the phone across the table between turns and the pad just follows.
+
 ## Weapons
 1. **Tusk Lance** (bazooka) — arcing projectile, affected by wind, big crater. Unlimited ammo.
 2. **Horn Blast** (shotgun) — 5-pellet hitscan spread, short range, small craters. Unlimited ammo.
@@ -38,4 +41,4 @@ Win counts are saved to the browser via `localStorage` (`nvu:stats`). This is pe
 - No mid-air side-wall collision — combatants can nudge through very steep overhangs.
 - Airstrike always targets the opponent's current position rather than a manually-aimed spot.
 - No sound.
-- No mobile touch controls.
+- The on-screen pad works but isn't laid out for one-handed thumb reach yet — good candidate for a follow-up pass once you've tested it on an actual phone.

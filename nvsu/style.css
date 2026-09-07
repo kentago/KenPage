@@ -137,3 +137,47 @@ canvas#game {
   font-size: 0.75rem;
   opacity: 0.55;
 }
+
+#touchpad {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.tp-group {
+  display: flex;
+  gap: 8px;
+}
+
+.tp-btn {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.08);
+  color: #f2f2fa;
+  border-radius: 12px;
+  padding: 14px 18px;
+  font-size: 1.1rem;
+  min-width: 56px;
+  cursor: pointer;
+}
+
+.tp-btn:active {
+  background: rgba(255,255,255,0.22);
+}
+
+.tp-fire {
+  background: linear-gradient(135deg, #ff9de2, #7ee7ff);
+  color: #101025;
+  font-weight: 700;
+  padding: 14px 28px;
+  border: none;
+}
+
+.tp-fire:active {
+  filter: brightness(0.92);
+}

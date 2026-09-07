@@ -36,11 +36,25 @@
           </div>
         </div>
         <p class="hint">Pick a weapon from your panel below the battlefield before you fire.</p>
+        <p class="hint">On a phone? Pass the device each turn — the on-screen pad below the battlefield always controls whoever's turn it is.</p>
         <button id="overlay-btn">Start Battle</button>
         <p id="highscore-line"></p>
       </div>
     </div>
   </div>
+
+  <div id="touchpad">
+    <div class="tp-group">
+      <button id="tp-left" class="tp-btn" aria-label="Move left">◀</button>
+      <button id="tp-right" class="tp-btn" aria-label="Move right">▶</button>
+    </div>
+    <div class="tp-group">
+      <button id="tp-up" class="tp-btn" aria-label="Aim up">▲ Aim</button>
+      <button id="tp-down" class="tp-btn" aria-label="Aim down">▼ Aim</button>
+    </div>
+    <button id="tp-fire" class="tp-btn tp-fire" aria-label="Hold to charge, release to fire">Hold to Fire</button>
+  </div>
+
   <div id="panels">
     <div class="panel" id="p1panel">
       <h3>Narwhal 🔵 <span id="p1wins"></span></h3>
