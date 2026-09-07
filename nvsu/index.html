@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Narwhals vs Unicorns</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <h1 id="title">🦄 Narwhals vs Unicorns 🐳</h1>
+  <div id="stage">
+    <canvas id="game" width="960" height="540"></canvas>
+    <div id="overlay">
+      <div id="overlay-card">
+        <h2 id="overlay-title">Narwhals vs Unicorns</h2>
+        <p id="overlay-text">
+          A destructible-terrain duel. Everyone's got a horn — only one side wins.
+        </p>
+        <div class="controls-grid">
+          <div>
+            <h3>Player 1 — Narwhal 🔵</h3>
+            <ul>
+              <li><b>A / D</b> — move</li>
+              <li><b>W / S</b> — aim up / down</li>
+              <li><b>Space</b> — hold to charge, release to fire</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Player 2 — Unicorn 🩷</h3>
+            <ul>
+              <li><b>← / →</b> — move</li>
+              <li><b>↑ / ↓</b> — aim up / down</li>
+              <li><b>Enter</b> — hold to charge, release to fire</li>
+            </ul>
+          </div>
+        </div>
+        <p class="hint">Pick a weapon from your panel below the battlefield before you fire.</p>
+        <button id="overlay-btn">Start Battle</button>
+        <p id="highscore-line"></p>
+      </div>
+    </div>
+  </div>
+  <div id="panels">
+    <div class="panel" id="p1panel">
+      <h3>Narwhal 🔵 <span id="p1wins"></span></h3>
+      <div class="weapons" id="p1weapons"></div>
+    </div>
+    <div class="panel" id="p2panel">
+      <h3>Unicorn 🩷 <span id="p2wins"></span></h3>
+      <div class="weapons" id="p2weapons"></div>
+    </div>
+  </div>
+  <p id="footer">v1 · static, no backend · scores saved to this browser only</p>
+</div>
+<script src="js/storage.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/weapons.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
