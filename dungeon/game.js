@@ -384,11 +384,17 @@ function currentTollPrice(){
   // EFFORT + DEPTH GATE — the toll NEVER reads your wallet (no peeking at gold), so it
   // can't shrink just because you're poorer after paying. It's a rising curve driven
   // ONLY by how many tolls you've bought this run and how deep you are:
-  //   core = START * GROWTH^(tolls paid) * (1 + floor * DEPTH)
-  // Each toll paid raises the next one; descending raises it too. A rush-buyer's tolls
-  // balloon fast (forcing them to earn between descents); a fighter/searcher keeps up.
-  const START=40, GROWTH=1.18, DEPTH=0.03;
-  let core=START*Math.pow(GROWTH,paid)*(1+(S.floor||1)*DEPTH);
+  //   core = START * (1 + tollsPaid)^GROWTH_EXP * (1 + floor * DEPTH)
+  // POLYNOMIAL (v1.4 fix): the old core used GROWTH^tollsPaid (1.18^paid), which is
+  // EXPONENTIAL and unbounded — by ~60 descents a single toll ran into the MILLIONS
+  // while loot/sell income is only linear/polynomial (sell ~ statSum × (1+floor/100),
+  // loot ~ floor^1.2). Exponential-vs-linear diverges no matter how the constants are
+  // tuned, so deep runs hit an unpayable wall (~350 weapons per descent). The core is
+  // now POLYNOMIAL — same growth class as income — so it stays a meaningful sink at any
+  // depth without ballooning. Rushing still costs steeply more per floor than you earn;
+  // an effort player who fights/searches between descents keeps pace.
+  const START=40, GROWTH_EXP=1.5, DEPTH=0.03;
+  let core=START*Math.pow(1+paid,GROWTH_EXP)*(1+(S.floor||1)*DEPTH);
   // Unluck surcharge: LOW luck = pricier (up to +50%), shrinking toward ~5% with luck.
   // Multiplicative and >= 1, so it can only ADD to the toll, never discount it.
   let luck=(typeof eff==="function"?(eff().luck||0):0);
@@ -403,7 +409,7 @@ function currentTollPrice(){
   // applies afterwards, so the cost only ever climbs.
   let lvl=S.level||1;
   if(lvl>=10 && lvl%10===0 && (S.lastTollEconomyLevel||0)!==lvl){
-    let wealthShare=Math.round((S.gold||0)*0.25); // peek: up to 25% of current gold
+    let wealthShare=Math.round((S.gold||0)*0.10); // peek: up to 10% of current gold (v1.4: was 25%, too steep)
     if(wealthShare>toll) toll=wealthShare;         // only ever RAISE, never lower
     S.lastTollEconomyLevel=lvl;                    // this milestone is now spent
   }
