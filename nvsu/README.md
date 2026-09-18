@@ -1,22 +1,27 @@
 # Narwhals vs Unicorns — V1
 
-A local 2-player, turn-based, destructible-terrain duel. No backend, no build step — just static files.
+A local 2-player, turn-based, destructible-terrain battle between two pods of three. No backend, no build step — just static files.
 
 ## Run it
 Open `index.html` directly in a browser, or serve the folder with any static server. To deploy: push this folder to your GitHub repo and let Amplify sync it to your existing domain, exactly like any other static site. Cloudflare isn't needed for V1 — it's only in the picture later if you add a database or Workers for online play/leaderboards.
 
 ## Controls
-**Player 1 — Narwhal**
+**Player 1 — Narwhal Pod**
 - `A` / `D` — move
 - `W` / `S` — aim up / down
 - `Space` — hold to charge power, release to fire
+- `Tab` — switch which pod member you're controlling
 
-**Player 2 — Unicorn**
+**Player 2 — Unicorn Pod**
 - `←` / `→` — move
 - `↑` / `↓` — aim up / down
 - `Enter` — hold to charge power, release to fire
+- `Tab` — switch which pod member you're controlling
 
-Pick a weapon by clicking its button in your panel below the battlefield before firing.
+Pick a weapon by clicking its button in your panel below the battlefield before firing. Each pod has 3 members; switching is free (doesn't cost your turn) and only cycles between living members.
+
+## Pod names
+Each of the 3 members on both sides gets a randomly generated two-part lore name (e.g. a narwhal might be "Kelgorin Icetusk", a unicorn "Thalindra Starmane") drawn from `js/names.js`. Names are unique within a match; edit the name banks in that file to reskin the lore however you like.
 
 ## Touch controls (phones/tablets)
 Since two people typically share one device, there's a single on-screen pad (Left/Right, Aim Up/Down, and a hold-to-charge Fire button) rather than two separate touch layouts. It always drives whoever's turn it currently is — pass the phone across the table between turns and the pad just follows.
@@ -31,14 +36,19 @@ Since two people typically share one device, there's a single on-screen pad (Lef
 ## How the destructible terrain works
 Terrain is drawn once onto an offscreen canvas. Its alpha channel doubles as the collision mask. An explosion erases a circle from that canvas using `globalCompositeOperation = 'destination-out'` — so the crater is both the visual and the physical hole, with no separate terrain data structure to keep in sync.
 
-Each match generates a fresh terrain profile via midpoint displacement, so no two rounds look the same.
+Each match randomly picks one of three map styles:
+- **Mainland** — one connected landmass, classic layout.
+- **Twin Isles** — two landmasses split by open water. No walking across; you're forced to use arcing weapons, an airstrike, or a teleport to reach the other side.
+- **Bridged Isles** — two landmasses joined by a single narrow, floating causeway. You can walk across it right up until someone blows it out from under you — it's thin enough that a Tusk Lance or Spiral Bomb can breach it in one or two hits, permanently cutting the crossing for the rest of the match.
+
+Both pods always spawn on solid land inside their own landmass regardless of style, so nobody starts stranded in the water.
 
 ## Scoring
 Win counts are saved to the browser via `localStorage` (`nvu:stats`). This is per-browser, not shared between players/devices — good enough for a couch-multiplayer V1. Swapping this for a real leaderboard later (Cloudflare Workers + D1/KV) is a drop-in replacement for `js/storage.js` without touching game logic.
 
 ## Known V1 limitations / good next steps
-- Only one fighter per side (no squads yet).
 - No mid-air side-wall collision — combatants can nudge through very steep overhangs.
-- Airstrike always targets the opponent's current position rather than a manually-aimed spot.
+- Airstrike always targets a random living opponent's current position rather than a manually-aimed spot.
 - No sound.
 - The on-screen pad works but isn't laid out for one-handed thumb reach yet — good candidate for a follow-up pass once you've tested it on an actual phone.
+- Pod member switching is unlimited and free — could be worth costing a small amount of turn time if it feels too easy to abuse.

@@ -8,35 +8,37 @@
 </head>
 <body>
 <div id="app">
-  <h1 id="title">🦄 Narwhals vs Unicorns 🐳</h1>
+  <h1 id="title">🐳 Narwhals vs Unicorns 🦄</h1>
   <div id="stage">
     <canvas id="game" width="960" height="540"></canvas>
     <div id="overlay">
       <div id="overlay-card">
         <h2 id="overlay-title">Narwhals vs Unicorns</h2>
         <p id="overlay-text">
-          A destructible-terrain duel. Everyone's got a horn — only one side wins.
+          Two pods of three, a shrinking battlefield, and everyone's got a horn.
         </p>
         <div class="controls-grid">
           <div>
-            <h3>Player 1 — Narwhal 🔵</h3>
+            <h3>Player 1 — Narwhal Pod 🔵</h3>
             <ul>
               <li><b>A / D</b> — move</li>
               <li><b>W / S</b> — aim up / down</li>
               <li><b>Space</b> — hold to charge, release to fire</li>
+              <li><b>Tab</b> — switch which pod member you're controlling</li>
             </ul>
           </div>
           <div>
-            <h3>Player 2 — Unicorn 🩷</h3>
+            <h3>Player 2 — Unicorn Pod 🩷</h3>
             <ul>
               <li><b>← / →</b> — move</li>
               <li><b>↑ / ↓</b> — aim up / down</li>
               <li><b>Enter</b> — hold to charge, release to fire</li>
+              <li><b>Tab</b> — switch which pod member you're controlling</li>
             </ul>
           </div>
         </div>
         <p class="hint">Pick a weapon from your panel below the battlefield before you fire.</p>
-        <p class="hint">On a phone? Pass the device each turn — the on-screen pad below the battlefield always controls whoever's turn it is.</p>
+        <p class="hint">On a phone? Pass the device each turn — the on-screen pad below always controls whoever's turn it is.</p>
         <button id="overlay-btn">Start Battle</button>
         <p id="highscore-line"></p>
       </div>
@@ -52,16 +54,21 @@
       <button id="tp-up" class="tp-btn" aria-label="Aim up">▲ Aim</button>
       <button id="tp-down" class="tp-btn" aria-label="Aim down">▼ Aim</button>
     </div>
+    <button id="tp-switch" class="tp-btn" aria-label="Switch pod member">🔄 Switch</button>
     <button id="tp-fire" class="tp-btn tp-fire" aria-label="Hold to charge, release to fire">Hold to Fire</button>
   </div>
 
   <div id="panels">
     <div class="panel" id="p1panel">
-      <h3>Narwhal 🔵 <span id="p1wins"></span></h3>
+      <h3>Narwhal Pod 🔵 <span id="p1wins"></span></h3>
+      <ul class="roster" id="p1roster"></ul>
+      <button class="switch-btn" id="p1switch">🔄 Switch member</button>
       <div class="weapons" id="p1weapons"></div>
     </div>
     <div class="panel" id="p2panel">
-      <h3>Unicorn 🩷 <span id="p2wins"></span></h3>
+      <h3>Unicorn Pod 🩷 <span id="p2wins"></span></h3>
+      <ul class="roster" id="p2roster"></ul>
+      <button class="switch-btn" id="p2switch">🔄 Switch member</button>
       <div class="weapons" id="p2weapons"></div>
     </div>
   </div>
@@ -70,6 +77,7 @@
 <script src="js/storage.js"></script>
 <script src="js/terrain.js"></script>
 <script src="js/weapons.js"></script>
+<script src="js/names.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>
