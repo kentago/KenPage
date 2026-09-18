@@ -660,7 +660,7 @@ function drawCombatant(u, side) {
   const rad = (u.aimAngle * Math.PI) / 180;
   const effAngle = u.facing === 1 ? rad : Math.PI - rad;
   const charging = isActive && side.charging;
-  const baseDist = HORN_RADIUS * 0.45;
+  const baseDist = HORN_RADIUS * 0.85;
   const hornLen = 20 + (charging ? side.power * 0.28 : 0);
   const hornHalfWidth = 3.5;
 
